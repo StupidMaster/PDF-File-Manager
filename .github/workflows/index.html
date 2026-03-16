@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>PDF Manager - Split & Merge</title>
+
+    <!-- Favicon -->
+    <!-- <link rel="icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico"> -->
+    <!-- <link rel="shortcut icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico"> -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
+    <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
+
+    <link rel="stylesheet" href="./CSS/index.css">
+</head>
+
+<body>
+    <!-- Fixed Sticky Header Container -->
+    <div class="sticky-header-container">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div class="title">
+                <button class="back-btn" onclick="window.history.back()">←</button>
+                <span>✂️ Split PDF</span>
+            </div>
+            <div class="top-bar-actions">
+                <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileMenu()">☰</button>
+                <button class="theme-toggle" onclick="toggleTheme()">
+                    <span id="themeIcon">🌙</span>
+                    <span id="themeText">Dark</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Tool Tabs -->
+        <div class="tool-tabs" id="toolTabs">
+            <button class="tab-btn active" id="splitTab" onclick="switchToSplit()">
+                <span>✂️</span>
+                <span>Split</span>
+            </button>
+            <button class="tab-btn" id="mergeTab" onclick="switchToMerge()">
+                <span>🔗</span>
+                <span>Merge</span>
+            </button>
+            <button class="tab-btn" id="stampTab" onclick="switchToStamp()">
+                <span>🖋️</span>
+                <span>Stamp</span>
+            </button>
+            <button class="tab-btn">
+                <span>🔄</span>
+                <span>Rotate</span>
+            </button>
+            <button class="tab-btn">
+                <span>🗑️</span>
+                <span>Delete Pages</span>
+            </button>
+            <button class="tab-btn">
+                <span>📄</span>
+                <span>Extract</span>
+            </button>
+        </div>
+
+        <!-- Split Controls -->
+        <div class="split-controls" id="splitControls">
+            <div class="split-controls-content">
+                <div class="split-every-section">
+                    <label>
+                        <input type="checkbox" id="splitEveryCheckbox" onchange="toggleSplitEvery()">
+                        <span>Split after every</span>
+                    </label>
+                    <input type="number" id="splitEveryInput" min="1" value="1" disabled>
+                    <label>
+                        <span>pages</span>
+                    </label>
+                </div>
+                <div class="split-actions">
+                    <button class="btn btn-secondary" onclick="clearAllSplitPoints()">
+                        <span>🗑️</span>
+                        <span class="btn-text">Clear All</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="showResetConfirm()">
+                        <span>↻</span>
+                        <span class="btn-text">New File</span>
+                    </button>
+                    <button class="btn btn-primary" id="splitBtn" onclick="executeSplit()" disabled>
+                        <span>✂️</span>
+                        <span>Split into</span>
+                        <span class="split-count-badge" id="splitCountBtn">1</span>
+                        <span>PDFs</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Merge Controls -->
+        <div class="split-controls" id="mergeControls">
+            <div class="split-controls-content">
+                <div class="merge-info-section">
+                    <span>📚 Drag files or pages to reorder</span>
+                    <span id="mergeTotalPages" style="margin-left: 15px; color: var(--text-secondary);"></span>
+                </div>
+                <div class="split-actions">
+                    <button class="btn btn-secondary" onclick="addMoreMergeFiles()">
+                        <span>➕</span>
+                        <span class="btn-text">Add Files</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAllMergeFiles()">
+                        <span>🗑️</span>
+                        <span class="btn-text">Clear All</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="showResetConfirm()">
+                        <span>↻</span>
+                        <span class="btn-text">New Merge</span>
+                    </button>
+                    <button class="btn btn-primary" id="mergeBtn" onclick="executeMerge()" disabled>
+                        <span>🔗</span>
+                        <span>Merge</span>
+                        <span class="split-count-badge" id="mergeCountBtn">0</span>
+                        <span id="mergeFilesText">files</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Overlay -->
+    <div class="mobile-overlay" id="mobileOverlay" onclick="closeOverlay()"></div>
+
+    <!-- Mobile Menu Toggle Button (for left panel on mobile) -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleLeftPanel()">📁</button>
+
+    <!-- Main Layout with Left Panel -->
+    <div class="app-layout">
+        <!-- Left Panel - Collapsible File List -->
+        <div class="left-panel" id="leftPanel">
+            <div class="panel-header">
+                <h3 id="panelTitle">📁 Uploaded Files (0)</h3>
+                <button class="collapse-btn" id="collapseBtn" onclick="toggleLeftPanel()">
+                    <i class="fa fa-angle-double-left" style="font-size:24px"></i>
+                </button>
+            </div>
+            <div class="files-container" id="filesContainer">
+                <div class="empty-files">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                    <span>No files uploaded yet</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Mode Switch Loading Overlay -->
+            <div class="mode-loading-overlay" id="modeLoadingOverlay">
+                <div class="mode-loading-spinner"></div>
+                <div class="mode-loading-text" id="modeLoadingText">Switching mode...</div>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Click to upload or drag & drop</div>
+                    <div class="upload-subtext">PDF files only (multiple files allowed)</div>
+                </div>
+                <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple onchange="handleFileSelect(event)">
+            </div>
+
+            <!-- Page Container -->
+            <div class="page-container" id="pageContainer">
+                <div class="page-grid" id="pageGrid"></div>
+            </div>
+
+            <!-- Stamp Tool Panel (hidden until Stamp tab is clicked) -->
+            <div id="stampContainer" style="display:none;"></div>
+
+        </div><!-- end .main-content -->
+    </div><!-- end .app-layout -->
+
+    <!-- Preview Modal -->
+    <div class="preview-modal" id="previewModal" onclick="closePreview(event)">
+        <div class="preview-modal-content" onclick="event.stopPropagation()">
+            <button class="preview-close" onclick="closePreview()">×</button>
+
+            <div class="preview-canvas-wrapper" id="previewCanvasWrapper"></div>
+
+            <!-- Unified Bottom Bar: Zoom | Nav | Rotate | Delete -->
+            <div class="preview-bottom-bar">
+                <!-- Zoom -->
+                <button class="preview-nav-btn" onclick="zoomPreview(-0.25)" title="Zoom Out">&#8722;</button>
+                <span class="preview-page-counter" id="previewZoomLevel">100%</span>
+                <button class="preview-nav-btn" onclick="zoomPreview(0.25)" title="Zoom In">+</button>
+                <button class="preview-nav-btn" onclick="fitPreview()" title="Fit to Screen">&#8862;</button>
+
+                <div class="preview-bottom-divider"></div>
+
+                <!-- Page Navigation -->
+                <button class="preview-nav-btn" id="previewPrevBtn" onclick="navigatePreview(-1)" title="Previous Page">&#8592;</button>
+                <span class="preview-page-counter" id="previewPageCounter">1 / 1</span>
+                <button class="preview-nav-btn" id="previewNextBtn" onclick="navigatePreview(1)" title="Next Page">&#8594;</button>
+
+                <div class="preview-bottom-divider"></div>
+
+                <!-- Rotate -->
+                <button class="preview-nav-btn" onclick="rotatePreview(-90)" title="Rotate Left">&#8634;</button>
+                <button class="preview-nav-btn" onclick="rotatePreview(90)" title="Rotate Right">&#8635;</button>
+
+                <div class="preview-bottom-divider"></div>
+
+                <!-- Delete -->
+                <button class="preview-nav-btn danger" onclick="deletePreviewPage()" title="Delete Page">&#128465;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="processing-content" id="processingContent">
+            <div class="spinner" id="processingSpinner"></div>
+            <div class="processing-text" id="processingTitle">Loading PDF...</div>
+            <div class="processing-subtext" id="processingMessage">Please wait</div>
+            <div class="progress-container" id="progressContainer" style="display: none;">
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar-fill" id="progressBarFill"></div>
+                </div>
+                <div class="progress-percentage" id="progressPercentage">0%</div>
+                <div class="progress-detail" id="progressDetail"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div class="notification-modal" id="notificationModal">
+        <div class="notification-content">
+            <div class="notification-header">
+                <div class="notification-icon" id="notificationIcon">ℹ️</div>
+                <div class="notification-title" id="notificationTitle">Notification</div>
+            </div>
+            <div class="notification-message" id="notificationMessage"></div>
+            <div class="notification-actions">
+                <button class="notification-btn primary" onclick="closeNotification()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="confirm-modal" id="confirmModal">
+        <div class="confirm-content">
+            <div class="confirm-header">
+                <div class="confirm-icon">⚠️</div>
+                <div class="confirm-title" id="confirmTitle">Confirm Action</div>
+            </div>
+            <div class="confirm-message" id="confirmMessage"></div>
+            <div class="confirm-actions">
+                <button class="confirm-btn secondary" id="confirmCancelBtn">Cancel</button>
+                <button class="confirm-btn primary" id="confirmOkBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.PDF_MANAGER_BASE = '.';
+    </script>
+    <script src="./js/common.js"></script>
+    <script src="./js/split.js"></script>
+    <script src="./js/merge.js"></script>
+    <script src="./js/stamp.js"></script>
+
+    <!-- Tool switching -->
+    <script>
+        let activeTool = 'split';
+        window.activeTool = 'split';
+
+        // ── Mode-switch loading helpers ──────────────────────────────────────
+        function showModeLoading(text = 'Switching mode...') {
+            const overlay = document.getElementById('modeLoadingOverlay');
+            const label = document.getElementById('modeLoadingText');
+            if (label) label.textContent = text;
+            if (overlay) overlay.classList.add('active');
+        }
+
+        function hideModeLoading() {
+            const overlay = document.getElementById('modeLoadingOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        // ── Switch to Split ──────────────────────────────────────────────────
+        window.switchToSplit = function() {
+            if (activeTool === 'split') return;
+
+            const doSwitch = () => {
+                if (activeTool === 'stamp' && typeof leaveStampMode === 'function') {
+                    leaveStampMode(executeSplitSwitch);
+                    return;
+                }
+                executeSplitSwitch();
+            };
+
+            function executeSplitSwitch() {
+                showModeLoading('Loading Split mode...');
+
+                requestAnimationFrame(() => setTimeout(() => {
+                    activeTool = 'split';
+                    window.activeTool = 'split';
+
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('splitTab').classList.add('active');
+
+                    const mergeControls = document.getElementById('mergeControls');
+                    if (mergeControls) mergeControls.classList.remove('active');
+
+                    const titleSpan = document.querySelector('.title span:last-child');
+                    if (titleSpan) titleSpan.textContent = '✂️ Split PDF';
+
+                    if (typeof window.initSplit === 'function') window.initSplit();
+
+                    hideModeLoading();
+                }, 350));
+            };
+
+            if (window.hasMergeFiles) {
+                showConfirm(
+                    'Switch to Split Mode',
+                    'You have files loaded in Merge mode. Switching will clear all current files and progress. Continue?',
+                    doSwitch
+                );
+            } else {
+                doSwitch();
+            }
+        }
+
+        // ── Switch to Merge ──────────────────────────────────────────────────
+        window.switchToMerge = function() {
+            if (activeTool === 'merge') return;
+
+            const doSwitch = () => {
+                if (activeTool === 'stamp' && typeof leaveStampMode === 'function') {
+                    leaveStampMode(executeMergeSwitch);
+                    return;
+                }
+                executeMergeSwitch();
+            };
+
+            function executeMergeSwitch() {
+                showModeLoading('Loading Merge mode...');
+
+                requestAnimationFrame(() => setTimeout(() => {
+                    activeTool = 'merge';
+                    window.activeTool = 'merge';
+
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('mergeTab').classList.add('active');
+
+                    const splitControls = document.getElementById('splitControls');
+                    const mergeControls = document.getElementById('mergeControls');
+                    if (splitControls) splitControls.classList.remove('show');
+                    if (mergeControls) mergeControls.classList.add('active');
+
+                    const pageContainer = document.getElementById('pageContainer');
+                    const pageGrid = document.getElementById('pageGrid');
+                    const uploadSection = document.getElementById('uploadSection');
+                    if (pageContainer) pageContainer.classList.remove('active');
+                    if (pageGrid) pageGrid.innerHTML = '';
+                    if (uploadSection) uploadSection.classList.remove('hidden');
+
+                    const titleSpan = document.querySelector('.title span:last-child');
+                    if (titleSpan) titleSpan.textContent = '🔗 Merge PDF';
+
+                    const panelTitle = document.getElementById('panelTitle');
+                    if (panelTitle) panelTitle.textContent = '📁 Files to Merge (0)';
+
+                    const filesContainer = document.getElementById('filesContainer');
+                    if (filesContainer) {
+                        filesContainer.innerHTML = `
+                            <div class="empty-files">
+                                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                                <span>Upload PDFs to merge</span>
+                            </div>`;
+                    }
+
+                    if (typeof initMerge === 'function') initMerge();
+
+                    hideModeLoading();
+                }, 350));
+            };
+
+            if (window.hasSplitFiles) {
+                showConfirm(
+                    'Switch to Merge Mode',
+                    'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
+                    doSwitch
+                );
+            } else {
+                doSwitch();
+            }
+        }
+
+        // ── Switch to Stamp ──────────────────────────────────────────────────
+        window.switchToStamp = function() {
+            if (activeTool === 'stamp') return;
+
+            // Check if split or merge currently has files loaded
+            const hasFiles = window.hasSplitFiles || window.hasMergeFiles;
+            const fromMode = activeTool; // 'split' or 'merge'
+
+            function executeStampSwitch() {
+                showModeLoading('Loading Stamp mode...');
+
+                requestAnimationFrame(() => setTimeout(() => {
+                    activeTool = 'stamp';
+                    window.activeTool = 'stamp';
+
+                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+                    document.getElementById('stampTab').classList.add('active');
+
+                    // Hide split / merge controls
+                    const splitControls = document.getElementById('splitControls');
+                    const mergeControls = document.getElementById('mergeControls');
+                    if (splitControls) {
+                        splitControls.classList.remove('show');
+                        splitControls.classList.remove('active');
+                    }
+                    if (mergeControls) {
+                        mergeControls.classList.remove('active');
+                    }
+
+                    // Clear page grid and uploaded file thumbnails so they don't show behind stamp panel
+                    const pageGrid = document.getElementById('pageGrid');
+                    if (pageGrid) pageGrid.innerHTML = '';
+                    const pageContainer = document.getElementById('pageContainer');
+                    if (pageContainer) {
+                        pageContainer.classList.remove('active');
+                        pageContainer.style.display = 'none';
+                    }
+
+                    // Hide upload section
+                    const uploadSection = document.getElementById('uploadSection');
+                    if (uploadSection) uploadSection.style.display = 'none';
+
+                    // Clear the left panel file list
+                    const filesContainer = document.getElementById('filesContainer');
+                    if (filesContainer) {
+                        filesContainer.innerHTML = `
+                            <div class="empty-files">
+                                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                                <span>No files uploaded yet</span>
+                            </div>`;
+                    }
+
+                    // Reset split/merge file flags so they don't trigger false confirmations later
+                    window.hasSplitFiles = false;
+                    window.hasMergeFiles = false;
+
+                    // Update header title
+                    const titleSpan = document.querySelector('.title span:last-child');
+                    if (titleSpan) titleSpan.textContent = '🖋️ Stamp PDF';
+
+                    // Hide left panel (stamp has its own file upload)
+                    const leftPanel = document.getElementById('leftPanel');
+                    if (leftPanel) leftPanel.style.display = 'none';
+
+                    // Hide the floating mobile file-panel button — stamp has its own upload
+                    const mmt = document.getElementById('mobileMenuToggle');
+                    if (mmt) mmt.style.display = 'none';
+
+                    // Show stamp panel and initialise
+                    const stampContainer = document.getElementById('stampContainer');
+                    if (stampContainer) {
+                        stampContainer.style.display = 'block';
+                        if (typeof window.initStamp === 'function') window.initStamp();
+                    }
+
+                    hideModeLoading();
+                }, 350));
+            }
+
+            if (hasFiles) {
+                const modeLabel = fromMode === 'merge' ? 'Merge' : 'Split';
+                showConfirm(
+                    'Switch to Stamp Mode',
+                    `You have files loaded in ${modeLabel} mode. Switching will clear all current files and progress. Continue?`,
+                    executeStampSwitch
+                );
+            } else {
+                executeStampSwitch();
+            }
+        }
+
+        // ── Handle reset for split / merge ───────────────────────────────────
+        window.showResetConfirm = function() {
+            if (activeTool === 'merge') {
+                if (typeof resetMerge === 'function') resetMerge();
+            } else {
+                showConfirm(
+                    'Start Over',
+                    'Start over with new files? All current progress will be lost.',
+                    () => {
+                        if (typeof window.initSplit === 'function') window.initSplit();
+                        else location.reload();
+                    }
+                );
+            }
+        };
+
+        // ── leaveStampMode — extend to also restore left panel ───────────────
+        const _origLeaveStamp = window.leaveStampMode;
+        window.leaveStampMode = function(onConfirmed) {
+            const afterLeave = function() {
+                const leftPanel = document.getElementById('leftPanel');
+                if (leftPanel) leftPanel.style.display = '';
+                // Restore the floating mobile button
+                const mmt = document.getElementById('mobileMenuToggle');
+                if (mmt) mmt.style.display = '';
+                if (typeof onConfirmed === 'function') onConfirmed();
+            };
+            if (_origLeaveStamp) {
+                _origLeaveStamp(afterLeave);
+            } else {
+                afterLeave();
+            }
+        };
+
+        // ── Initialise UI on page load ───────────────────────────────────────
+        (function initializeUI() {
+            const panelTitle = document.getElementById('panelTitle');
+            if (panelTitle && !panelTitle.textContent) {
+                panelTitle.textContent = '📁 Uploaded Files (0)';
+            }
+
+            const filesContainer = document.getElementById('filesContainer');
+            if (filesContainer && filesContainer.children.length === 0) {
+                filesContainer.innerHTML = `
+                    <div class="empty-files">
+                        <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                        <span>No files uploaded yet</span>
+                    </div>`;
+            }
+        })();
+
+        // ============================================================
+        // Preview button routing is handled entirely by merge.js (loaded above).
+        // merge.js defines window.zoomPreview, window.navigatePreview, window.rotatePreview,
+        // window.fitPreview, window.deletePreviewPage, and window.closePreview.
+
+
+        // ── Auto-load PDF into Stamp mode when redirected from external stamp button ──
+        (function autoLoadStampPdf() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('tool') !== 'stamp') return;
+
+    const pdfUrl  = sessionStorage.getItem('stampPdfUrl');
+    const pdfData = sessionStorage.getItem('stampPdfData');
+    const pdfName = sessionStorage.getItem('stampPdfName');
+
+    // Neither source present — nothing to load
+    if (!pdfName || (!pdfUrl && !pdfData)) return;
+
+    const requestedMode = params.get('mode') || 'formatted';
+
+    // Clear immediately
+    sessionStorage.removeItem('stampPdfUrl');
+    sessionStorage.removeItem('stampPdfData');
+    sessionStorage.removeItem('stampPdfName');
+
+    function doLoad() {
+        if (typeof window.switchToStamp === 'function') {
+            window.switchToStamp();
+        }
+
+        setTimeout(function() {
+            if (typeof window.switchStampMode === 'function') {
+                window.switchStampMode(requestedMode);
+            }
+
+            // Resolve: use URL if available (large files), fall back to base64 data
+            const source = pdfUrl || pdfData;
+
+            fetch(source)
+                .then(r => {
+                    if (!r.ok) throw new Error('Fetch failed: ' + r.status);
+                    return r.blob();
+                })
+                .then(blob => {
+                    const file = new File([blob], pdfName, { type: 'application/pdf' });
+                    const dt   = new DataTransfer();
+                    dt.items.add(file);
+                    const input = document.getElementById('stampFileInput');
+                    if (input) {
+                        input.files = dt.files;
+                        input.dispatchEvent(new Event('change'));
+                    }
+                })
+                .catch(err => console.error('Stamp auto-load failed:', err));
+        }, 700);
+    }
+
+    if (document.readyState === 'complete') {
+        doLoad();
+    } else {
+        window.addEventListener('load', doLoad);
+    }
+})();
+    </script>
+</body>
+
+</html>

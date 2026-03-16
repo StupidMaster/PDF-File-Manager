@@ -1,0 +1,3106 @@
+:root {
+  --bg-primary: #f0f4f8;
+  --bg-secondary: white;
+  --bg-tertiary: #fafafa;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --border-color: #e0e0e0;
+  --accent-color: #1976d2;
+  --accent-light: #e3f2fd;
+  --hover-bg: #f5f5f5;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.15);
+  --page-number-bg: #fef0f0;
+  --success-color: #4caf50;
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  --info-color: #2196f3;
+
+  /* File colors */
+  --file-color-1: #4caf50;
+  --file-color-2: #2196f3;
+  --file-color-3: #ff9800;
+  --file-color-4: #9c27b0;
+  --file-color-5: #f44336;
+  --file-color-6: #00bcd4;
+  --file-color-7: #ffeb3b;
+  --file-color-8: #795548;
+}
+
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-tertiary: #242424;
+  --text-primary: #e0e0e0;
+  --text-secondary: #b0b0b0;
+  --border-color: #404040;
+  --accent-color: #64b5f6;
+  --accent-light: #1e3a5f;
+  --hover-bg: #383838;
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --page-number-bg: #3d2a2a;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition:
+    background 0.3s,
+    color 0.3s;
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
+}
+
+/* Fixed Sticky Header Container */
+.sticky-header-container {
+  position: sticky;
+  top: 0;
+  z-index: 1002; /* CHANGED: Highest to stay on top */
+  background: var(--bg-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+/* Top Bar */
+.top-bar {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 22px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: color 0.2s;
+}
+
+.back-btn:hover {
+  color: var(--text-primary);
+}
+
+.top-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Hamburger Menu - Always visible on mobile */
+.hamburger-btn {
+  display: none;
+  background: none;
+  border: none;
+  font-size: 26px;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: var(--hover-bg);
+}
+
+/* Dark Mode Toggle */
+.theme-toggle {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 6px 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: all 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--hover-bg);
+}
+
+/* Tool Tabs - Fixed Sticky */
+.tool-tabs {
+  background: var(--bg-secondary);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  gap: 8px;
+  transition:
+    background 0.3s,
+    transform 0.3s;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.tool-tabs::-webkit-scrollbar {
+  height: 3px;
+}
+
+.tool-tabs::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 6px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.tab-btn:hover {
+  background: var(--hover-bg);
+}
+
+.tab-btn.active {
+  background: var(--accent-light);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+/* Prevent split controls from flashing on page load */
+
+/* Same for merge controls to prevent future issues */
+#mergeControls {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#mergeControls.active {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 16px 20px !important;
+}
+
+.merge-info-section {
+  min-height: auto;
+  margin: 0;
+}
+
+.split-controls {
+  padding: 12px 20px;
+  min-height: auto;
+}
+
+.split-controls-content {
+  min-height: auto;
+  gap: 12px;
+}
+
+/* FORCE split controls to take ZERO space when hidden */
+#splitControls {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#splitControls.show {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 16px 20px !important;
+}
+
+/* Split Controls - Fixed Sticky */
+.split-controls {
+  background: var(--bg-secondary);
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.3s;
+  width: 100%;
+}
+
+.split-controls-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.split-every-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.split-every-section label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.split-every-section input[type="checkbox"] {
+  /* Use standard appearance so it's always visible */
+  appearance: auto;
+  -webkit-appearance: checkbox;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+.split-every-section input[type="number"] {
+  width: 60px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  text-align: center;
+  font-size: 13px;
+}
+
+.split-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.split-count-badge {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #1565c0;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
+}
+
+.btn-primary:disabled {
+  background: var(--border-color);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+  background: var(--hover-bg);
+}
+
+/* Layout with left panel */
+.app-layout {
+  display: flex;
+  min-height: calc(100vh - 200px);
+  position: relative;
+  width: 100%;
+}
+
+/* Left Panel - Collapsible File List - Fixed Sticky */
+.left-panel {
+  width: 320px;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 200px;
+  height: calc(100vh - 100px);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.left-panel.collapsed {
+  width: 60px;
+}
+
+.panel-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  flex-shrink: 0;
+}
+
+.panel-header h3 {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.left-panel.collapsed .panel-header h3 {
+  display: none;
+}
+
+.collapse-btn {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.left-panel.collapsed .collapse-btn {
+  width: 40px;
+  height: 40px;
+  padding: 6px 6px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  margin: 0 auto;
+}
+
+.collapse-btn:hover {
+  background: var(--hover-bg);
+}
+
+.files-container {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.left-panel.collapsed .files-container {
+  padding: 16px 8px;
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  border-left: 4px solid var(--accent-color);
+  transition: all 0.2s;
+  cursor: pointer;
+  position: relative;
+}
+
+.file-card:hover {
+  transform: translateX(2px);
+  box-shadow: var(--shadow-sm);
+  background: var(--hover-bg);
+}
+
+.file-card.highlight {
+  background: var(--accent-light);
+  border-left-width: 6px;
+}
+
+.left-panel.collapsed .file-card {
+  padding: 12px 8px;
+  justify-content: center;
+}
+
+.file-icon {
+  font-size: 24px;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.left-panel.collapsed .file-icon {
+  margin-right: 0;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.left-panel.collapsed .file-info {
+  display: none;
+}
+
+.file-name {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta {
+  font-size: 11px;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 8px;
+}
+
+.file-pages {
+  background: var(--accent-light);
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.file-remove {
+  padding: 6px 8px;
+  background: var(--error-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.left-panel.collapsed .file-remove {
+  display: none;
+}
+
+.file-remove:hover {
+  background: #d32f2f;
+}
+
+.empty-files {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.left-panel.collapsed .empty-files span {
+  display: none;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  overflow-x: hidden;
+  padding-bottom: 50px;
+  width: 100%;
+  position: relative;
+}
+
+/* Mode-switch loading overlay — scoped to main-content only */
+.mode-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 500;
+  background: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.mode-loading-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.mode-loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: modeSpinAnim 0.75s linear infinite;
+}
+
+@keyframes modeSpinAnim {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.mode-loading-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+/* Upload Section */
+.upload-section {
+  padding: 40px 20px;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+  transition: all 0.3s;
+  width: 100%;
+}
+
+.upload-section.hidden {
+  display: none;
+}
+
+.upload-box {
+  border: 3px dashed var(--border-color);
+  border-radius: 16px;
+  padding: 50px 20px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.upload-box:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.upload-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+}
+
+.upload-text {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.upload-subtext {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.file-input {
+  display: none;
+}
+
+/* Page Container */
+.page-container {
+  padding: 20px;
+  display: none;
+  width: 100%;
+}
+
+.page-container.active {
+  display: block;
+}
+
+/* Page grid adjustments for scissor space */
+.page-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 50px; /* Increased gap to accommodate scissors */
+  align-items: start;
+  width: 100%;
+  padding-right: 50px; /* Extra space so last-column + button isn't clipped */
+  overflow: visible;
+}
+
+.page-item-wrapper {
+  position: relative;
+  overflow: visible;
+}
+
+.page-item {
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  /* transition: all 0.3s; */
+  cursor: default; /* Remove pointer cursor */
+  position: relative;
+  border: 2px solid transparent;
+}
+
+.page-item:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.page-item.file-1 {
+  border-top: 3px solid var(--file-color-1);
+}
+.page-item.file-2 {
+  border-top: 3px solid var(--file-color-2);
+}
+.page-item.file-3 {
+  border-top: 3px solid var(--file-color-3);
+}
+.page-item.file-4 {
+  border-top: 3px solid var(--file-color-4);
+}
+.page-item.file-5 {
+  border-top: 3px solid var(--file-color-5);
+}
+.page-item.file-6 {
+  border-top: 3px solid var(--file-color-6);
+}
+.page-item.file-7 {
+  border-top: 3px solid var(--file-color-7);
+}
+.page-item.file-8 {
+  border-top: 3px solid var(--file-color-8);
+}
+
+.page-thumbnail {
+  width: 100%;
+  aspect-ratio: 0.7;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+}
+
+.page-thumbnail canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.page-footer {
+  padding: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--page-number-bg);
+}
+
+.page-number {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* File Badge - Fixed styling */
+.file-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  background: var(--accent-color);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  letter-spacing: 0.3px;
+}
+
+.add-page-item {
+  border: 2px dashed var(--border-color);
+  background: var(--bg-tertiary);
+  cursor: pointer !important;
+  transition: all 0.3s;
+}
+
+.add-page-item:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.add-page-item .page-thumbnail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+}
+
+/* Skeleton Loader with Progress Bar */
+.skeleton-item {
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  border: 2px solid var(--border-color);
+}
+
+.skeleton-thumbnail {
+  width: 100%;
+  aspect-ratio: 0.7;
+  background: var(--bg-tertiary);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Progress Bar for Skeleton Loader */
+.page-progress-loader {
+  width: 90%;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  padding: 20px 15px;
+  text-align: center;
+}
+
+[data-theme="dark"] .page-progress-loader {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 40px;
+  background: var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.progress-bar-container .progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), #043964);
+  border-radius: 10px;
+  width: 0%; /* START AT 0% */
+  transition: width 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.progress-bar-container .progress-percentage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  mix-blend-mode: difference; /* Makes it visible on both filled and unfilled parts */
+}
+
+.progress-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+.skeleton-footer {
+  height: 32px;
+  background: var(--border-color);
+}
+
+/* Split Point (Scissor) - EXACT positioning retained */
+.split-point-wrapper {
+  position: relative;
+}
+
+/* Scissor Button — centered in the 50px gap between page-items.
+   gap = 50px → midpoint at 25px past the wrapper's right edge.
+   left: calc(100% + 5px) puts the 40px container from 5px→45px → centred at 25px. */
+.split-point {
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  cursor: pointer;
+}
+
+/* Dashed vertical line — border-left draws at the element's LEFT edge.
+   Position the element so its left edge = container center (20px on a 40px container).
+   Use left: calc(50% - 1px) so the 2px border straddles the centre pixel.
+   A wider invisible ::after expands the click target. */
+.split-line-horizontal {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* 1px = half of the 2px border, so line visually centres on the midpoint */
+  left: calc(50% - 1px);
+  width: 2px;
+  background: transparent;
+  border-left: 2px dashed var(--border-color);
+  z-index: 1;
+  cursor: pointer;
+  transition:
+    border-left-color 0.3s ease,
+    border-left-width 0.3s ease;
+}
+
+/* Wide invisible click area for the line */
+.split-line-horizontal::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -11px;
+  right: -11px;
+}
+
+.scissor-btn {
+  /* sits on top of the line in the flex centre */
+  position: relative;
+  z-index: 2;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s;
+  flex-shrink: 0;
+}
+
+.split-line-horizontal.active {
+  border-left: 2px solid var(--accent-color);
+}
+
+/* Hovering anywhere in the split-point zone highlights BOTH line and button */
+.split-point:hover .split-line-horizontal {
+  border-left-color: var(--accent-color);
+  border-left-width: 3px;
+}
+
+.split-point:hover .scissor-btn {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+}
+
+.scissor-btn .scissor-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  font-size: 15px; /* or whatever size you want */
+}
+
+.scissor-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+  transform: scale(1.15);
+}
+
+.scissor-btn.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.scissor-btn.active .scissor-icon {
+  filter: brightness(0) invert(1);
+}
+
+.scissor-icon {
+  transition: filter 0.3s;
+}
+
+/* ── Merge: between-page + insert button ────────────────────────────────────── */
+.merge-add-between {
+  position: absolute;
+  left: calc(100% + 5px);
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* No line — button only */
+.merge-add-line {
+  display: none;
+}
+
+.merge-add-btn {
+  position: relative;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--accent-color);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.merge-add-btn:hover {
+  border-color: var(--accent-color);
+  background: var(--accent-color);
+  color: #fff;
+  transform: scale(1.18);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.2);
+}
+
+.merge-add-tooltip {
+  position: fixed; /* escape any overflow:hidden ancestor */
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  z-index: 99999;
+  min-width: 170px;
+  white-space: nowrap;
+  /* Position is set via JS */
+}
+
+.merge-add-option {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  border-radius: 7px;
+  transition:
+    background 0.15s,
+    color 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.merge-add-option:hover {
+  background: var(--accent-light);
+  color: var(--accent-color);
+}
+
+/* Processing Overlay */
+.processing-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  backdrop-filter: blur(8px);
+}
+
+.processing-overlay.active {
+  display: flex;
+}
+
+.processing-content {
+  background: var(--bg-secondary);
+  padding: 40px 50px;
+  border-radius: 16px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  max-width: 450px;
+  width: 90%;
+}
+
+.processing-text {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.processing-subtext {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 30px;
+}
+
+/* Progress Bar Container */
+.progress-container {
+  width: 100%;
+  margin-bottom: 15px;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), var(--accent-dark));
+  border-radius: 10px;
+  width: 0%;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-wrapper {
+  width: 100%;
+  height: 16px;
+  background: var(--bg-tertiary);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.progress-bar-wrapper .progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), #0d519e);
+  border-radius: 12px;
+  width: 0%;
+  transition: width 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.progress-bar-wrapper .progress-bar-fill::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+.progress-percentage {
+  font-size: 42px;
+  font-weight: 700;
+  color: var(--accent-color);
+  margin: 0px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-detail {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 8px;
+}
+
+/* Spinner fallback */
+.spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Hide spinner when progress is shown */
+.processing-content.with-progress .spinner {
+  display: none;
+}
+
+/* Notification Modal */
+.notification-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10001;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+}
+
+.notification-modal.show {
+  display: flex;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.notification-content {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 25px;
+  max-width: 450px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+  animation: slideIn 0.3s ease;
+}
+
+.notification-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.notification-icon {
+  font-size: 32px;
+}
+
+.notification-icon.success {
+  color: var(--success-color);
+}
+.notification-icon.error {
+  color: var(--error-color);
+}
+.notification-icon.warning {
+  color: var(--warning-color);
+}
+.notification-icon.info {
+  color: var(--accent-color);
+}
+
+.notification-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.notification-message {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+  white-space: pre-line;
+  font-size: 14px;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.notification-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.notification-btn.primary {
+  background: var(--accent-color);
+  color: white;
+}
+
+.notification-btn.primary:hover {
+  background: #1565c0;
+}
+
+.notification-btn.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.notification-btn.secondary:hover {
+  background: var(--hover-bg);
+}
+
+/* Confirmation Modal */
+.confirm-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10002;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+}
+
+.confirm-modal.show {
+  display: flex;
+}
+
+.confirm-content {
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  padding: 25px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: var(--shadow-md);
+  animation: slideIn 0.3s ease;
+}
+
+.confirm-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.confirm-icon {
+  font-size: 32px;
+  color: var(--warning-color);
+}
+
+.confirm-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.confirm-message {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.confirm-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.confirm-btn.primary {
+  background: var(--error-color);
+  color: white;
+}
+
+.confirm-btn.primary:hover {
+  background: #d32f2f;
+}
+
+.confirm-btn.secondary {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.confirm-btn.secondary:hover {
+  background: var(--hover-bg);
+}
+
+/* Preview Modal */
+.preview-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.95);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.preview-modal.active {
+  display: flex;
+}
+
+.preview-modal-content {
+  position: relative;
+  /* Static size — never grows/shrinks with canvas zoom */
+  width: min(900px, 96vw);
+  height: min(90vh, 900px);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.preview-close:hover {
+  transform: scale(1.1);
+  background: var(--accent-color);
+  color: white;
+}
+
+.preview-canvas-wrapper {
+  flex: 1;
+  min-height: 0; /* critical — allows flex child to shrink and scroll */
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 20px;
+  background: #2a2a2a;
+}
+
+.preview-canvas-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.preview-canvas-wrapper::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.preview-canvas-wrapper::-webkit-scrollbar-thumb {
+  background: #555;
+  border-radius: 5px;
+}
+
+.preview-canvas-wrapper::-webkit-scrollbar-thumb:hover {
+  background: #777;
+}
+
+.preview-canvas-wrapper canvas {
+  display: block;
+  /* No max-width/height constraints — canvas should render at exact zoom size */
+  flex-shrink: 0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* Preview Zoom Controls — DISABLED (moved into bottom bar) */
+.preview-controls {
+  display: none !important;
+}
+
+.preview-zoom-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.preview-zoom-btn:hover {
+  background: var(--accent-color);
+  color: white;
+  transform: scale(1.1);
+}
+
+.preview-zoom-level {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Mobile Overlay */
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 998;
+}
+
+.mobile-overlay.show {
+  display: block;
+}
+
+/* Mobile Menu Button - Always visible on small screens */
+.mobile-menu-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  border: none;
+  box-shadow: var(--shadow-md);
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 999;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.mobile-menu-toggle:hover {
+  transform: scale(1.1);
+  background: #1565c0;
+}
+
+/* Mobile responsive scissor buttons */
+/* @media (max-width: 1400px) {
+            .split-point {
+                width: 45px;
+            }
+            .scissor-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 20px;
+            }
+        } */
+@media (max-width: 1400px) {
+  .split-point {
+    width: 40px;
+  }
+  .scissor-btn {
+    width: 38px;
+    height: 38px;
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .split-point {
+    width: 40px;
+  }
+  .scissor-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 19px;
+  }
+}
+
+@media (max-width: 992px) {
+  .split-point {
+    width: 40px;
+  }
+  .scissor-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .scissor-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+    background: var(--bg-secondary);
+    border: 2px solid var(--accent-color);
+  }
+
+  /* 2 columns, normal vertical gap — scissors stay to the right */
+  .page-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 40px 30px;
+  }
+
+  /* scissors stay vertical, to the right — gap=30px → center at 15px */
+  .split-point {
+    position: absolute;
+    left: calc(100% - 5px);
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Restore vertical line */
+  .split-line-horizontal {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: calc(50% - 1px);
+    width: 2px;
+    height: auto;
+    border-left: 2px dashed var(--border-color);
+    border-top: none;
+    transform: none;
+  }
+
+  .split-line-horizontal.active {
+    border-left: 2px solid var(--accent-color);
+    border-top: none;
+  }
+
+  .split-point:hover .split-line-horizontal {
+    border-left-color: var(--accent-color);
+    border-left-width: 3px;
+    border-top: none;
+  }
+}
+
+/* 576px and below: scissors already handled in the main 576px block below */
+
+@media (max-width: 480px) {
+  .scissor-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1400px) {
+  .page-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 40px; /* Slightly larger gap for scissor space */
+  }
+  .split-point {
+    left: calc(100% + 0px); /* gap=40px → center at 20px → 20-20=0px */
+  }
+}
+
+@media (max-width: 1200px) {
+  .page-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 35px;
+  }
+  .split-point {
+    left: calc(100% - 2px); /* gap=35px → center at 17.5px → 17.5-20≈-2px */
+  }
+}
+
+@media (max-width: 992px) {
+  .page-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 35px;
+  }
+  .split-point {
+    left: calc(100% - 2px); /* gap=35px → center at 17.5px → 17.5-20≈-2px */
+  }
+
+  /* Keep scissors same size */
+  .scissor-btn {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+  }
+
+  .left-panel {
+    position: fixed;
+    left: 0;
+    top: 200px;
+    z-index: 996;
+    box-shadow: var(--shadow-md);
+    height: calc(100vh - 200px);
+    transform: translateX(-100%); /* CHANGED: Hide by default */
+    width: 320px;
+  }
+
+  .left-panel.collapsed {
+    transform: translateX(-100%); /* CHANGED: Hidden when collapsed */
+  }
+
+  /* CHANGED: Show when NOT collapsed */
+  .left-panel:not(.collapsed) {
+    transform: translateX(0);
+  }
+
+  .left-panel.collapsed .panel-header h3,
+  .left-panel.collapsed .file-info,
+  .left-panel.collapsed .file-remove {
+    display: block;
+  }
+
+  .left-panel.collapsed .file-card {
+    padding: 12px;
+    justify-content: flex-start;
+  }
+
+  .left-panel.collapsed .file-icon {
+    margin-right: 12px;
+  }
+
+  .mobile-menu-toggle {
+    display: flex;
+  }
+
+  /* FIXED: No gap - main content always full width */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  .split-controls-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .split-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .hamburger-btn {
+    display: block;
+  }
+
+  /* 2 columns, large vertical gap for below-page scissors */
+  .page-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 60px 40px;
+  }
+
+  /* Slightly smaller but still visible */
+  .scissor-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  /* FIXED: Tool tabs positioning to not overlap */
+  .tool-tabs {
+    transform: translateX(-100%);
+    position: fixed;
+    left: 0;
+    top: 56px; /* CHANGED from 60px - just below top bar */
+    width: 280px;
+    height: calc(100vh - 56px); /* CHANGED to match top position */
+    flex-direction: column;
+    box-shadow: var(--shadow-md);
+    overflow-y: auto;
+    z-index: 1001; /* CHANGED: Higher z-index */
+    background: var(--bg-secondary);
+    padding: 20px;
+  }
+
+  .tool-tabs.show {
+    transform: translateX(0);
+  }
+
+  /* Mobile overlay needs higher z-index than tabs */
+  .mobile-overlay {
+    z-index: 1000; /* CHANGED: Between content and tabs */
+  }
+
+  .split-controls-content {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .split-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .split-actions .btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .processing-content {
+    padding: 25px 20px;
+    width: 95%;
+  }
+
+  .left-panel {
+    top: 180px;
+    height: calc(100vh - 180px);
+    width: 280px;
+  }
+
+  .upload-section {
+    padding: 30px 15px;
+  }
+
+  .upload-box {
+    padding: 40px 15px;
+  }
+
+  .upload-icon {
+    font-size: 48px;
+  }
+
+  .upload-text {
+    font-size: 15px;
+  }
+
+  .upload-subtext {
+    font-size: 12px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+
+  .split-count-badge {
+    padding: 3px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Single column, centered */
+  .page-grid {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 60px 0;
+    justify-items: center;
+  }
+
+  .page-item-wrapper {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* Switch scissors to BELOW the page, centered */
+  .split-point {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 10px);
+    bottom: auto;
+    width: 100%;
+    height: 30px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Switch line to horizontal */
+  .split-line-horizontal {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: 100%;
+    height: 2px;
+    border-left: none;
+    border-top: 2px dashed var(--border-color);
+    background: transparent;
+    transition:
+      border-top-color 0.3s ease,
+      border-top-width 0.3s ease;
+  }
+
+  .split-line-horizontal.active {
+    border-top: 3px solid var(--accent-color);
+    border-left: none;
+  }
+
+  .split-point:hover .split-line-horizontal {
+    border-top-color: var(--accent-color);
+    border-top-width: 3px;
+    border-left: none;
+  }
+
+  /* Click area — horizontal span */
+  .split-line-horizontal::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: -11px;
+    bottom: -11px;
+  }
+
+  /* Scissor sits above the line */
+  .scissor-btn {
+    position: relative;
+    z-index: 2;
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .top-bar {
+    padding: 10px 15px;
+  }
+
+  .title {
+    font-size: 15px;
+  }
+
+  .title span:last-child {
+    display: none;
+  }
+
+  .theme-toggle span:last-child {
+    display: none;
+  }
+
+  .theme-toggle {
+    padding: 6px 10px;
+  }
+
+  .upload-box {
+    padding: 30px 15px;
+  }
+
+  .page-container {
+    padding: 15px;
+  }
+
+  .split-every-section {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .split-controls {
+    padding: 12px 15px;
+  }
+
+  .tool-tabs {
+    padding: 12px 15px;
+  }
+
+  .split-every-section input[type="number"] {
+    width: 50px;
+  }
+
+  .left-panel {
+    width: 260px;
+  }
+
+  .file-card {
+    padding: 10px;
+  }
+
+  .file-name {
+    font-size: 12px;
+  }
+
+  .file-meta {
+    font-size: 10px;
+  }
+
+  .file-remove {
+    padding: 4px 10px;
+    font-size: 11px;
+  }
+
+  .notification-content,
+  .confirm-content {
+    padding: 20px;
+  }
+
+  .notification-title,
+  .confirm-title {
+    font-size: 16px;
+  }
+
+  .notification-message,
+  .confirm-message {
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 360px) {
+  .split-every-section {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .split-every-section label {
+    width: 100%;
+  }
+
+  .split-actions {
+    flex-direction: column;
+  }
+
+  .split-actions .btn {
+    width: 100%;
+  }
+
+  .left-panel {
+    width: 240px;
+  }
+}
+
+/* Fix overlap on mobile by adding margin to split point wrapper */
+@media (max-width: 768px) {
+  .split-point-wrapper {
+    margin-bottom: 15px;
+  }
+
+  /* Smaller scissor buttons for mobile */
+  .scissor-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 567px) {
+  .split-point-wrapper {
+    margin-bottom: 20px;
+  }
+
+  /* Even smaller for very small screens */
+  .scissor-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}
+
+/* Fix split point positioning on very small screens */
+@media (max-width: 567px) {
+  .page-grid {
+    gap: 20px 10px; /* Vertical gap, horizontal gap */
+  }
+
+  .split-point {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    bottom: auto;
+    width: auto;
+    height: 20px;
+    transform: translateX(-50%);
+    margin-top: 5px;
+  }
+
+  .split-line-horizontal {
+    display: none; /* Hide vertical line on very small screens */
+  }
+
+  .scissor-btn {
+    position: relative;
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+}
+
+/* Icon-only buttons starting from 992px and below */
+@media (max-width: 992px) {
+  .btn-secondary .btn-text {
+    display: none;
+  }
+
+  .btn-secondary {
+    padding: 10px 14px;
+    min-width: 44px;
+    justify-content: center;
+  }
+}
+
+/* ===================================
+   MERGE MODE SPECIFIC STYLES
+   Add these to your existing index.css
+   =================================== */
+
+/* Merge Controls */
+.merge-info-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+/* File Color Indicator */
+.file-color-indicator {
+  width: 4px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 8px 0 0 8px;
+}
+
+.file-card {
+  position: relative;
+  padding-left: 16px;
+}
+
+/* Page Cards in Merge Mode */
+.page-card {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+}
+
+.page-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.95);
+}
+
+.page-card.drag-over {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 2px solid var(--accent-color);
+}
+
+/* ── Merge page drag: dragging state ───────────────────────────────────────── */
+.page-item.dragging {
+  opacity: 0.35;
+  transform: scale(0.92);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+  pointer-events: none;
+}
+
+/* ── Swap target: glow + lift ──────────────────────────────────────────────── */
+.page-item-wrapper.drop-swap .page-item {
+  outline: 2.5px solid var(--accent-color);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(25, 118, 210, 0.18),
+    0 8px 24px rgba(0, 0, 0, 0.18);
+  transform: scale(1.04) translateY(-4px);
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    outline 0.1s;
+  z-index: 10;
+}
+
+/* ── Insert-before: glowing left border line + card shifts right ───────────── */
+.page-item-wrapper.drop-insert-before {
+  position: relative;
+}
+.page-item-wrapper.drop-insert-before::before {
+  content: "";
+  position: absolute;
+  left: -6px;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--accent-color);
+  box-shadow: 0 0 10px 3px rgba(25, 118, 210, 0.55);
+  z-index: 20;
+  animation: merge-insert-pulse 0.7s ease-in-out infinite alternate;
+}
+.page-item-wrapper.drop-insert-before .page-item {
+  transform: translateX(8px);
+  transition: transform 0.18s ease;
+}
+
+/* ── Insert-after: glowing right border line + next card shifts right ──────── */
+.page-item-wrapper.drop-insert-after {
+  position: relative;
+}
+.page-item-wrapper.drop-insert-after::after {
+  content: "";
+  position: absolute;
+  right: -6px;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  border-radius: 4px;
+  background: var(--accent-color);
+  box-shadow: 0 0 10px 3px rgba(25, 118, 210, 0.55);
+  z-index: 20;
+  animation: merge-insert-pulse 0.7s ease-in-out infinite alternate;
+}
+
+/* ── Neighbour push-right animation ────────────────────────────────────────── */
+.page-item-wrapper.push-right .page-item {
+  transform: translateX(10px);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.page-item-wrapper.push-left .page-item {
+  transform: translateX(-10px);
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ── Pulse keyframes for insert line ───────────────────────────────────────── */
+@keyframes merge-insert-pulse {
+  from {
+    opacity: 0.75;
+    box-shadow: 0 0 8px 2px rgba(25, 118, 210, 0.45);
+  }
+  to {
+    opacity: 1;
+    box-shadow: 0 0 14px 5px rgba(25, 118, 210, 0.75);
+  }
+}
+
+/* File Cards in Merge Mode */
+.file-card {
+  transition:
+    transform 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
+}
+
+.file-card.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.file-card.drag-over {
+  transform: translateX(5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-left: 3px solid var(--accent-color);
+}
+
+/* Merge Button States */
+#mergeBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#mergeBtn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* File Color Palette */
+:root {
+  --file-color-1: #3b82f6;
+  --file-color-2: #8b5cf6;
+  --file-color-3: #ec4899;
+  --file-color-4: #f59e0b;
+  --file-color-5: #10b981;
+  --file-color-6: #06b6d4;
+  --file-color-7: #f97316;
+  --file-color-8: #6366f1;
+}
+
+/* Merge Page Number Badge */
+.page-number {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.page-number span:first-child {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-number span:last-child {
+  font-size: 10px;
+  opacity: 0.9;
+}
+
+/* Merge Total Pages Display */
+#mergeTotalPages {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Responsive adjustments for merge */
+@media (max-width: 768px) {
+  .merge-info-section {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+
+  #mergeTotalPages {
+    margin-left: 0 !important;
+  }
+}
+
+/* Drag and drop hover effects */
+.file-card:hover {
+  background: var(--card-hover);
+}
+
+.page-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* Animation for file removal */
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+.file-card.removing {
+  animation: slideOut 0.3s ease-out forwards;
+}
+/* Force page container to be completely hidden when not active */
+.page-container {
+  display: none !important;
+}
+
+.page-container.active {
+  display: block !important;
+}
+
+/* Ensure no extra space when page container is hidden */
+#pageContainer:not(.active) {
+  height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove any min-height that might create gaps */
+.page-grid {
+  min-height: 0 !important;
+}
+
+.main-content {
+  padding-bottom: 20px;
+}
+
+/* =============================================
+   SPLIT GROUP HIGHLIGHTS
+   ============================================= */
+:root {
+  --group-color-0: #3b82f6; /* blue */
+  --group-color-1: #22c55e; /* green */
+  --group-color-2: #f97316; /* orange */
+  --group-color-3: #a855f7; /* purple */
+  --group-color-4: #ef4444; /* red */
+  --group-color-5: #06b6d4; /* cyan */
+  --group-color-6: #eab308; /* yellow */
+  --group-color-7: #ec4899; /* pink */
+}
+
+.page-item-wrapper[data-group] .page-item {
+  transition:
+    background 0.25s,
+    border-color 0.25s,
+    box-shadow 0.25s;
+}
+
+.page-item-wrapper[data-group="0"] .page-item {
+  border: 2px solid var(--group-color-0);
+  background: color-mix(in srgb, var(--group-color-0) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="1"] .page-item {
+  border: 2px solid var(--group-color-1);
+  background: color-mix(in srgb, var(--group-color-1) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="2"] .page-item {
+  border: 2px solid var(--group-color-2);
+  background: color-mix(in srgb, var(--group-color-2) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="3"] .page-item {
+  border: 2px solid var(--group-color-3);
+  background: color-mix(in srgb, var(--group-color-3) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="4"] .page-item {
+  border: 2px solid var(--group-color-4);
+  background: color-mix(in srgb, var(--group-color-4) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="5"] .page-item {
+  border: 2px solid var(--group-color-5);
+  background: color-mix(in srgb, var(--group-color-5) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="6"] .page-item {
+  border: 2px solid var(--group-color-6);
+  background: color-mix(in srgb, var(--group-color-6) 10%, var(--bg-secondary));
+}
+.page-item-wrapper[data-group="7"] .page-item {
+  border: 2px solid var(--group-color-7);
+  background: color-mix(in srgb, var(--group-color-7) 10%, var(--bg-secondary));
+}
+
+/* Group label badge on top-left of wrapper */
+.page-item-wrapper[data-group]::before {
+  content: attr(data-group-label);
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 3;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #fff;
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+.page-item-wrapper[data-group="0"]::before {
+  background: var(--group-color-0);
+}
+.page-item-wrapper[data-group="1"]::before {
+  background: var(--group-color-1);
+}
+.page-item-wrapper[data-group="2"]::before {
+  background: var(--group-color-2);
+}
+.page-item-wrapper[data-group="3"]::before {
+  background: var(--group-color-3);
+}
+.page-item-wrapper[data-group="4"]::before {
+  background: var(--group-color-4);
+}
+.page-item-wrapper[data-group="5"]::before {
+  background: var(--group-color-5);
+}
+.page-item-wrapper[data-group="6"]::before {
+  background: var(--group-color-6);
+}
+.page-item-wrapper[data-group="7"]::before {
+  background: var(--group-color-7);
+}
+
+/* Keep position: relative on wrappers for the badge */
+.page-item-wrapper {
+  position: relative;
+}
+
+/* =============================================
+   PAGE HOVER ACTION OVERLAY
+   ============================================= */
+
+/* Highlight card on hover — violet 10px — only when NOT hovering the split-point,
+   and only for real PDF pages (not add-page-item). */
+.page-item-wrapper:not(:has(.add-page-item)):hover:not(:has(.split-point:hover))
+  .page-item {
+  outline: 20px solid rgba(138, 43, 226, 0.5);
+  outline-offset: 0px;
+  border-radius: 0px !important;
+  opacity: 0.8;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  /* transform: translateY(-2px); */
+  /* transition:
+    outline 0.12s ease,
+    box-shadow 0.12s ease,
+    transform 0.12s ease; */
+}
+
+/* Do NOT trigger outline on add-page-item */
+.page-item-wrapper:has(.add-page-item):hover .page-item {
+  outline: none;
+  transform: none;
+}
+
+.page-hover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+  border-radius: inherit;
+  z-index: 10;
+}
+
+/* Trigger overlay on wrapper hover — but NOT when hovering the split-point */
+.page-item-wrapper:hover:not(:has(.split-point:hover)) .page-hover-overlay {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* Do NOT trigger overlay on add-page-item */
+.page-item-wrapper:has(.add-page-item) .page-hover-overlay,
+.add-page-item .page-hover-overlay {
+  display: none !important;
+}
+
+.page-hover-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0 6px;
+}
+
+.page-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(255, 255, 255, 0.92);
+  color: #333;
+  font-size: 15px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    transform 0.1s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  flex-shrink: 0;
+}
+
+.page-action-btn:hover {
+  background: #fff;
+  transform: scale(1.12);
+}
+
+.page-action-btn.danger:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.page-action-btn.primary:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.page-hover-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.9);
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  margin-top: 2px;
+}
+
+/* Make page-thumbnail position relative for overlay */
+.page-thumbnail {
+  position: relative;
+}
+
+/* =============================================
+   ENHANCED PREVIEW MODAL — BOTTOM NAV BAR
+   ============================================= */
+.preview-bottom-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-radius: 0 0 16px 16px;
+  flex-shrink: 0;
+}
+
+.preview-nav-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+
+.preview-nav-btn:hover:not(:disabled) {
+  background: var(--accent-light);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.preview-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.preview-page-counter {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 72px;
+  text-align: center;
+}
+
+.preview-bottom-divider {
+  width: 1px;
+  height: 26px;
+  background: var(--border-color);
+  margin: 0 4px;
+}
+
+.preview-nav-btn.danger:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #dc2626;
+}
+
+.preview-modal-content {
+  position: relative;
+  width: min(900px, 96vw);
+  height: min(90vh, 900px);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: column;
+}
+
+.preview-canvas-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  justify-content: center; /* center canvas horizontally */
+  align-items: flex-start; /* align to top so tall pages scroll naturally */
+  padding: 24px;
+  background: #2a2a2a;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE FIXES v2
+   ══════════════════════════════════════════════════════════════════ */
+
+/* 1. Icon-only secondary buttons at ≤992px */
+@media (max-width: 992px) {
+  .btn-secondary .btn-text {
+    display: none;
+  }
+  .btn-secondary {
+    padding: 8px 12px;
+    min-width: 40px;
+    justify-content: center;
+    gap: 0;
+  }
+}
+
+/* 2. Left panel at ≤992px — slides over content as a drawer.
+      top/height are set by JS (toggleLeftPanel measures header).
+      z-index must be below sticky header (1002) but above content. */
+@media (max-width: 992px) {
+  .left-panel {
+    position: fixed !important;
+    left: 0;
+    top: 100px; /* JS overrides this precisely */
+    height: calc(100vh - 100px); /* JS overrides this precisely */
+    z-index: 1001 !important; /* below sticky header (1002), above content */
+    width: 300px !important;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.35);
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  /* Shown when NOT collapsed */
+  .left-panel:not(.collapsed) {
+    transform: translateX(0) !important;
+  }
+
+  /* Collapsed = hidden off-screen */
+  .left-panel.collapsed {
+    transform: translateX(-100%) !important;
+  }
+
+  /* Main content always full width — panel is a drawer overlay */
+  .main-content {
+    margin-left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Dark overlay sits between content and drawer */
+  .mobile-overlay {
+    z-index: 1000 !important;
+  }
+}
+
+/* 3. Fix tool-tabs slide panel at ≤768px
+      Starts below the top-bar (~56px). Left panel also adjusted. */
+@media (max-width: 768px) {
+  .tool-tabs {
+    top: 56px !important;
+    height: calc(100vh - 56px) !important;
+    z-index: 1003 !important; /* above sticky header so it truly overlays */
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   STAMP TOOL STYLES  —  append to index.css
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Layout height token — adjust if your sticky header is taller/shorter */
+:root {
+  --stamp-header-h: 100px; /* top-bar (~50px) + tool-tabs (~48px) */
+  --stamp-gap: 16px; /* padding above the stamp layout */
+  --stamp-vh-used: calc(var(--stamp-header-h) + var(--stamp-gap) * 2);
+}
+
+/* Container injected into .main-content */
+#stampContainer {
+  display: none;
+  padding: var(--stamp-gap) var(--stamp-gap) 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Two-column layout — fills remaining viewport height ────────── */
+.stamp-layout {
+  display: flex;
+  gap: 18px;
+  align-items: stretch; /* both columns same height */
+  height: calc(100vh - var(--stamp-vh-used));
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* no outer page scroll */
+}
+
+/* Controls (left) — scrollable internally */
+.stamp-controls-panel {
+  flex: 0 0 320px;
+  max-width: 320px;
+  min-height: 0; /* allows flex child to shrink below content size */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto; /* scrolls its own content */
+  overflow-x: hidden;
+}
+
+/* Preview (right) — toolbar pinned, canvas area scrollable */
+.stamp-preview-panel {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0; /* allows flex child to shrink below content size */
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden; /* clips canvas overflow, toolbar stays pinned */
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Section groups ─────────────────────────────────────────────── */
+.stamp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stamp-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 5px;
+  margin-bottom: 2px;
+}
+
+/* ── Controls helpers ───────────────────────────────────────────── */
+.stamp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.stamp-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  min-width: 72px;
+}
+
+.stamp-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--text-primary);
+  width: 100%;
+  transition: border-color 0.2s;
+}
+.stamp-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+}
+
+.stamp-check {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ── Upload area ────────────────────────────────────────────────── */
+.stamp-upload-area {
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 18px 12px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition:
+    border-color 0.2s,
+    background 0.2s;
+}
+.stamp-upload-area:hover,
+.stamp-upload-area.drag-over {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+  color: var(--accent-color);
+}
+
+/* ── Preset pills ───────────────────────────────────────────────── */
+.stamp-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.stamp-preset-btn {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1.5px solid currentColor;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    color 0.18s;
+}
+.stamp-preset-btn:hover {
+  background: currentColor;
+  color: #fff !important;
+  filter: brightness(1.05);
+}
+
+/* ── Position grid ──────────────────────────────────────────────── */
+.stamp-pos-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 5px;
+  margin-top: 6px;
+}
+
+.stamp-pos-btn {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 16px;
+  padding: 6px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  line-height: 1;
+}
+.stamp-pos-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent-color);
+}
+
+/* ── Apply button ───────────────────────────────────────────────── */
+.stamp-apply-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 8px;
+  margin-top: 4px;
+}
+.stamp-apply-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ── Preview toolbar ────────────────────────────────────────────── */
+.stamp-preview-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.stamp-tool-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+  color: var(--text-primary);
+}
+.stamp-tool-btn:hover {
+  background: var(--accent-light);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* ── Preview canvas scroll area ─────────────────────────────────── */
+.stamp-preview-scroll {
+  flex: 1 1 0; /* fills all space below the toolbar */
+  overflow: auto;
+  background: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  position: relative;
+}
+
+.stamp-preview-canvas-wrap {
+  position: relative;
+  display: inline-block;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+  line-height: 0;
+  cursor: crosshair; /* show crosshair on the whole wrap, not just overlay */
+}
+
+#stampBaseCanvas {
+  display: block;
+}
+
+#stampOverlayCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  cursor: crosshair;
+}
+
+.stamp-preview-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  text-align: center;
+  pointer-events: none;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .stamp-layout {
+    flex-direction: column;
+    height: auto; /* allow natural height on mobile */
+    overflow: visible;
+  }
+  .stamp-controls-panel {
+    flex: none;
+    max-width: 100%;
+    width: 100%;
+    max-height: 60vh; /* cap controls on mobile */
+    overflow-y: auto;
+  }
+  .stamp-preview-panel {
+    height: 70vh; /* fixed height for preview on mobile */
+  }
+}
+
+/* ── Mode toggle (Simple / Official) ───────────────────────────── */
+.stamp-mode-toggle {
+  display: flex;
+  gap: 6px;
+}
+
+.stamp-mode-btn {
+  flex: 1;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.18s;
+  white-space: nowrap;
+}
+.stamp-mode-btn:hover {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+.stamp-mode-btn.active {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: #fff;
+}
+
+/* ── Print button ───────────────────────────────────────────────── */
+.stamp-print-btn {
+  background: var(--bg-secondary);
+  border: 1.5px solid var(--accent-color);
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 10px 12px;
+  transition: all 0.18s;
+}
+.stamp-print-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+  color: #fff;
+}
+.stamp-print-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  border-color: var(--border-color);
+  color: var(--text-secondary);
+}
