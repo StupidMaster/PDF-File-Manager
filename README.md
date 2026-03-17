@@ -356,4 +356,3 @@ For issues and feature requests, please refer to the documentation or contact su
 
 ## Version
 Version 1.0.0 - Initial Release
- 
