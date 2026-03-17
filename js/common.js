@@ -182,15 +182,51 @@ function downloadFile(base64Content, filename) {
     URL.revokeObjectURL(url);
 }
 
-// Close modals with Escape key
+// Close modals with Escape key / confirm with Space
 document.addEventListener('keydown', function(e) {
+
+    const confirmModal      = document.getElementById('confirmModal');
+    const notificationModal = document.getElementById('notificationModal');
+    const confirmOpen       = confirmModal      && confirmModal.classList.contains('show');
+    const notifOpen         = notificationModal && notificationModal.classList.contains('show');
+
+    // ── Escape = Cancel / Close ───────────────────────────────────────────────
     if (e.key === 'Escape') {
-        closeNotification();
-        const confirmModal = document.getElementById('confirmModal');
-        if (confirmModal) confirmModal.classList.remove('show');
-        const toolTabs = document.getElementById('toolTabs');
-        if (toolTabs && toolTabs.classList.contains('show')) {
-            toggleMobileMenu();
+        if (confirmOpen) {
+            e.preventDefault();
+            // Click Cancel button so its event handler runs cleanly
+            const cancelBtn = document.getElementById('confirmCancelBtn');
+            if (cancelBtn) cancelBtn.click();
+            else confirmModal.classList.remove('show');
+        } else if (notifOpen) {
+            e.preventDefault();
+            closeNotification();
+        } else {
+            const toolTabs = document.getElementById('toolTabs');
+            if (toolTabs && toolTabs.classList.contains('show')) {
+                toggleMobileMenu();
+            }
+        }
+    }
+
+    // ── Space = OK / Confirm ──────────────────────────────────────────────────
+    if (e.key === ' ') {
+        // Don't hijack Space if user is typing in a text input/textarea
+        const el  = document.activeElement;
+        const tag = el && el.tagName;
+        const type = el && el.type && el.type.toLowerCase();
+        const isTextInput = (tag === 'TEXTAREA') ||
+                            (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' && type !== 'button' && type !== 'submit') ||
+                            (tag === 'SELECT');
+        if (isTextInput) return;
+
+        if (confirmOpen) {
+            e.preventDefault();
+            const okBtn = document.getElementById('confirmOkBtn');
+            if (okBtn) okBtn.click();
+        } else if (notifOpen) {
+            e.preventDefault();
+            closeNotification();
         }
     }
 

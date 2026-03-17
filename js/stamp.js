@@ -318,7 +318,7 @@
                 </div>
               </div>
 
-              <div class="stamp-section stamp-apply-pages-section" id="simpleApplyPages">
+              <div class="stamp-section stamp-apply-pages-section" id="simpleApplyPages" style="display:none">
               <br>
                 <div class="stamp-section-title">📋 Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
@@ -414,7 +414,7 @@
                 </div>
               </div>
 
-              <div class="stamp-section stamp-apply-pages-section" id="fmtApplyPages">
+              <div class="stamp-section stamp-apply-pages-section" id="fmtApplyPages" style="display:none">
               <br>
                 <div class="stamp-section-title">📋 Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
@@ -507,7 +507,7 @@
                 </div>
               </div>
 
-              <div class="stamp-section stamp-apply-pages-section" id="sealApplyPages">
+              <div class="stamp-section stamp-apply-pages-section" id="sealApplyPages" style="display:none">
               <br>
                 <div class="stamp-section-title">📋 Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
@@ -710,6 +710,37 @@
         await page.render({ canvasContext: base.getContext('2d'), viewport }).promise;
         document.getElementById('stampPageIndicator').textContent = `Page ${stampPreviewPage} / ${stampTotalPages}`;
 
+        // Update Apply to Pages visibility based on page count
+        const modes = [
+            { sectionId: 'simpleApplyPages', rangeRowId: 'stampRangeRow' },
+            { sectionId: 'fmtApplyPages',    rangeRowId: 'fmtRangeRow'   },
+            { sectionId: 'sealApplyPages',   rangeRowId: 'sealRangeRow'  },
+        ];
+        modes.forEach(function(m) {
+            const section  = document.getElementById(m.sectionId);
+            const rangeRow = document.getElementById(m.rangeRowId);
+            if (!section) return;
+            if (stampTotalPages <= 1) {
+                section.style.display = 'none';
+            } else if (stampTotalPages === 2) {
+                section.style.display = '';
+                const rangeLbl = section.querySelector('input[value="range"]')?.closest('label');
+                if (rangeLbl) rangeLbl.style.display = 'none';
+                const rangeRadio = section.querySelector('input[value="range"]');
+                if (rangeRadio && rangeRadio.checked) {
+                    const allRadio = section.querySelector('input[value="all"]');
+                    if (allRadio) { allRadio.checked = true; allRadio.dispatchEvent(new Event('change')); }
+                }
+                if (rangeRow) rangeRow.style.display = 'none';
+            } else {
+                section.style.display = '';
+                const rangeLbl = section.querySelector('input[value="range"]')?.closest('label');
+                if (rangeLbl) rangeLbl.style.display = '';
+                const rangeRadio = section.querySelector('input[value="range"]');
+                if (rangeRow) rangeRow.style.display = (rangeRadio && rangeRadio.checked) ? 'flex' : 'none';
+            }
+        });
+
         // Show per-page checkbox only when more than 1 page
         const lbl = document.getElementById('pageOverrideLabel');
         const chk = document.getElementById('pageOverrideChk');
@@ -867,11 +898,13 @@
                 const orientSel = document.getElementById('stampOnlyOrient');
                 if (orientSel) orientSel.style.display = 'none';
 
-                // Restore Apply to Pages sections
-                ['simpleApplyPages','fmtApplyPages','sealApplyPages'].forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.style.display = '';
-                });
+                // Restore Apply to Pages — only show if PDF loaded with 2+ pages
+                if (!hasPdf || stampTotalPages <= 1) {
+                    ['simpleApplyPages','fmtApplyPages','sealApplyPages'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.style.display = 'none';
+                    });
+                }
 
                 if (hasPdf) {
                     // Restore PDF preview — await it then force overlay redraw
@@ -971,6 +1004,11 @@
         const bCtx = base.getContext('2d');
         bCtx.fillStyle = '#ffffff';
         bCtx.fillRect(0, 0, cW, cH);
+
+        // Subtle page border so user can see paper edges
+        bCtx.strokeStyle = '#cbd5e1';
+        bCtx.lineWidth = 2;
+        bCtx.strokeRect(1, 1, cW - 2, cH - 2);
 
         // Hide empty state
         if (emptyDiv) emptyDiv.style.display = 'none';
@@ -1338,7 +1376,7 @@
 <svg width="100%" viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg"
      style="font-family:Arial,sans-serif;max-width:380px;display:block;margin:0 auto">
 
-  <!-- STEP 1: Printed landscape doc (face-down, right edge first) -->
+  <!-- STEP 1: Printed landscape doc face-down -->
   <text x="36" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">① Printed doc</text>
   <text x="36" y="21" font-size="7" fill="var(--text-secondary)" text-anchor="middle">(face-down)</text>
   <rect x="4" y="28" width="64" height="44" rx="3" fill="white" stroke="var(--accent-color)" stroke-width="1.5"/>
@@ -1349,50 +1387,49 @@
   <text x="60" y="43" font-size="6" font-weight="700" fill="var(--accent-color)" text-anchor="middle">M</text>
   <text x="36" y="83" font-size="7" fill="var(--text-secondary)" text-anchor="middle">LEFT — RIGHT</text>
 
-  <!-- Arrow 1 -->
+  <!-- Arrow 1 — rotate CCW -->
   <path d="M76 50 L90 50" stroke="var(--text-secondary)" stroke-width="1.5" fill="none"/>
   <path d="M87 46 L92 50 L87 54" fill="var(--text-secondary)"/>
-  <text x="83" y="45" font-size="7" fill="var(--text-secondary)" text-anchor="middle">flip ↕</text>
+  <text x="83" y="45" font-size="7" fill="var(--text-secondary)" text-anchor="middle">↺ CCW</text>
 
-  <!-- STEP 2: After vertical flip -->
-  <text x="122" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">② After flip</text>
-  <text x="122" y="21" font-size="7" fill="var(--text-secondary)" text-anchor="middle">(face-up)</text>
-  <rect x="90" y="28" width="64" height="44" rx="3" fill="white" stroke="#22c55e" stroke-width="1.5"/>
-  <path d="M96 40 Q108 37 120 40 Q132 43 144 40" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <path d="M96 50 Q108 47 120 50 Q132 53 144 50" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <path d="M96 60 Q108 57 120 60 Q132 63 144 60" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <circle cx="94" cy="60" r="6" fill="var(--accent-color)" opacity="0.35" stroke="var(--accent-color)" stroke-width="1.5"/>
-  <text x="94" y="63" font-size="6" font-weight="700" fill="var(--accent-color)" text-anchor="middle">M</text>
-  <text x="122" y="83" font-size="7" fill="#22c55e" font-weight="700" text-anchor="middle">RIGHT → in first</text>
-  <line x1="152" x2="152" y1="28" y2="72" stroke="#22c55e" stroke-width="1.5"/>
+  <!-- STEP 2: After 90° CCW rotation — now portrait, face-up -->
+  <text x="122" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">② Rotate 90° CCW</text>
+  <text x="122" y="21" font-size="7" fill="var(--text-secondary)" text-anchor="middle">(face-up, portrait)</text>
+  <rect x="98" y="18" width="48" height="66" rx="3" fill="white" stroke="#22c55e" stroke-width="1.5"/>
+  <path d="M104 30 Q112 27 120 30 Q128 33 136 30" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <path d="M104 42 Q112 39 120 42 Q128 45 136 42" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <path d="M104 54 Q112 51 120 54 Q128 57 136 54" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <circle cx="136" cy="72" r="6" fill="var(--accent-color)" opacity="0.35" stroke="var(--accent-color)" stroke-width="1.5"/>
+  <text x="136" y="75" font-size="6" font-weight="700" fill="var(--accent-color)" text-anchor="middle">M</text>
+  <line x1="98" x2="146" y1="84" y2="84" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="122" y="94" font-size="7" fill="#22c55e" font-weight="700" text-anchor="middle">BOTTOM → in first</text>
 
   <!-- Arrow 2 -->
-  <path d="M162 50 L176 50" stroke="var(--text-secondary)" stroke-width="1.5" fill="none"/>
-  <path d="M173 46 L178 50 L173 54" fill="var(--text-secondary)"/>
-  <text x="169" y="45" font-size="7" fill="var(--text-secondary)" text-anchor="middle">feed</text>
+  <path d="M155 50 L169 50" stroke="var(--text-secondary)" stroke-width="1.5" fill="none"/>
+  <path d="M166 46 L171 50 L166 54" fill="var(--text-secondary)"/>
+  <text x="162" y="45" font-size="7" fill="var(--text-secondary)" text-anchor="middle">feed</text>
 
-  <!-- STEP 3: Feeding landscape — right edge goes in first -->
-  <text x="218" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">③ Feed into printer</text>
-  <!-- Printer (rotated slot for landscape) -->
-  <rect x="186" y="60" width="64" height="22" rx="4" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1.5"/>
-  <rect x="194" y="65" width="48" height="4" rx="2" fill="var(--border-color)"/>
-  <!-- Paper above, landscape orientation -->
-  <rect x="186" y="26" width="64" height="38" rx="2" fill="white" stroke="#22c55e" stroke-width="1.5"/>
-  <path d="M192 36 Q204 33 216 36 Q228 39 240 36" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <path d="M192 46 Q204 43 216 46 Q228 49 240 46" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <path d="M192 56 Q204 53 216 56 Q228 59 240 56" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
-  <circle cx="190" cy="56" r="5" fill="var(--accent-color)" opacity="0.35" stroke="var(--accent-color)" stroke-width="1.5"/>
-  <text x="190" y="59" font-size="5" font-weight="700" fill="var(--accent-color)" text-anchor="middle">M</text>
-  <line x1="186" x2="186" y1="26" y2="62" stroke="#22c55e" stroke-width="1.5"/>
-  <text x="186" y="24" font-size="6" font-weight="700" fill="#22c55e" text-anchor="middle">→ in</text>
-  <path d="M218 80 L218 90" stroke="var(--accent-color)" stroke-width="1.5" stroke-dasharray="3,2"/>
-  <path d="M214 88 L218 93 L222 88" fill="var(--accent-color)"/>
+  <!-- STEP 3: Feed portrait into printer — BOTTOM edge first -->
+  <text x="210" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">③ Feed into printer</text>
+  <rect x="178" y="60" width="64" height="22" rx="4" fill="var(--bg-secondary)" stroke="var(--border-color)" stroke-width="1.5"/>
+  <rect x="186" y="65" width="48" height="4" rx="2" fill="var(--border-color)"/>
+  <text x="210" y="75" font-size="6" fill="var(--text-secondary)" text-anchor="middle">PRINTER</text>
+  <rect x="186" y="16" width="48" height="46" rx="2" fill="white" stroke="#22c55e" stroke-width="1.5"/>
+  <path d="M192 26 Q200 23 208 26 Q216 29 224 26" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <path d="M192 36 Q200 33 208 36 Q216 39 224 36" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <path d="M192 46 Q200 43 208 46 Q216 49 224 46" stroke="var(--border-color)" stroke-width="1.5" fill="none"/>
+  <circle cx="224" cy="54" r="5" fill="var(--accent-color)" opacity="0.35" stroke="var(--accent-color)" stroke-width="1.5"/>
+  <text x="224" y="57" font-size="5" font-weight="700" fill="var(--accent-color)" text-anchor="middle">M</text>
+  <line x1="186" x2="234" y1="62" y2="62" stroke="#22c55e" stroke-width="1.5"/>
+  <text x="210" y="60" font-size="6" font-weight="700" fill="#22c55e" text-anchor="middle">BOTTOM ↓</text>
+  <path d="M210 82 L210 90" stroke="var(--accent-color)" stroke-width="1.5" stroke-dasharray="3,2"/>
+  <path d="M206 88 L210 93 L214 88" fill="var(--accent-color)"/>
 
   <!-- Arrow 3 -->
-  <path d="M254 50 L268 50" stroke="var(--text-secondary)" stroke-width="1.5" fill="none"/>
-  <path d="M265 46 L270 50 L265 54" fill="var(--text-secondary)"/>
+  <path d="M246 50 L260 50" stroke="var(--text-secondary)" stroke-width="1.5" fill="none"/>
+  <path d="M257 46 L262 50 L257 54" fill="var(--text-secondary)"/>
 
-  <!-- STEP 4: Output -->
+  <!-- STEP 4: Output — landscape, stamp correct -->
   <text x="316" y="12" font-size="8" font-weight="700" fill="var(--text-secondary)" text-anchor="middle">④ Output ✓</text>
   <text x="316" y="21" font-size="7" fill="#22c55e" text-anchor="middle">Stamp correct!</text>
   <rect x="284" y="28" width="64" height="44" rx="3" fill="white" stroke="#22c55e" stroke-width="2"/>
@@ -1406,8 +1443,8 @@
             descEl.innerHTML =
                 `<strong>Step-by-step (Landscape):</strong><br>
                 ① Your original document was printed <em>face-down</em> in landscape.<br>
-                ② Flip it vertically (top-to-bottom) so it's now <em>face-up</em>.<br>
-                ③ Feed the paper <strong>face-up</strong> with the <strong>RIGHT edge going in first</strong> (long side into the printer).<br>
+                ② <strong>Rotate it 90° counter-clockwise</strong> — it becomes portrait-shaped, now face-up.<br>
+                ③ Feed <strong>face-up</strong> into the printer with the <strong>BOTTOM edge going in first</strong>.<br>
                 ④ The stamp prints exactly where you placed it in the preview. ✅`;
         }
     }
@@ -1415,13 +1452,11 @@
     window.executePrintStampOnly = function () {
         const sizeKey    = document.getElementById('psoPageSize')?.value || 'A4';
         const orient     = document.querySelector('input[name="psoOrient"]:checked')?.value || 'portrait';
-        const copies     = Math.max(1, Math.min(20, parseInt(document.getElementById('psoCopies')?.value) || 1));
-        const compensate = document.getElementById('psoCompensate')?.checked || false;
+        const copies  = Math.max(1, Math.min(20, parseInt(document.getElementById('psoCopies')?.value) || 1));
 
         let { w: ptW, h: ptH } = PAGE_SIZES[sizeKey];
         if (orient === 'landscape') { [ptW, ptH] = [ptH, ptW]; }
 
-        // Render stamp onto a high-res canvas
         const SCALE  = 2.0;
         const cW     = Math.round(ptW * SCALE);
         const cH     = Math.round(ptH * SCALE);
@@ -1429,7 +1464,6 @@
         canvas.width  = cW;
         canvas.height = cH;
         const ctx = canvas.getContext('2d');
-
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, cW, cH);
 
@@ -1439,55 +1473,20 @@
         else if (stampMode === 'seal') readSealSettings();
         else readStampSettings();
 
-        if (compensate) {
-            // ── Compensate for 90° feed rotation ─────────────────────────────
-            // The paper goes through the printer rotated 90° CCW, so we
-            // pre-rotate the canvas 90° CW to counteract it.
-            // Draw onto a temp canvas first, then rotate it onto the final canvas.
-            const tmp = document.createElement('canvas');
-            tmp.width  = cW;
-            tmp.height = cH;
-            const tCtx = tmp.getContext('2d');
-            tCtx.fillStyle = '#ffffff';
-            tCtx.fillRect(0, 0, cW, cH);
-
-            if (copies === 1) {
-                drawStampOnCanvas(tCtx, cW, cH, now);
-            } else {
-                const cols = Math.ceil(Math.sqrt(copies));
-                const rows = Math.ceil(copies / cols);
-                let drawn  = 0;
-                for (let r = 0; r < rows && drawn < copies; r++) {
-                    for (let c = 0; c < cols && drawn < copies; c++) {
-                        const posX = ((c + 0.5) / cols) * 100;
-                        const posY = ((r + 0.5) / rows) * 100;
-                        drawStampOnCanvasAt(tCtx, cW, cH, now, posX, posY);
-                        drawn++;
-                    }
-                }
-            }
-
-            // Rotate 90° CW: translate to center, rotate, draw temp canvas
-            ctx.save();
-            ctx.translate(cW / 2, cH / 2);
-            ctx.rotate(Math.PI / 2);   // 90° clockwise
-            ctx.drawImage(tmp, -cH / 2, -cW / 2, cH, cW);
-            ctx.restore();
-
+        // Draw stamp exactly as shown in preview — no rotation.
+        // What you see in the canvas is what prints.
+        if (copies === 1) {
+            drawStampOnCanvas(ctx, cW, cH, now);
         } else {
-            if (copies === 1) {
-                drawStampOnCanvas(ctx, cW, cH, now);
-            } else {
-                const cols = Math.ceil(Math.sqrt(copies));
-                const rows = Math.ceil(copies / cols);
-                let drawn  = 0;
-                for (let r = 0; r < rows && drawn < copies; r++) {
-                    for (let c = 0; c < cols && drawn < copies; c++) {
-                        const posX = ((c + 0.5) / cols) * 100;
-                        const posY = ((r + 0.5) / rows) * 100;
-                        drawStampOnCanvasAt(ctx, cW, cH, now, posX, posY);
-                        drawn++;
-                    }
+            const cols = Math.ceil(Math.sqrt(copies));
+            const rows = Math.ceil(copies / cols);
+            let drawn  = 0;
+            for (let r = 0; r < rows && drawn < copies; r++) {
+                for (let c = 0; c < cols && drawn < copies; c++) {
+                    const posX = ((c + 0.5) / cols) * 100;
+                    const posY = ((r + 0.5) / rows) * 100;
+                    drawStampOnCanvasAt(ctx, cW, cH, now, posX, posY);
+                    drawn++;
                 }
             }
         }
