@@ -32,7 +32,7 @@
         color: '#1a2a6c', opacity: 1.0,
         positionX: 50, positionY: 50,
         applyPages: 'all', pageRange: '',
-        scale: 0.6,
+        scale: 0.45,
         transparentBg: true
     };
 
@@ -143,7 +143,7 @@
             color: '#1a2a6c', opacity: 1.0,
             positionX: 50, positionY: 50,
             applyPages: 'all', pageRange: '',
-            scale: 0.6, transparentBg: true
+            scale: 0.45, transparentBg: true
         };
 
         sealSettings = {
@@ -1760,7 +1760,7 @@
         fmtSettings.institution   =  g('fmtInstitution')?.value  || '';
         fmtSettings.color         =  g('fmtColor')?.value        || '#1a2a6c';
         fmtSettings.opacity       =  parseFloat(g('fmtOpacity')?.value)  || 1.0;
-        fmtSettings.scale         =  parseFloat(g('fmtScale')?.value)    || 0.6;
+        fmtSettings.scale         =  parseFloat(g('fmtScale')?.value)    || 0.45;
         fmtSettings.showDate      =  g('fmtShowDate')?.checked   ?? true;
         fmtSettings.showTime      =  g('fmtShowTime')?.checked   ?? true;
         fmtSettings.transparentBg =  g('fmtTransparent')?.checked ?? true;
