@@ -65,6 +65,7 @@
 
     // ─── Stamp-only mode (no PDF) ─────────────────────────────────────────────
     let stampOnlyMode = false;   // true when "Print Stamp Only" checkbox is checked
+    let stampOnlyLastSize = 'A4'; // remembers last paper size used this session
 
     // ─── Presets ──────────────────────────────────────────────────────────────
     const PRESETS = [
@@ -801,23 +802,22 @@
 
     function refreshOverlay() {
         if (stampOnlyMode) {
-            // In stamp-only mode, always re-render the blank canvas preview
             renderStampOnlyPreview();
             saveStampSettings();
+            // Also refresh modal preview if open
+            if (document.getElementById('printStampOnlyModal')) renderPsoPreview();
             return;
         }
         const c = document.getElementById('stampOverlayCanvas');
         if (c && stampPdfDoc) {
-            // Only save override if this page's checkbox is actually checked AND
-            // an override entry already exists for this page.
-            // Using the real DOM state instead of the stale pageOverrideActive flag
-            // prevents a navigated-away custom page from bleeding into other pages.
             const chk = document.getElementById('pageOverrideChk');
             if (chk && chk.checked && pageOverrides[stampPreviewPage]) {
                 saveCurrentPageOverride();
             }
             drawStampOverlay(c, c.width, c.height);
         }
+        // Also refresh modal preview if open
+        if (document.getElementById('printStampOnlyModal')) renderPsoPreview();
         saveStampSettings();
     }
 
@@ -1155,12 +1155,11 @@
     }
 
     window.openPrintStampOnly = function () {
-        // Build the modal HTML
         const existing = document.getElementById('printStampOnlyModal');
         if (existing) existing.remove();
 
         const sizeOptions = Object.entries(PAGE_SIZES)
-            .map(([k, v]) => `<option value="${k}">${v.label}</option>`).join('');
+            .map(([k, v]) => `<option value="${k}" ${k === stampOnlyLastSize ? 'selected' : ''}>${v.label}</option>`).join('');
 
         const modal = document.createElement('div');
         modal.id = 'printStampOnlyModal';
@@ -1168,80 +1167,132 @@
             position:fixed;inset:0;z-index:9999;
             background:rgba(0,0,0,0.55);
             display:flex;align-items:center;justify-content:center;
+            padding:16px;
         `;
         modal.innerHTML = `
           <div style="
             background:var(--bg-secondary);
             border:1px solid var(--border-color);
             border-radius:12px;
-            padding:24px;
-            width:min(440px,94vw);
+            padding:0;
+            width:min(900px,99vw);
+            max-height:92vh;
             box-shadow:var(--shadow-md);
-            display:flex;flex-direction:column;gap:14px;
+            display:flex;flex-direction:column;
+            overflow:hidden;
           ">
-            <div style="font-size:16px;font-weight:700;color:var(--text-primary)">🖨️ Print Stamp Only</div>
-            <div style="font-size:12px;color:var(--text-secondary)">
-              Prints the stamp on a blank page — no PDF needed.<br>
-              Use this to stamp an already-printed document.
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Paper Size</label>
-              <select id="psoPageSize" class="stamp-input" style="width:100%">
-                ${sizeOptions}
-              </select>
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Orientation</label>
-              <div style="display:flex;gap:8px">
-                <label class="stamp-check" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">
-                  <input type="radio" name="psoOrient" value="portrait" checked> Portrait
-                </label>
-                <label class="stamp-check" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">
-                  <input type="radio" name="psoOrient" value="landscape"> Landscape
-                </label>
+            <!-- Header -->
+            <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border-color);flex-shrink:0">
+              <div style="font-size:16px;font-weight:700;color:var(--text-primary)">🖨️ Print Stamp Only</div>
+              <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">
+                Prints the stamp on a blank page — use this to stamp an already-printed document.
               </div>
             </div>
 
-            <!-- Paper feed guide — updates when orientation changes -->
-            <div id="psoFeedGuide" style="
-                background:var(--bg-tertiary);
-                border:1px solid var(--border-color);
-                border-radius:8px;
-                padding:14px 16px;
-                display:flex;
-                flex-direction:column;
-                gap:10px;
+            <!-- Body: left settings + right preview -->
+            <div style="display:flex;flex:1;min-height:0;overflow:hidden">
+
+              <!-- LEFT: Settings -->
+              <div style="
+                flex:0 0 500px;
+                display:flex;flex-direction:column;gap:14px;
+                padding:18px 20px;
+                overflow-y:auto;
+                border-right:1px solid var(--border-color);
+              ">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Paper Size</label>
+                  <select id="psoPageSize" class="stamp-input" style="width:100%">
+                    ${sizeOptions}
+                  </select>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Orientation</label>
+                  <div style="display:flex;gap:8px">
+                    <label class="stamp-check" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">
+                      <input type="radio" name="psoOrient" value="portrait" checked> Portrait
+                    </label>
+                    <label class="stamp-check" style="flex:1;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">
+                      <input type="radio" name="psoOrient" value="landscape"> Landscape
+                    </label>
+                  </div>
+                </div>
+
+                <!-- Paper feed guide -->
+                <div id="psoFeedGuide" style="
+                    background:var(--bg-tertiary);
+                    border:1px solid var(--border-color);
+                    border-radius:8px;
+                    padding:12px 14px;
+                    display:flex;flex-direction:column;gap:8px;
+                ">
+                  <div style="font-size:12px;font-weight:700;color:var(--text-primary)" id="psoFeedTitle">📄 Portrait — How to Feed the Paper</div>
+                  <div id="psoFeedSvg" style="width:100%;overflow-x:auto"></div>
+                  <div style="font-size:11px;color:var(--text-secondary);line-height:1.6" id="psoFeedDesc"></div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Copies (stamps per page)</label>
+                  <input type="number" id="psoCopies" class="stamp-input" value="1" min="1" max="20" style="width:80px">
+                  <div style="font-size:11px;color:var(--text-secondary)">Multiple copies tile the stamp evenly across the page.</div>
+                </div>
+              </div>
+
+              <!-- RIGHT: Live preview -->
+              <div style="
+                flex:1;min-width:0;
+                display:flex;flex-direction:column;
+                background:#6b7280;
+                position:relative;
+              ">
+                <div style="
+                  font-size:11px;font-weight:600;
+                  color:rgba(255,255,255,0.7);
+                  padding:8px 12px;
+                  background:rgba(0,0,0,0.25);
+                  letter-spacing:0.4px;
+                  flex-shrink:0;
+                ">PREVIEW — updates as you adjust stamp settings</div>
+                <div style="
+                  flex:1;min-height:0;
+                  overflow:auto;
+                  display:flex;align-items:center;justify-content:center;
+                  padding:16px;
+                " id="psoPreviewScroll">
+                  <div style="position:relative;display:inline-block;line-height:0;box-shadow:0 4px 24px rgba(0,0,0,0.4)">
+                    <canvas id="psoBaseCanvas"></canvas>
+                    <canvas id="psoOverlayCanvas" style="position:absolute;top:0;left:0"></canvas>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Footer buttons -->
+            <div style="
+              padding:14px 20px;
+              border-top:1px solid var(--border-color);
+              display:flex;gap:8px;
+              flex-shrink:0;
             ">
-              <div style="font-size:12px;font-weight:700;color:var(--text-primary)" id="psoFeedTitle">📄 Portrait — How to Feed the Paper</div>
-              <div id="psoFeedSvg" style="width:100%;overflow-x:auto"></div>
-              <div style="font-size:11px;color:var(--text-secondary);line-height:1.6" id="psoFeedDesc"></div>
-            </div>
-
-            <div style="display:flex;flex-direction:column;gap:8px">
-              <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Copies (stamps per page)</label>
-              <input type="number" id="psoCopies" class="stamp-input" value="1" min="1" max="20" style="width:80px">
-              <div style="font-size:11px;color:var(--text-secondary)">Multiple copies tile the stamp evenly across the page.</div>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:4px">
-              <button onclick="executePrintStampOnly()" class="btn btn-primary" style="flex:1; text-align:center; justify-content: center;">🖨️ Print</button>
-              <button onclick="document.getElementById('printStampOnlyModal').remove()" class="btn" style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border-color);color:var(--text-primary);text-align:center; justify-content: center;">Cancel</button>
+              <button onclick="executePrintStampOnly()" class="btn btn-primary" style="flex:1;justify-content:center;">🖨️ Print</button>
+              <button onclick="document.getElementById('printStampOnlyModal').remove()" class="btn" style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border-color);color:var(--text-primary);justify-content:center;">Cancel</button>
             </div>
           </div>
         `;
         document.body.appendChild(modal);
 
-        // Pre-select orientation from the toolbar dropdown
+        // Restore orientation from toolbar
         const toolbarOrient = document.getElementById('stampOnlyOrient')?.value || 'portrait';
         const radioToCheck  = modal.querySelector(`input[name="psoOrient"][value="${toolbarOrient}"]`);
         if (radioToCheck) radioToCheck.checked = true;
 
-        // Draw the initial feed guide
+        // Draw initial feed guide and preview
         updateFeedGuide(toolbarOrient);
+        renderPsoPreview();
 
-        // When orientation changes in modal → update toolbar dropdown + re-render preview + guide
+        // Orientation change → update toolbar, main preview, feed guide, modal preview
         modal.querySelectorAll('input[name="psoOrient"]').forEach(radio => {
             radio.addEventListener('change', function () {
                 const orientSel = document.getElementById('stampOnlyOrient');
@@ -1250,14 +1301,17 @@
                     stampOnlyOrientChange();
                 }
                 updateFeedGuide(this.value);
+                renderPsoPreview();
             });
         });
 
-        // When paper size changes in modal → re-render preview with new size
+        // Paper size change → save as last used, update main + modal preview
         const pageSizeSelect = modal.querySelector('#psoPageSize');
         if (pageSizeSelect) {
             pageSizeSelect.addEventListener('change', function () {
+                stampOnlyLastSize = this.value;  // remember for next open
                 renderStampOnlyPreview();
+                renderPsoPreview();
             });
         }
 
@@ -1266,6 +1320,61 @@
             if (e.target === modal) modal.remove();
         });
     };
+
+    // ─── Render the modal's own preview canvas ────────────────────────────────
+    function renderPsoPreview() {
+        const sizeKey = document.getElementById('psoPageSize')?.value || stampOnlyLastSize;
+        const orient  = document.querySelector('input[name="psoOrient"]:checked')?.value || 'portrait';
+        const size    = PAGE_SIZES[sizeKey] || PAGE_SIZES['A4'];
+
+        let ptW = size.w, ptH = size.h;
+        if (orient === 'landscape') { [ptW, ptH] = [ptH, ptW]; }
+
+        // Scale to fit within the preview area (max ~340px on the short side)
+        const maxDim = 340;
+        const fitScale = Math.min(maxDim / ptW, maxDim / ptH, 0.6);
+        const cW = Math.round(ptW * fitScale);
+        const cH = Math.round(ptH * fitScale);
+
+        const base = document.getElementById('psoBaseCanvas');
+        const over = document.getElementById('psoOverlayCanvas');
+        if (!base || !over) return;
+
+        base.width  = over.width  = cW;
+        base.height = over.height = cH;
+
+        // White background + border
+        const bCtx = base.getContext('2d');
+        bCtx.fillStyle = '#ffffff';
+        bCtx.fillRect(0, 0, cW, cH);
+        bCtx.strokeStyle = '#cbd5e1';
+        bCtx.lineWidth = 1.5;
+        bCtx.strokeRect(1, 1, cW - 2, cH - 2);
+
+        // Draw stamp overlay — reuse existing draw logic at the modal's scale
+        drawStampOverlayOnCanvas(over, cW, cH);
+    }
+
+    // Draw the stamp onto any canvas at any size (used by both main preview and modal preview)
+    function drawStampOverlayOnCanvas(canvas, w, h) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, w, h);
+        const now = new Date();
+        if (stampMode === 'formatted') {
+            readFmtSettings();
+            drawFormattedStamp(ctx, w, h, fmtSettings, now);
+        } else if (stampMode === 'seal') {
+            readSealSettings();
+            drawCircularSeal(ctx, w, h, sealSettings, now);
+        } else {
+            readStampSettings();
+            const ratio = w / 595;
+            drawSimpleStamp(ctx, w, h, Object.assign({}, stampSettings, {
+                fontSize:    stampSettings.fontSize    * ratio,
+                borderWidth: stampSettings.borderWidth * ratio
+            }));
+        }
+    }
 
     // ─── Paper feed guide diagram ─────────────────────────────────────────────
     // Based on the actual printer behavior:
