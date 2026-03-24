@@ -3105,6 +3105,7 @@ body {
   color: var(--text-secondary);
 }
 
+/* ── Toast Notification ─────────────────────────────────────────────────────── */
 /* ── Toast Stack ─────────────────────────────────────────────────────────── */
 #toast-container {
   position: fixed;
@@ -3153,4 +3154,3 @@ body {
     opacity 0.4s ease,
     transform 0.4s ease;
 }
-
