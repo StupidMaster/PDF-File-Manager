@@ -3105,48 +3105,52 @@ body {
   color: var(--text-secondary);
 }
 
-/* ── Toast Notification ─────────────────────────────────────────────────────── */
-.toast {
-  visibility: hidden;
-  min-width: 250px;
-  margin-left: -125px;
+/* ── Toast Stack ─────────────────────────────────────────────────────────── */
+#toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  flex-direction: column-reverse; /* newest toast appears on top */
+  align-items: center;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.toast-item {
+  pointer-events: all;
+  min-width: 220px;
+  max-width: 360px;
   background-color: #333;
   color: #fff;
   text-align: center;
-  border-radius: 4px;
-  padding: 16px;
-  position: fixed;
-  z-index: 1;
-  left: 50%;
-  bottom: 30px;
-  font-size: 17px;
+  border-radius: 6px;
+  padding: 12px 18px;
+  font-size: 15px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  user-select: none;
+
+  /* enter: slide up + fade in */
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
-.toast.show {
-  visibility: visible;
-  animation:
-    fadein 0.5s,
-    fadeout 0.5s 2.5s;
+.toast-item.show {
+  opacity: 1;
+  transform: translateY(0);
 }
 
-@keyframes fadein {
-  from {
-    bottom: 0;
-    opacity: 0;
-  }
-  to {
-    bottom: 30px;
-    opacity: 1;
-  }
+.toast-item.hide {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
 }
 
-@keyframes fadeout {
-  from {
-    bottom: 30px;
-    opacity: 1;
-  }
-  to {
-    bottom: 0;
-    opacity: 0;
-  }
-}
