@@ -294,9 +294,9 @@
                   <span style="font-size:12px;color:var(--text-secondary)">°</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange()"> <b>Bold</b></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange()"> <i>Italic</i></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange()"> Border</label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Bold enabled' : '❌ Bold disabled')"> <b>Bold</b></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Italic enabled' : '❌ Italic disabled')"> <i>Italic</i></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Border enabled' : '❌ Border disabled')"> Border</label>
                 </div>
               </div>
 
@@ -314,7 +314,7 @@
                   <span id="stampPosYVal" style="width:36px;text-align:right">${stampSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('simplePosGrid').style.display=this.checked?'grid':'none'">
+                  <input type="checkbox" onchange="document.getElementById('simplePosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="simplePosGrid" class="stamp-pos-grid" style="display:none">
@@ -390,9 +390,9 @@
                   <span style="font-size:12px;color:var(--text-secondary)">%</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange()"> Show Date</label>
-                  <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange()"> Show Time</label>
-                  <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange()"> Transparent BG</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show Date</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🕐 Time shown' : '🕐 Time hidden')"> Show Time</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🪟 Transparent BG on' : '🪟 Transparent BG off')"> Transparent BG</label>
                   <label class="stamp-check" title="Convert the PDF page to grayscale — stamp color is preserved">
                     <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked)"> Grayscale PDF
                   </label>
@@ -413,7 +413,7 @@
                   <span id="fmtPosYVal" style="width:36px;text-align:right">${fmtSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('fmtPosGrid').style.display=this.checked?'grid':'none'">
+                  <input type="checkbox" onchange="document.getElementById('fmtPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="fmtPosGrid" class="stamp-pos-grid" style="display:none">
@@ -462,7 +462,7 @@
               <br>
                 <div class="stamp-section-title">📅 Show Date</div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="sealShowDate" ${sealSettings.showDate ? 'checked' : ''} onchange="onSealSettingChange()"> Show current date above DATE line</label>
+                  <label class="stamp-check"><input type="checkbox" id="sealShowDate" ${sealSettings.showDate ? 'checked' : ''} onchange="onSealSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show current date above DATE line</label>
                 </div>
               </div>
 
@@ -506,7 +506,7 @@
                   <span id="sealPosYVal" style="width:36px;text-align:right">${sealSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('sealPosGrid').style.display=this.checked?'grid':'none'">
+                  <input type="checkbox" onchange="document.getElementById('sealPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="sealPosGrid" class="stamp-pos-grid" style="display:none">
@@ -834,6 +834,7 @@
 
     // ─── Stamp-Only Mode toggle ───────────────────────────────────────────────
     window.toggleStampOnlyMode = function (checked) {
+        showToast(checked ? '🖨️ Stamp-only mode enabled' : '📄 Stamp-only mode disabled');
         // ── Show a brief loading overlay on the preview panel ─────────────────
         const previewScroll = document.getElementById('stampPreviewScroll');
         let loadingEl = null;
@@ -1038,6 +1039,7 @@
     // ─── Grayscale page mode ──────────────────────────────────────────────────
     window.toggleBwMode = function (checked) {
         bwMode = checked;
+        showToast(checked ? '🩶 Grayscale PDF enabled' : '🎨 Grayscale PDF disabled');
         renderStampPreviewPage();
     };
 
@@ -1064,12 +1066,14 @@
         if (checked) {
             // Snapshot current global settings as the starting point for this page
             saveCurrentPageOverride();
+            showToast(`✏️ Custom override on for page ${stampPreviewPage}`);
             showNotification(`Page ${stampPreviewPage} now has custom stamp settings.`, 'info');
         } else {
             // Remove override — revert to global settings
             delete pageOverrides[stampPreviewPage];
             loadSettingsIntoUI(null);   // restore global settings into UI controls
             refreshOverlay();
+            showToast(`↩️ Page ${stampPreviewPage} reverted to global settings`);
             showNotification(`Page ${stampPreviewPage} reverted to global settings.`, 'info');
         }
     };
