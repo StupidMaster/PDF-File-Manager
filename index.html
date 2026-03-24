@@ -1057,28 +1057,45 @@
         
     </script>
 
-        <!-- Toast Notification -->
+    <!-- Toast Notification -->
     <script>
         function showToast(message) {
-            const toast = document.getElementById('toast');
-            const messageEl = document.getElementById('toast-message');
-
-            if (!toast || !messageEl) {
-                console.error('Toast elements not found');
-                alert(message); // Fallback to alert if toast not found
+            const container = document.getElementById('toast-container');
+            if (!container) {
+                alert(message);
                 return;
             }
 
-            messageEl.textContent = message;
-            toast.className = 'toast show';
-            toast.style.visibility = 'visible';
+            const item = document.createElement('div');
+            item.className = 'toast-item';
+            item.textContent = message;
+            container.appendChild(item);
 
-            setTimeout(() => {
-                toast.className = 'toast';
-                toast.style.visibility = 'hidden';
-            }, 3000);
+            // Trigger enter animation on next frame
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => item.classList.add('show'));
+            });
+
+            // Auto-dismiss after 3 s
+            const DURATION = 3000;
+            let dismissTimer = setTimeout(() => dismiss(item), DURATION);
+
+            // Click to dismiss early
+            item.addEventListener('click', () => {
+                clearTimeout(dismissTimer);
+                dismiss(item);
+            });
+
+            function dismiss(el) {
+                el.classList.remove('show');
+                el.classList.add('hide');
+                el.addEventListener('transitionend', () => el.remove(), {
+                    once: true
+                });
+                // Safety removal in case transitionend doesn't fire
+                setTimeout(() => el.remove(), 600);
+            }
         }
-    </script>
 
     
 </body>
