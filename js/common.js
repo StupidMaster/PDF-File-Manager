@@ -230,12 +230,52 @@ document.addEventListener('keydown', function(e) {
         }
     }
 
-    // Ctrl+Shift+P -- toggle left panel
+    // Ctrl+Shift+ArrowRight — next stamp preview page
+    if (e.key === 'ArrowRight') {
+        const tool = window.activeTool || 'split';
+        if (tool === 'stamp' && typeof window.changeStampPreviewPage === 'function') {
+            e.preventDefault();
+            window.changeStampPreviewPage(1);
+        }
+    }
+
+    // Ctrl+Shift+ArrowLeft — previous stamp preview page
+    if (e.key === 'ArrowLeft') {
+        const tool = window.activeTool || 'split';
+        if (tool === 'stamp' && typeof window.changeStampPreviewPage === 'function') {
+            e.preventDefault();
+            window.changeStampPreviewPage(-1);
+        }
+    }
+
+
+    // Ctrl+Shift+ArrowRight — next stamp preview page
+    if (e.key === 'ArrowUp') {
+        const tool = window.activeTool || 'split';
+        if (tool === 'stamp' && typeof window.changeStampZoom === 'function') {
+            e.preventDefault();
+            window.changeStampZoom(0.2);
+        }
+    }
+
+    // Ctrl+Shift+ArrowLeft — previous stamp preview page
+    if (e.key === 'ArrowDown') {
+        const tool = window.activeTool || 'split';
+        if (tool === 'stamp' && typeof window.changeStampZoom === 'function') {
+            e.preventDefault();
+            window.changeStampZoom(-0.2);
+        }
+    }
+
+    
+
+
+    // Ctrl+Shift+Z -- switch to Split
     if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'Z') {
         e.preventDefault();
         switchToSplit();
     }
-    // Ctrl+Shift+P -- toggle left panel
+    // Ctrl+Shift+X -- switch to Merge
     if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'X') {
         e.preventDefault();
         switchToMerge();
