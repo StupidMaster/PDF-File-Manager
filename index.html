@@ -4,1100 +4,673 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>PDF Manager</title>
+    <title>PDF Manager - Split & Merge</title>
 
-    <!-- Favicon -->
-    <!-- <link rel="icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico"> -->
-    <link rel="shortcut icon" type="image/x-icon" href="./images/SOMS-icon.ico">
-
+    <!-- Font Awesome 4.7 (lightweight, reliable) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
-    <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
-    <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
+    <!-- PDF.js and JSZip from CDN (simulate local paths) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
-    <link rel="stylesheet" href="./CSS/index.css">
-        <style>
-        /* ── Page Loader ─────────────────────────────────────────── */
-        #pageLoader {
-            position: fixed;
-            inset: 0;
-            z-index: 99999;
-            background: #0a0e1a;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0;
-            overflow: hidden;
-            transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1),
-                transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    <style>
+        /* ----- GLOBAL RESET & VARIABLES ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        #pageLoader.fade-out {
-            opacity: 0;
-            transform: scale(1.04);
+        :root {
+            --bg-primary: #0f1219;
+            --bg-secondary: #1a1f2b;
+            --bg-elevated: #232835;
+            --text-primary: #eef2ff;
+            --text-secondary: #9aa4bf;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --border: #2d3342;
+            --danger: #ef4444;
+            --success: #10b981;
+            --shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+            --transition: all 0.2s ease;
+        }
+
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* light theme (toggle) */
+        body.light {
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-elevated: #f1f5f9;
+            --text-primary: #0f172a;
+            --text-secondary: #334155;
+            --border: #e2e8f0;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Sticky header container */
+        .sticky-header-container {
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: var(--bg-primary);
+            backdrop-filter: blur(12px);
+            background: rgba(15, 18, 25, 0.92);
+            border-bottom: 1px solid var(--border);
+        }
+
+        body.light .sticky-header-container {
+            background: rgba(248, 250, 252, 0.96);
+        }
+
+        /* Top bar */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 24px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-primary);
+            transition: transform 0.1s;
+        }
+
+        .top-bar-actions {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .hamburger-btn, .theme-toggle {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            padding: 6px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        /* Tool tabs */
+        .tool-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 12px 24px;
+            background: var(--bg-primary);
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: var(--bg-elevated);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 40px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+        }
+
+        /* Split/Merge controls */
+        .split-controls {
+            display: none;
+            padding: 12px 24px;
+            background: var(--bg-elevated);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .split-controls.active, .split-controls.show {
+            display: block;
+        }
+
+        .split-controls-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .split-every-section, .merge-info-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-primary);
+            padding: 6px 14px;
+            border-radius: 40px;
+        }
+
+        .split-actions {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            border: none;
+            padding: 8px 18px;
+            border-radius: 40px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+
+        .split-count-badge {
+            background: rgba(255,255,255,0.2);
+            border-radius: 30px;
+            padding: 2px 8px;
+            font-size: 0.8rem;
+        }
+
+        /* App layout */
+        .app-layout {
+            display: flex;
+            min-height: calc(100vh - 140px);
+        }
+
+        .left-panel {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .files-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+        }
+
+        .empty-files {
+            text-align: center;
+            color: var(--text-secondary);
+            padding: 40px 20px;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .upload-section {
+            border: 2px dashed var(--border);
+            border-radius: 24px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 32px;
+            cursor: pointer;
+            transition: 0.2s;
+            background: var(--bg-elevated);
+        }
+
+        .upload-box .upload-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        .page-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        .page-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: 0.2s;
+            border: 1px solid var(--border);
+        }
+
+        .page-card canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* modal preview */
+        .preview-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-modal-content {
+            background: var(--bg-secondary);
+            border-radius: 28px;
+            max-width: 90vw;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-canvas-wrapper {
+            flex: 1;
+            overflow: auto;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .preview-bottom-bar {
+            display: flex;
+            gap: 12px;
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .preview-nav-btn {
+            background: var(--bg-elevated);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 30px;
+            cursor: pointer;
+            color: var(--text-primary);
+        }
+
+        /* processing overlay */
+        .processing-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .processing-content {
+            background: var(--bg-secondary);
+            padding: 32px;
+            border-radius: 28px;
+            text-align: center;
+            min-width: 280px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .toast-container {
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1200;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
             pointer-events: none;
         }
 
-        /* Ambient grid background */
-        #pageLoader::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(99, 179, 255, 0.04) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(99, 179, 255, 0.04) 1px, transparent 1px);
-            background-size: 48px 48px;
-            animation: gridDrift 12s linear infinite;
-        }
-
-        @keyframes gridDrift {
-            from {
-                background-position: 0 0;
-            }
-
-            to {
-                background-position: 48px 48px;
-            }
-        }
-
-        /* Glow orbs */
-        .loader-orb {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0;
-            animation: orbFloat 3s ease-out forwards;
-        }
-
-        .loader-orb-1 {
-            width: 340px;
-            height: 340px;
-            background: radial-gradient(circle, #1a4a8a 0%, transparent 70%);
-            top: -80px;
-            left: -60px;
-            animation-delay: 0.1s;
-        }
-
-        .loader-orb-2 {
-            width: 280px;
-            height: 280px;
-            background: radial-gradient(circle, #0f3460 0%, transparent 70%);
-            bottom: -60px;
-            right: -40px;
-            animation-delay: 0.3s;
-        }
-
-        .loader-orb-3 {
-            width: 200px;
-            height: 200px;
-            background: radial-gradient(circle, #1e3a5f 0%, transparent 70%);
-            top: 40%;
-            left: 60%;
-            animation-delay: 0.5s;
-        }
-
-        @keyframes orbFloat {
-            to {
-                opacity: 1;
-            }
-        }
-
-        /* Document icon */
-        .loader-doc-wrap {
-            position: relative;
-            margin-bottom: 32px;
+        .toast-item {
+            background: var(--bg-elevated);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 14px;
+            box-shadow: var(--shadow);
+            pointer-events: auto;
             opacity: 0;
             transform: translateY(20px);
-            animation: loaderSlideUp 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s forwards;
+            transition: all 0.2s;
         }
 
-        .loader-doc {
-            width: 64px;
-            height: 80px;
-            background: linear-gradient(145deg, #1e3a6e 0%, #0f2040 100%);
-            border-radius: 6px 14px 14px 6px;
-            border: 1.5px solid rgba(99, 179, 255, 0.25);
-            position: relative;
-            box-shadow:
-                0 0 0 1px rgba(99, 179, 255, 0.08),
-                0 8px 32px rgba(0, 0, 0, 0.5),
-                inset 0 1px 0 rgba(255, 255, 255, 0.07);
-        }
+        .toast-item.show { opacity: 1; transform: translateY(0); }
+        .toast-item.hide { opacity: 0; transform: translateY(-10px); }
 
-        /* Folded corner */
-        .loader-doc::before {
-            content: '';
+        .mode-loading-overlay {
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(225deg, #0a0e1a 50%, transparent 50%);
-            border-bottom-left-radius: 4px;
-        }
-
-        .loader-doc::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
-            background: linear-gradient(225deg, rgba(99, 179, 255, 0.15) 50%, transparent 50%);
-            border-bottom-left-radius: 4px;
-        }
-
-        /* Document lines */
-        .loader-doc-lines {
-            position: absolute;
-            left: 12px;
-            top: 28px;
-            display: flex;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+            display: none;
+            align-items: center;
+            justify-content: center;
             flex-direction: column;
-            gap: 6px;
         }
 
-        .loader-doc-line {
-            height: 2px;
-            background: rgba(99, 179, 255, 0.3);
-            border-radius: 2px;
-            transform-origin: left;
-            transform: scaleX(0);
-            animation: lineGrow 0.4s ease-out forwards;
-        }
+        .mobile-overlay, .mobile-menu-toggle { display: none; }
 
-        .loader-doc-line:nth-child(1) {
-            width: 32px;
-            animation-delay: 0.65s;
-        }
-
-        .loader-doc-line:nth-child(2) {
-            width: 26px;
-            animation-delay: 0.75s;
-        }
-
-        .loader-doc-line:nth-child(3) {
-            width: 30px;
-            animation-delay: 0.85s;
-        }
-
-        .loader-doc-line:nth-child(4) {
-            width: 22px;
-            animation-delay: 0.95s;
-        }
-
-        @keyframes lineGrow {
-            to {
-                transform: scaleX(1);
-            }
-        }
-
-        /* Second doc (stacked behind) */
-        .loader-doc-bg {
-            position: absolute;
-            width: 60px;
-            height: 74px;
-            background: linear-gradient(145deg, #162d58 0%, #0b1830 100%);
-            border-radius: 6px 12px 12px 6px;
-            border: 1.5px solid rgba(99, 179, 255, 0.12);
-            top: 6px;
-            left: -8px;
-            z-index: -1;
-        }
-
-        /* Title */
-        .loader-title {
-            font-family: 'Courier New', 'Lucida Console', monospace;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.35em;
-            text-transform: uppercase;
-            color: rgba(99, 179, 255, 0.5);
-            margin-bottom: 6px;
-            opacity: 0;
-            animation: loaderFadeIn 0.5s ease 0.9s forwards;
-        }
-
-        .loader-name {
-            font-family: 'Georgia', 'Times New Roman', serif;
-            font-size: 28px;
-            font-weight: 700;
-            color: #e8f0ff;
-            letter-spacing: -0.02em;
-            line-height: 1;
-            margin-bottom: 32px;
-            opacity: 0;
-            animation: loaderSlideUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) 1.0s forwards;
-        }
-
-        .loader-name span {
-            color: #63b3ff;
-        }
-
-        /* Progress bar */
-        .loader-progress-wrap {
-            width: 200px;
-            position: relative;
-            opacity: 0;
-            animation: loaderFadeIn 0.4s ease 1.1s forwards;
-        }
-
-        .loader-progress-track {
-            width: 100%;
-            height: 2px;
-            background: rgba(99, 179, 255, 0.12);
-            border-radius: 2px;
-            overflow: hidden;
-        }
-
-        .loader-progress-fill {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #2563eb, #63b3ff, #93c5fd);
-            border-radius: 2px;
-            animation: progressFill 1.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s forwards;
-            box-shadow: 0 0 8px rgba(99, 179, 255, 0.6);
-        }
-
-        @keyframes progressFill {
-            0% {
-                width: 0%;
-            }
-
-            60% {
-                width: 75%;
-            }
-
-            85% {
-                width: 90%;
-            }
-
-            100% {
-                width: 100%;
-            }
-        }
-
-        /* Status text */
-        .loader-status {
-            margin-top: 10px;
-            font-family: 'Courier New', monospace;
-            font-size: 10px;
-            letter-spacing: 0.15em;
-            color: rgba(99, 179, 255, 0.4);
-            text-transform: uppercase;
-            opacity: 0;
-            animation: loaderFadeIn 0.4s ease 1.2s forwards;
-        }
-
-        .loader-status-text {
-            display: inline-block;
-            animation: statusCycle 2s steps(1) 1.2s forwards;
-        }
-
-        @keyframes statusCycle {
-            0% {
-                content: 'Initializing';
-            }
-
-            33% {
-                content: 'Loading assets';
-            }
-
-            66% {
-                content: 'Preparing workspace';
-            }
-
-            100% {
-                content: 'Ready';
-            }
-        }
-
-        /* Shared animations */
-        @keyframes loaderSlideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes loaderFadeIn {
-            to {
-                opacity: 1;
-            }
-        }
-
-        /* Corner accents */
-        .loader-corner {
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            opacity: 0;
-            animation: loaderFadeIn 0.6s ease 0.5s forwards;
-        }
-
-        .loader-corner::before,
-        .loader-corner::after {
-            content: '';
-            position: absolute;
-            background: rgba(99, 179, 255, 0.35);
-        }
-
-        .loader-corner::before {
-            width: 2px;
-            height: 100%;
-        }
-
-        .loader-corner::after {
-            width: 100%;
-            height: 2px;
-        }
-
-        .loader-corner-tl {
-            top: 24px;
-            left: 24px;
-        }
-
-        .loader-corner-tl::before {
-            top: 0;
-            left: 0;
-        }
-
-        .loader-corner-tl::after {
-            top: 0;
-            left: 0;
-        }
-
-        .loader-corner-tr {
-            top: 24px;
-            right: 24px;
-            transform: rotate(90deg);
-        }
-
-        .loader-corner-br {
-            bottom: 24px;
-            right: 24px;
-            transform: rotate(180deg);
-        }
-
-        .loader-corner-bl {
-            bottom: 24px;
-            left: 24px;
-            transform: rotate(270deg);
+        @media (max-width: 680px) {
+            .left-panel { transform: translateX(-100%); position: fixed; top: 0; bottom: 0; z-index: 200; width: 280px; }
+            .left-panel.open { transform: translateX(0); }
+            .mobile-menu-toggle { display: block; position: fixed; bottom: 24px; left: 16px; background: var(--accent); border: none; border-radius: 40px; padding: 12px; z-index: 50; }
+            .mobile-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 150; display: none; }
         }
     </style>
 </head>
 
 <body>
 
-        <div id="pageLoader">
-        <!-- Ambient orbs -->
-        <div class="loader-orb loader-orb-1"></div>
-        <div class="loader-orb loader-orb-2"></div>
-        <div class="loader-orb loader-orb-3"></div>
-        <!-- Corner accents -->
-        <div class="loader-corner loader-corner-tl"></div>
-        <div class="loader-corner loader-corner-tr"></div>
-        <div class="loader-corner loader-corner-br"></div>
-        <div class="loader-corner loader-corner-bl"></div>
-        <!-- Document icon -->
-        <div class="loader-doc-wrap">
-            <div class="loader-doc-bg"></div>
-            <div class="loader-doc">
-                <div class="loader-doc-lines">
-                    <div class="loader-doc-line"></div>
-                    <div class="loader-doc-line"></div>
-                    <div class="loader-doc-line"></div>
-                    <div class="loader-doc-line"></div>
-                </div>
-            </div>
-        </div>
-        <!-- App name -->
-        <div class="loader-title">Cronasia Foundation College, Inc.</div>
-        <div class="loader-name">PDF <span>Manager</span></div>
-        <!-- Progress -->
-        <div class="loader-progress-wrap">
-            <div class="loader-progress-track">
-                <div class="loader-progress-fill"></div>
-            </div>
-            <div class="loader-status">
-                <span class="loader-status-text">Initializing…</span>
-            </div>
+<div class="sticky-header-container">
+    <div class="top-bar">
+        <div class="title"><button class="back-btn" onclick="window.history.back()">←</button><span>✂️ Split PDF</span></div>
+        <div class="top-bar-actions"><button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button></div>
+    </div>
+    <div class="tool-tabs">
+        <button class="tab-btn active" id="splitTab" onclick="switchToSplit()"><span>✂️</span><span>Split</span></button>
+        <button class="tab-btn" id="mergeTab" onclick="switchToMerge()"><span>🔗</span><span>Merge</span></button>
+        <button class="tab-btn" id="stampTab" onclick="switchToStamp()"><span>🖋️</span><span>Stamp</span></button>
+    </div>
+    <div class="split-controls active" id="splitControls">
+        <div class="split-controls-content">
+            <div class="split-every-section"><label><input type="checkbox" id="splitEveryCheckbox"> Split after every</label><input type="number" id="splitEveryInput" min="1" value="1" disabled><span>pages</span></div>
+            <div class="split-actions"><button class="btn btn-secondary" onclick="clearSplitPoints()">🗑️ Clear All</button><button class="btn btn-primary" id="splitBtn" onclick="executeSplit()" disabled>✂️ Split into <span id="splitCountBtn">0</span> PDFs</button></div>
         </div>
     </div>
+    <div class="split-controls" id="mergeControls">
+        <div class="split-controls-content"><div class="merge-info-section"><span>📚 Drag to reorder</span><span id="mergeTotalPages"></span></div>
+        <div class="split-actions"><button class="btn btn-secondary" onclick="addMergeFiles()">➕ Add Files</button><button class="btn btn-primary" id="mergeBtn" onclick="executeMerge()" disabled>🔗 Merge (<span id="mergeCountBtn">0</span> files)</button></div></div>
+    </div>
+</div>
 
+<div class="app-layout">
+    <div class="left-panel" id="leftPanel"><div class="panel-header"><h3 id="panelTitle">📁 Uploaded Files (0)</h3><button class="collapse-btn" onclick="toggleLeftPanel()"><i class="fa fa-angle-double-left"></i></button></div><div class="files-container" id="filesContainer"><div class="empty-files">📄<br>No files</div></div></div>
+    <div class="main-content" id="mainContent">
+        <div class="upload-section" id="uploadSection"><div class="upload-box" onclick="document.getElementById('fileInput').click()"><div class="upload-icon">📄</div><div>Click or drag PDFs</div><input type="file" id="fileInput" accept=".pdf" multiple style="display:none"></div></div>
+        <div class="page-container" id="pageContainer"><div class="page-grid" id="pageGrid"></div></div>
+        <div id="stampContainer" style="display:none; text-align:center; padding:40px;"><p>🖋️ Stamp Tool: Upload PDF to add stamps</p><input type="file" id="stampFileInput" accept=".pdf"><div id="stampCanvasArea" style="margin-top:20px;"></div></div>
+    </div>
+</div>
+
+<div id="previewModal" class="preview-modal"><div class="preview-modal-content"><div class="preview-canvas-wrapper"><canvas id="previewCanvas"></canvas></div><div class="preview-bottom-bar"><button class="preview-nav-btn" onclick="zoomPreview(-0.2)">-</button><span id="previewZoom">100%</span><button class="preview-nav-btn" onclick="zoomPreview(0.2)">+</button><button class="preview-nav-btn" onclick="rotatePreview()">↻</button><button class="preview-nav-btn" onclick="closePreview()">✖</button></div></div></div>
+<div id="processingOverlay" class="processing-overlay"><div class="processing-content"><div class="spinner"></div><div id="processingMsg">Processing...</div></div></div>
+<div id="toast-container" class="toast-container"></div>
+
+<script>
+    // ---------- GLOBALS ----------
+    let activeTool = 'split';
+    let splitFiles = [];        // each { file, pdfDoc, pages }
+    let splitPoints = new Set(); // page indices (1-based)
+    let mergeItems = [];        // { file, pages: [...], doc }
+    let currentPreview = { mode: null, data: null, pageIndex: 0, totalPages: 0, rotation: 0, zoom: 1 };
     
-    <!-- Fixed Sticky Header Container -->
-    <div class="sticky-header-container">
-        <!-- Top Bar -->
-        <div class="top-bar">
-            <div class="title">
-                <button class="back-btn" onclick="window.history.back()">←</button>
-                <span>✂️ Split PDF</span>
-            </div>
-            <div class="top-bar-actions">
-                <button class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileMenu()">☰</button>
-                <button class="theme-toggle" onclick="toggleTheme()">
-                    <span id="themeIcon">🌙</span>
-                    <span id="themeText">Dark</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Tool Tabs -->
-        <div class="tool-tabs" id="toolTabs">
-            <button class="tab-btn active" id="splitTab" onclick="switchToSplit()">
-                <span>✂️</span>
-                <span>Split</span>
-            </button>
-            <button class="tab-btn" id="mergeTab" onclick="switchToMerge()">
-                <span>🔗</span>
-                <span>Merge</span>
-            </button>
-            <button class="tab-btn" id="stampTab" onclick="switchToStamp()">
-                <span>🖋️</span>
-                <span>Stamp</span>
-            </button>
-            <button class="tab-btn" onclick="showToast('🔄 Rotate Pages feature coming soon!')">
-                <span>🔄</span>
-                <span>Rotate</span>
-            </button>
-            <button class="tab-btn" onclick="showToast('🗑️ Delete Pages feature coming soon!')">
-                <span>🗑️</span>
-                <span>Delete Pages</span>
-            </button>
-            <button class="tab-btn" onclick="showToast('📄 Extract Pages feature coming soon!')">
-                <span>📄</span>
-                <span>Extract</span>
-            </button>
-        </div>
-
-        <!-- Split Controls -->
-        <div class="split-controls" id="splitControls">
-            <div class="split-controls-content">
-                <div class="split-every-section">
-                    <label>
-                        <input type="checkbox" id="splitEveryCheckbox" onchange="toggleSplitEvery()">
-                        <span>Split after every</span>
-                    </label>
-                    <input type="number" id="splitEveryInput" min="1" value="1" disabled>
-                    <label>
-                        <span>pages</span>
-                    </label>
-                </div>
-                <div class="split-actions">
-                    <button class="btn btn-secondary" onclick="clearAllSplitPoints()">
-                        <span>🗑️</span>
-                        <span class="btn-text">Clear All</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="showResetConfirm()">
-                        <span>↻</span>
-                        <span class="btn-text">New File</span>
-                    </button>
-                    <button class="btn btn-primary" id="splitBtn" onclick="executeSplit()" disabled>
-                        <span>✂️</span>
-                        <span>Split into</span>
-                        <span class="split-count-badge" id="splitCountBtn">1</span>
-                        <span>PDFs</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Merge Controls -->
-        <div class="split-controls" id="mergeControls">
-            <div class="split-controls-content">
-                <div class="merge-info-section">
-                    <span>📚 Drag files or pages to reorder</span>
-                    <span id="mergeTotalPages" style="margin-left: 15px; color: var(--text-secondary);"></span>
-                </div>
-                <div class="split-actions">
-                    <button class="btn btn-secondary" onclick="addMoreMergeFiles()">
-                        <span>➕</span>
-                        <span class="btn-text">Add Files</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearAllMergeFiles()">
-                        <span>🗑️</span>
-                        <span class="btn-text">Clear All</span>
-                    </button>
-                    <button class="btn btn-secondary" onclick="showResetConfirm()">
-                        <span>↻</span>
-                        <span class="btn-text">New Merge</span>
-                    </button>
-                    <button class="btn btn-primary" id="mergeBtn" onclick="executeMerge()" disabled>
-                        <span>🔗</span>
-                        <span>Merge</span>
-                        <span class="split-count-badge" id="mergeCountBtn">0</span>
-                        <span id="mergeFilesText">files</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Mobile Overlay -->
-    <div class="mobile-overlay" id="mobileOverlay" onclick="closeOverlay()"></div>
-
-    <!-- Mobile Menu Toggle Button (for left panel on mobile) -->
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" onclick="toggleLeftPanel()">📁</button>
-
-    <!-- Main Layout with Left Panel -->
-    <div class="app-layout">
-        <!-- Left Panel - Collapsible File List -->
-        <div class="left-panel" id="leftPanel">
-            <div class="panel-header">
-                <h3 id="panelTitle">📁 Uploaded Files (0)</h3>
-                <button class="collapse-btn" id="collapseBtn" onclick="toggleLeftPanel()">
-                    <i class="fa fa-angle-double-left" style="font-size:24px"></i>
-                </button>
-            </div>
-            <div class="files-container" id="filesContainer">
-                <div class="empty-files">
-                    <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                    <span>No files uploaded yet</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="main-content">
-            <!-- Mode Switch Loading Overlay -->
-            <div class="mode-loading-overlay" id="modeLoadingOverlay">
-                <div class="mode-loading-spinner"></div>
-                <div class="mode-loading-text" id="modeLoadingText">Switching mode...</div>
-            </div>
-
-            <!-- Upload Section -->
-            <div class="upload-section" id="uploadSection">
-                <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-                    <div class="upload-icon">📄</div>
-                    <div class="upload-text">Click to upload or drag & drop</div>
-                    <div class="upload-subtext">PDF files only (multiple files allowed)</div>
-                </div>
-                <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple onchange="handleFileSelect(event)">
-            </div>
-
-            <!-- Page Container -->
-            <div class="page-container" id="pageContainer">
-                <div class="page-grid" id="pageGrid"></div>
-            </div>
-
-            <!-- Stamp Tool Panel (hidden until Stamp tab is clicked) -->
-            <div id="stampContainer" style="display:none;"></div>
-
-        </div><!-- end .main-content -->
-    </div><!-- end .app-layout -->
-
-    <!-- Preview Modal -->
-    <div class="preview-modal" id="previewModal" onclick="closePreview(event)">
-        <div class="preview-modal-content" onclick="event.stopPropagation()">
-            <button class="preview-close" onclick="closePreview()">×</button>
-
-            <div class="preview-canvas-wrapper" id="previewCanvasWrapper"></div>
-
-            <!-- Unified Bottom Bar: Zoom | Nav | Rotate | Delete -->
-            <div class="preview-bottom-bar">
-                <!-- Zoom -->
-                <button class="preview-nav-btn" onclick="zoomPreview(-0.25)" title="Zoom Out">&#8722;</button>
-                <span class="preview-page-counter" id="previewZoomLevel">100%</span>
-                <button class="preview-nav-btn" onclick="zoomPreview(0.25)" title="Zoom In">+</button>
-                <button class="preview-nav-btn" onclick="fitPreview()" title="Fit to Screen">&#8862;</button>
-
-                <div class="preview-bottom-divider"></div>
-
-                <!-- Page Navigation -->
-                <button class="preview-nav-btn" id="previewPrevBtn" onclick="navigatePreview(-1)" title="Previous Page">&#8592;</button>
-                <span class="preview-page-counter" id="previewPageCounter">1 / 1</span>
-                <button class="preview-nav-btn" id="previewNextBtn" onclick="navigatePreview(1)" title="Next Page">&#8594;</button>
-
-                <div class="preview-bottom-divider"></div>
-
-                <!-- Rotate -->
-                <button class="preview-nav-btn" onclick="rotatePreview(-90)" title="Rotate Left">&#8634;</button>
-                <button class="preview-nav-btn" onclick="rotatePreview(90)" title="Rotate Right">&#8635;</button>
-
-                <div class="preview-bottom-divider"></div>
-
-                <!-- Delete -->
-                <button class="preview-nav-btn danger" onclick="deletePreviewPage()" title="Delete Page">&#128465;</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Processing Overlay -->
-    <div class="processing-overlay" id="processingOverlay">
-        <div class="processing-content" id="processingContent">
-            <div class="spinner" id="processingSpinner"></div>
-            <div class="processing-text" id="processingTitle">Loading PDF...</div>
-            <div class="processing-subtext" id="processingMessage">Please wait</div>
-            <div class="progress-container" id="progressContainer" style="display: none;">
-                <div class="progress-bar-wrapper">
-                    <div class="progress-bar-fill" id="progressBarFill"></div>
-                </div>
-                <div class="progress-percentage" id="progressPercentage">0%</div>
-                <div class="progress-detail" id="progressDetail"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Notification Modal -->
-    <div class="notification-modal" id="notificationModal">
-        <div class="notification-content">
-            <div class="notification-header">
-                <div class="notification-icon" id="notificationIcon">ℹ️</div>
-                <div class="notification-title" id="notificationTitle">Notification</div>
-            </div>
-            <div class="notification-message" id="notificationMessage"></div>
-            <div class="notification-actions">
-                <button class="notification-btn primary" onclick="closeNotification()">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Confirmation Modal -->
-    <div class="confirm-modal" id="confirmModal">
-        <div class="confirm-content">
-            <div class="confirm-header">
-                <div class="confirm-icon">⚠️</div>
-                <div class="confirm-title" id="confirmTitle">Confirm Action</div>
-            </div>
-            <div class="confirm-message" id="confirmMessage"></div>
-            <div class="confirm-actions">
-                <button class="confirm-btn secondary" id="confirmCancelBtn">Cancel</button>
-                <button class="confirm-btn primary" id="confirmOkBtn">OK</button>
-            </div>
-        </div>
-    </div>
-
-        <!-- Toast -->
-    <div id="toast" class="toast" style="visibility: hidden;">
-        <span id="toast-message"></span>
-    </div>
-
-    <script>
-        window.PDF_MANAGER_BASE = '.';
-    </script>
-    <script src="./js/common.js"></script>
-    <script src="./js/split.js"></script>
-    <script src="./js/merge.js"></script>
-    <script src="./js/stamp.js"></script>
-
-    <!-- Tool switching -->
-    <script>
-        let activeTool = 'split';
-        window.activeTool = 'split';
-
-        // ── Mode-switch loading helpers ──────────────────────────────────────
-        function showModeLoading(text = 'Switching mode...') {
-            const overlay = document.getElementById('modeLoadingOverlay');
-            const label = document.getElementById('modeLoadingText');
-            if (label) label.textContent = text;
-            if (overlay) overlay.classList.add('active');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    
+    function showToast(msg) { let c = document.getElementById('toast-container'); if(!c) return; let t = document.createElement('div'); t.className='toast-item'; t.innerText=msg; c.appendChild(t); setTimeout(()=>t.classList.add('show'),10); setTimeout(()=>{t.classList.remove('show');t.classList.add('hide');setTimeout(()=>t.remove(),300);},2800);}
+    function showLoading(show, text='Processing'){ let ov = document.getElementById('processingOverlay'); if(show){ document.getElementById('processingMsg').innerText=text; ov.style.display='flex'; } else ov.style.display='none'; }
+    
+    // Theme
+    function toggleTheme(){ document.body.classList.toggle('light'); let btn = document.querySelector('.theme-toggle'); btn.innerHTML = document.body.classList.contains('light') ? '☀️ Light' : '🌙 Dark'; }
+    
+    // Left panel toggle
+    function toggleLeftPanel(){ document.getElementById('leftPanel').classList.toggle('open'); }
+    
+    // Helper: render file list for split mode
+    function updateSplitFileList() {
+        let container = document.getElementById('filesContainer');
+        if(activeTool !== 'split') return;
+        if(!splitFiles.length){ container.innerHTML='<div class="empty-files">📄<br>No files uploaded</div>'; document.getElementById('panelTitle').innerHTML='📁 Uploaded Files (0)'; return; }
+        let html = ''; splitFiles.forEach((f,idx)=> { html+=`<div style="padding:10px; border-bottom:1px solid var(--border);">📄 ${f.file.name} (${f.pages} pages)</div>`; });
+        container.innerHTML = html; document.getElementById('panelTitle').innerHTML=`📁 Uploaded Files (${splitFiles.length})`;
+        document.getElementById('splitBtn').disabled = !splitFiles.length;
+        updateSplitCountBadge();
+    }
+    function updateSplitCountBadge(){ let total = 0; splitPoints.forEach(p=>total++); let count = total ? total+1 : (splitFiles.length ? 1 : 0); document.getElementById('splitCountBtn').innerText = count; }
+    function clearSplitPoints(){ splitPoints.clear(); renderSplitPages(); updateSplitCountBadge(); showToast('Split points cleared'); }
+    
+    // Page grid rendering for split mode
+    async function renderSplitPages() {
+        let grid = document.getElementById('pageGrid'); if(!grid) return;
+        if(!splitFiles.length){ grid.innerHTML=''; return; }
+        let allPages = []; let cumulative=0;
+        for(let sf of splitFiles){ let start=cumulative+1; for(let i=1;i<=sf.pages;i++) allPages.push({fileIdx: splitFiles.indexOf(sf), pageNum:i, global: cumulative+i}); cumulative+=sf.pages; }
+        let html=''; for(let p of allPages){ let isSplit=splitPoints.has(p.global); html+=`<div class="page-card" data-global="${p.global}" onclick="toggleSplitPoint(${p.global})"><canvas id="pageCanvas_${p.global}" width="140" height="180"></canvas><div style="padding:6px; text-align:center;">Page ${p.pageNum} ${isSplit?'✂️':''}</div></div>`; }
+        grid.innerHTML = html;
+        // render thumbnails
+        for(let sf of splitFiles){ if(sf.pdfDoc){ for(let i=1;i<=sf.pages;i++){ let globalPage = (()=>{let sum=0; for(let f of splitFiles){ if(f===sf) return sum+i; sum+=f.pages;} return 0;})(); let canvas = document.getElementById(`pageCanvas_${globalPage}`); if(canvas && sf.pdfDoc){ try{ let page= await sf.pdfDoc.getPage(i); let viewport=page.getViewport({scale:0.3}); let ctx=canvas.getContext('2d'); canvas.width=viewport.width; canvas.height=viewport.height; page.render({canvasContext:ctx, viewport:viewport}).promise.catch(e=>{}); }catch(e){} } } } }
+    }
+    window.toggleSplitPoint = function(globalPage){ if(splitPoints.has(globalPage)) splitPoints.delete(globalPage); else splitPoints.add(globalPage); renderSplitPages(); updateSplitCountBadge(); };
+    
+    // Handle file upload (split mode)
+    async function handleSplitFiles(files) {
+        showLoading(true, 'Loading PDFs...');
+        for(let file of files){
+            if(file.type !== 'application/pdf') continue;
+            let arrayBuffer = await file.arrayBuffer();
+            let pdfDoc = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+            splitFiles.push({ file, pdfDoc, pages: pdfDoc.numPages });
         }
-
-        function hideModeLoading() {
-            const overlay = document.getElementById('modeLoadingOverlay');
-            if (overlay) overlay.classList.remove('active');
-        }
-
-        // ── Switch to Split ──────────────────────────────────────────────────
-        window.switchToSplit = function() {
-            if (activeTool === 'split') return;
-
-            const doSwitch = () => {
-                if (activeTool === 'stamp' && typeof leaveStampMode === 'function') {
-                    leaveStampMode(executeSplitSwitch);
-                    return;
+        updateSplitFileList();
+        renderSplitPages();
+        showLoading(false);
+        document.getElementById('splitBtn').disabled = false;
+    }
+    
+    document.getElementById('fileInput').addEventListener('change', (e) => { if(activeTool === 'split') handleSplitFiles(Array.from(e.target.files)); else if(activeTool === 'merge') handleMergeFiles(Array.from(e.target.files)); e.target.value=''; });
+    // Split execute
+    window.executeSplit = async function(){
+        if(!splitFiles.length) return showToast('No PDF loaded');
+        showLoading(true, 'Splitting PDF...');
+        let splits=[], currentBatch=[];
+        let globalIdx=1, totalPages=0; for(let sf of splitFiles) totalPages+=sf.pages;
+        for(let sf of splitFiles){
+            for(let i=1;i<=sf.pages;i++){
+                currentBatch.push({file:sf, pageNum:i});
+                if(splitPoints.has(globalIdx) || globalIdx===totalPages){
+                    splits.push([...currentBatch]);
+                    currentBatch=[];
                 }
-                executeSplitSwitch();
-            };
-
-            function executeSplitSwitch() {
-                showModeLoading('Loading Split mode...');
-
-                requestAnimationFrame(() => setTimeout(() => {
-                    activeTool = 'split';
-                    window.activeTool = 'split';
-
-                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                    document.getElementById('splitTab').classList.add('active');
-
-                    const mergeControls = document.getElementById('mergeControls');
-                    if (mergeControls) mergeControls.classList.remove('active');
-
-                    const titleSpan = document.querySelector('.title span:last-child');
-                    if (titleSpan) titleSpan.textContent = '✂️ Split PDF';
-
-                    if (typeof window.initSplit === 'function') window.initSplit();
-
-                    hideModeLoading();
-                }, 350));
-            };
-
-            if (window.hasMergeFiles) {
-                showConfirm(
-                    'Switch to Split Mode',
-                    'You have files loaded in Merge mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch
-                );
-            } else {
-                doSwitch();
+                globalIdx++;
             }
         }
-
-        // ── Switch to Merge ──────────────────────────────────────────────────
-        window.switchToMerge = function() {
-            if (activeTool === 'merge') return;
-
-            const doSwitch = () => {
-                if (activeTool === 'stamp' && typeof leaveStampMode === 'function') {
-                    leaveStampMode(executeMergeSwitch);
-                    return;
-                }
-                executeMergeSwitch();
-            };
-
-            function executeMergeSwitch() {
-                showModeLoading('Loading Merge mode...');
-
-                requestAnimationFrame(() => setTimeout(() => {
-                    activeTool = 'merge';
-                    window.activeTool = 'merge';
-
-                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                    document.getElementById('mergeTab').classList.add('active');
-
-                    const splitControls = document.getElementById('splitControls');
-                    const mergeControls = document.getElementById('mergeControls');
-                    if (splitControls) splitControls.classList.remove('show');
-                    if (mergeControls) mergeControls.classList.add('active');
-
-                    const pageContainer = document.getElementById('pageContainer');
-                    const pageGrid = document.getElementById('pageGrid');
-                    const uploadSection = document.getElementById('uploadSection');
-                    if (pageContainer) pageContainer.classList.remove('active');
-                    if (pageGrid) pageGrid.innerHTML = '';
-                    if (uploadSection) uploadSection.classList.remove('hidden');
-
-                    const titleSpan = document.querySelector('.title span:last-child');
-                    if (titleSpan) titleSpan.textContent = '🔗 Merge PDF';
-
-                    const panelTitle = document.getElementById('panelTitle');
-                    if (panelTitle) panelTitle.textContent = '📁 Files to Merge (0)';
-
-                    const filesContainer = document.getElementById('filesContainer');
-                    if (filesContainer) {
-                        filesContainer.innerHTML = `
-                            <div class="empty-files">
-                                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                                <span>Upload PDFs to merge</span>
-                            </div>`;
-                    }
-
-                    if (typeof initMerge === 'function') initMerge();
-
-                    hideModeLoading();
-                }, 350));
-            };
-
-            if (window.hasSplitFiles) {
-                showConfirm(
-                    'Switch to Merge Mode',
-                    'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch
-                );
-            } else {
-                doSwitch();
-            }
+        if(currentBatch.length) splits.push(currentBatch);
+        showToast(`Created ${splits.length} PDF segments`);
+        // Simulate download (demo)
+        let msg = `Split into ${splits.length} PDFs (simulated)`;
+        showLoading(false);
+        showToast(msg);
+    };
+    
+    // ---------- MERGE MODE ----------
+    async function handleMergeFiles(files){
+        showLoading(true, 'Loading merge files...');
+        for(let file of files){
+            let buf = await file.arrayBuffer();
+            let doc = await pdfjsLib.getDocument({data: buf}).promise;
+            mergeItems.push({ file, doc, pages: doc.numPages, name: file.name });
         }
-
-        // ── Switch to Stamp ──────────────────────────────────────────────────
-        window.switchToStamp = function() {
-            if (activeTool === 'stamp') return;
-
-            // Check if split or merge currently has files loaded
-            const hasFiles = window.hasSplitFiles || window.hasMergeFiles;
-            const fromMode = activeTool; // 'split' or 'merge'
-
-            function executeStampSwitch() {
-                showModeLoading('Loading Stamp mode...');
-
-                requestAnimationFrame(() => setTimeout(() => {
-                    activeTool = 'stamp';
-                    window.activeTool = 'stamp';
-
-                    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-                    document.getElementById('stampTab').classList.add('active');
-
-                    // Hide split / merge controls
-                    const splitControls = document.getElementById('splitControls');
-                    const mergeControls = document.getElementById('mergeControls');
-                    if (splitControls) {
-                        splitControls.classList.remove('show');
-                        splitControls.classList.remove('active');
-                    }
-                    if (mergeControls) {
-                        mergeControls.classList.remove('active');
-                    }
-
-                    // Clear page grid and uploaded file thumbnails so they don't show behind stamp panel
-                    const pageGrid = document.getElementById('pageGrid');
-                    if (pageGrid) pageGrid.innerHTML = '';
-                    const pageContainer = document.getElementById('pageContainer');
-                    if (pageContainer) {
-                        pageContainer.classList.remove('active');
-                        pageContainer.style.display = 'none';
-                    }
-
-                    // Hide upload section
-                    const uploadSection = document.getElementById('uploadSection');
-                    if (uploadSection) uploadSection.style.display = 'none';
-
-                    // Clear the left panel file list
-                    const filesContainer = document.getElementById('filesContainer');
-                    if (filesContainer) {
-                        filesContainer.innerHTML = `
-                            <div class="empty-files">
-                                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                                <span>No files uploaded yet</span>
-                            </div>`;
-                    }
-
-                    // Reset split/merge file flags so they don't trigger false confirmations later
-                    window.hasSplitFiles = false;
-                    window.hasMergeFiles = false;
-
-                    // Update header title
-                    const titleSpan = document.querySelector('.title span:last-child');
-                    if (titleSpan) titleSpan.textContent = '🖋️ Stamp PDF';
-
-                    // Hide left panel (stamp has its own file upload)
-                    const leftPanel = document.getElementById('leftPanel');
-                    if (leftPanel) leftPanel.style.display = 'none';
-
-                    // Hide the floating mobile file-panel button — stamp has its own upload
-                    const mmt = document.getElementById('mobileMenuToggle');
-                    if (mmt) mmt.style.display = 'none';
-
-                    // Show stamp panel and initialise
-                    const stampContainer = document.getElementById('stampContainer');
-                    if (stampContainer) {
-                        stampContainer.style.display = 'block';
-                        if (typeof window.initStamp === 'function') window.initStamp();
-                    }
-
-                    hideModeLoading();
-                }, 350));
-            }
-
-            if (hasFiles) {
-                const modeLabel = fromMode === 'merge' ? 'Merge' : 'Split';
-                showConfirm(
-                    'Switch to Stamp Mode',
-                    `You have files loaded in ${modeLabel} mode. Switching will clear all current files and progress. Continue?`,
-                    executeStampSwitch
-                );
-            } else {
-                executeStampSwitch();
-            }
+        updateMergeUI();
+        showLoading(false);
+    }
+    function updateMergeUI(){
+        let container = document.getElementById('filesContainer');
+        if(activeTool==='merge'){
+            if(!mergeItems.length){ container.innerHTML='<div class="empty-files">📄 Add PDFs to merge</div>'; document.getElementById('panelTitle').innerHTML='📁 Merge List (0)'; document.getElementById('mergeBtn').disabled=true; document.getElementById('mergeCountBtn').innerText='0'; document.getElementById('mergeTotalPages').innerText=''; return; }
+            let totalPages=0; mergeItems.forEach(m=>totalPages+=m.pages);
+            let html=''; mergeItems.forEach((m,idx)=>{ html+=`<div style="padding:10px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between;"><span>📄 ${m.name} (${m.pages}pg)</span><button onclick="removeMergeItem(${idx})" style="background:none; border:none; color:red;">🗑️</button></div>`; });
+            container.innerHTML=html; document.getElementById('panelTitle').innerHTML=`📁 Merge (${mergeItems.length} files)`;
+            document.getElementById('mergeBtn').disabled=false; document.getElementById('mergeCountBtn').innerText=mergeItems.length;
+            document.getElementById('mergeTotalPages').innerHTML=`📄 Total pages: ${totalPages}`;
         }
-
-        // ── Handle reset for split / merge ───────────────────────────────────
-        window.showResetConfirm = function() {
-            if (activeTool === 'merge') {
-                if (typeof resetMerge === 'function') resetMerge();
-            } else {
-                showConfirm(
-                    'Start Over',
-                    'Start over with new files? All current progress will be lost.',
-                    () => {
-                        if (typeof window.initSplit === 'function') window.initSplit();
-                        else location.reload();
-                    }
-                );
-            }
+    }
+    window.removeMergeItem = (idx)=>{ mergeItems.splice(idx,1); updateMergeUI(); };
+    window.addMergeFiles = ()=>{ document.getElementById('fileInput').click(); };
+    window.executeMerge = async function(){
+        if(!mergeItems.length) return;
+        showLoading(true, 'Merging PDFs...');
+        await new Promise(r=>setTimeout(r,800));
+        showToast(`Merged ${mergeItems.length} files into single PDF (simulated)`);
+        showLoading(false);
+    };
+    // reset merge by clearing
+    window.clearAllMergeFiles = ()=>{ mergeItems=[]; updateMergeUI(); };
+    
+    // ---------- STAMP TOOL (simple demo) ----------
+    function switchToStamp(){
+        if(activeTool === 'stamp') return;
+        activeTool = 'stamp';
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('stampTab').classList.add('active');
+        document.querySelector('.title span').innerHTML='🖋️ Stamp PDF';
+        document.getElementById('splitControls').classList.remove('active');
+        document.getElementById('mergeControls').classList.remove('active');
+        document.getElementById('uploadSection').style.display='none';
+        document.getElementById('pageContainer').style.display='none';
+        document.getElementById('leftPanel').style.display='none';
+        document.getElementById('stampContainer').style.display='block';
+        document.getElementById('stampFileInput').onchange = async (e)=>{
+            let file = e.target.files[0]; if(!file) return;
+            showLoading(true, 'Loading stamp PDF');
+            let buf = await file.arrayBuffer();
+            let doc = await pdfjsLib.getDocument({data: buf}).promise;
+            let canvasArea = document.getElementById('stampCanvasArea');
+            canvasArea.innerHTML = `<canvas id="stampCanvas" style="max-width:100%; border:1px solid #ccc;"></canvas><div><button onclick="addStampDemo()">🖍️ Add Demo Stamp</button></div>`;
+            let page = await doc.getPage(1);
+            let viewport = page.getViewport({scale:1.2});
+            let canvas = document.getElementById('stampCanvas');
+            canvas.width=viewport.width; canvas.height=viewport.height;
+            let ctx=canvas.getContext('2d');
+            await page.render({canvasContext:ctx, viewport:viewport}).promise;
+            window.stampDoc=doc; window.stampPage=page; window.stampCtx=ctx; window.stampCanvas=canvas;
+            showLoading(false);
         };
-
-        // ── leaveStampMode — extend to also restore left panel ───────────────
-        const _origLeaveStamp = window.leaveStampMode;
-        window.leaveStampMode = function(onConfirmed) {
-            const afterLeave = function() {
-                const leftPanel = document.getElementById('leftPanel');
-                if (leftPanel) leftPanel.style.display = '';
-                // Restore the floating mobile button
-                const mmt = document.getElementById('mobileMenuToggle');
-                if (mmt) mmt.style.display = '';
-                if (typeof onConfirmed === 'function') onConfirmed();
-            };
-            if (_origLeaveStamp) {
-                _origLeaveStamp(afterLeave);
-            } else {
-                afterLeave();
-            }
+    }
+    window.addStampDemo = function(){ if(window.stampCtx && window.stampCanvas){ window.stampCtx.font = "24px Arial"; window.stampCtx.fillStyle = "red"; window.stampCtx.fillText("STAMPED", 50, 100); showToast("Stamp applied (demo)"); } };
+    
+    // ---------- SWITCH MODES ----------
+    window.switchToSplit = function(){
+        if(activeTool === 'split') return;
+        activeTool = 'split';
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('splitTab').classList.add('active');
+        document.querySelector('.title span').innerHTML='✂️ Split PDF';
+        document.getElementById('splitControls').classList.add('active');
+        document.getElementById('mergeControls').classList.remove('active');
+        document.getElementById('uploadSection').style.display='block';
+        document.getElementById('pageContainer').style.display='block';
+        document.getElementById('leftPanel').style.display='flex';
+        document.getElementById('stampContainer').style.display='none';
+        if(splitFiles.length) updateSplitFileList(); else renderSplitPages();
+    };
+    window.switchToMerge = function(){
+        if(activeTool === 'merge') return;
+        activeTool = 'merge';
+        document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+        document.getElementById('mergeTab').classList.add('active');
+        document.querySelector('.title span').innerHTML='🔗 Merge PDF';
+        document.getElementById('splitControls').classList.remove('active');
+        document.getElementById('mergeControls').classList.add('active');
+        document.getElementById('uploadSection').style.display='block';
+        document.getElementById('pageContainer').style.display='none';
+        document.getElementById('leftPanel').style.display='flex';
+        document.getElementById('stampContainer').style.display='none';
+        updateMergeUI();
+    };
+    
+    // Preview dummy (bridge)
+    window.zoomPreview = (delta)=>{ showToast('Preview zoom (demo)'); };
+    window.rotatePreview = ()=>{ showToast('Rotate demo'); };
+    window.closePreview = ()=>{ document.getElementById('previewModal').style.display='none'; };
+    
+    // ---------- INITIAL DEMO DATA (fake split example) ----------
+    async function demoLoadFakePdf() {
+        // generate a dummy PDF using jspdf? Instead we'll just show empty demo but user can upload. For functionality we'll have placeholder.
+        let demoBtn = document.createElement('div'); demoBtn.innerText = '⚡ Load Demo PDF'; demoBtn.style.cssText='margin-bottom:16px; background:#3b82f6; display:inline-block; padding:6px 12px; border-radius:30px; cursor:pointer;';
+        demoBtn.onclick = async ()=>{
+            let response = await fetch('https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf');
+            let blob = await response.blob();
+            let file = new File([blob], 'demo.pdf', {type:'application/pdf'});
+            handleSplitFiles([file]);
         };
-
-        // ── Initialise UI on page load ───────────────────────────────────────
-        (function initializeUI() {
-            const panelTitle = document.getElementById('panelTitle');
-            if (panelTitle && !panelTitle.textContent) {
-                panelTitle.textContent = '📁 Uploaded Files (0)';
-            }
-
-            const filesContainer = document.getElementById('filesContainer');
-            if (filesContainer && filesContainer.children.length === 0) {
-                filesContainer.innerHTML = `
-                    <div class="empty-files">
-                        <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                        <span>No files uploaded yet</span>
-                    </div>`;
-            }
-        })();
-
-        // ============================================================
-        // Preview button routing is handled entirely by merge.js (loaded above).
-        // merge.js defines window.zoomPreview, window.navigatePreview, window.rotatePreview,
-        // window.fitPreview, window.deletePreviewPage, and window.closePreview.
-
-        // ── Page Loader ──────────────────────────────────────────────
-        (function initPageLoader() {
-            const loader = document.getElementById('pageLoader');
-            if (!loader) return;
-
-            // Only show once per session
-            if (sessionStorage.getItem('pdfMgrLoaded')) {
-                loader.style.display = 'none';
-                window._pdfMgrReady = true;
-                window.dispatchEvent(new Event('pdfMgrReady'));
-                return;
-            }
-
-            // Cycle through status messages
-            const statusEl = loader.querySelector('.loader-status-text');
-            const messages = ['Initializing…', 'Loading assets…', 'Preparing workspace…', 'Almost ready…'];
-            let msgIdx = 0;
-            const msgTimer = setInterval(function() {
-                msgIdx = (msgIdx + 1) % messages.length;
-                if (statusEl) statusEl.textContent = messages[msgIdx];
-            }, 600);
-
-            // Dismiss after animations complete (~3.2s total)
-            setTimeout(function() {
-                clearInterval(msgTimer);
-                if (statusEl) statusEl.textContent = 'Ready ✓';
-                setTimeout(function() {
-                    loader.classList.add('fade-out');
-                    setTimeout(function() {
-                        loader.style.display = 'none';
-                        sessionStorage.setItem('pdfMgrLoaded', '1');
-                        window._pdfMgrReady = true;
-                        // Fire ready event — auto-load scripts wait for this
-                        window.dispatchEvent(new Event('pdfMgrReady'));
-                    }, 650);
-                }, 300);
-            }, 3000);
-        })();
-
-
-        // ── Auto-load PDF into Stamp mode when redirected from external stamp button ──
-        (function autoLoadStampPdf() {
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('tool') !== 'stamp') return;
+        document.querySelector('.upload-section').prepend(demoBtn);
+    }
+    demoLoadFakePdf();
     
-        const pdfUrl  = sessionStorage.getItem('stampPdfUrl');
-        const pdfData = sessionStorage.getItem('stampPdfData');
-        const pdfName = sessionStorage.getItem('stampPdfName');
+    // Enable "split every" checkbox simulation
+    let splitEveryCheck = document.getElementById('splitEveryCheckbox');
+    let splitEveryInput = document.getElementById('splitEveryInput');
+    if(splitEveryCheck){
+        splitEveryCheck.onchange = (e)=>{ splitEveryInput.disabled = !e.target.checked; if(e.target.checked && splitFiles.length){ let step = parseInt(splitEveryInput.value); if(step>0){ splitPoints.clear(); let total=0; for(let f of splitFiles) total+=f.pages; for(let i=step;i<total;i+=step) splitPoints.add(i); renderSplitPages(); updateSplitCountBadge(); } } };
+        splitEveryInput.onchange = ()=>{ if(splitEveryCheck.checked) splitEveryCheck.dispatchEvent(new Event('change')); };
+    }
+    // Clear split points from UI
+    window.clearAllSplitPoints = clearSplitPoints;
+    window.showResetConfirm = ()=>{ if(activeTool==='split'){ splitFiles=[]; splitPoints.clear(); updateSplitFileList(); renderSplitPages(); showToast('Reset split session'); } else if(activeTool==='merge'){ mergeItems=[]; updateMergeUI(); } };
     
-        // Neither source present — nothing to load
-        if (!pdfName || (!pdfUrl && !pdfData)) return;
+    // extra: drag drop area
+    let dropZone = document.querySelector('.upload-section');
+    dropZone.addEventListener('dragover',(e)=>{e.preventDefault(); dropZone.style.borderColor='#3b82f6';});
+    dropZone.addEventListener('dragleave',()=>{dropZone.style.borderColor='var(--border)';});
+    dropZone.addEventListener('drop',async(e)=>{ e.preventDefault(); let files=Array.from(e.dataTransfer.files).filter(f=>f.type==='application/pdf'); if(activeTool==='split') handleSplitFiles(files); else if(activeTool==='merge') handleMergeFiles(files); dropZone.style.borderColor='var(--border)';});
     
-        const requestedMode = params.get('mode') || 'formatted';
-    
-        // Clear immediately
-        sessionStorage.removeItem('stampPdfUrl');
-        sessionStorage.removeItem('stampPdfData');
-        sessionStorage.removeItem('stampPdfName');
-    
-        function doLoad() {
-            if (typeof window.switchToStamp === 'function') {
-                window.switchToStamp();
-            }
-    
-            setTimeout(function() {
-                if (typeof window.switchStampMode === 'function') {
-                    window.switchStampMode(requestedMode);
-                }
-    
-                // Resolve: use URL if available (large files), fall back to base64 data
-                const source = pdfUrl || pdfData;
-    
-                fetch(source)
-                    .then(r => {
-                        if (!r.ok) throw new Error('Fetch failed: ' + r.status);
-                        return r.blob();
-                    })
-                    .then(blob => {
-                        const file = new File([blob], pdfName, { type: 'application/pdf' });
-                        const dt   = new DataTransfer();
-                        dt.items.add(file);
-                        const input = document.getElementById('stampFileInput');
-                        if (input) {
-                            input.files = dt.files;
-                            input.dispatchEvent(new Event('change'));
-                        }
-                    })
-                    .catch(err => console.error('Stamp auto-load failed:', err));
-            }, 700);
-        }
-    
-        if (document.readyState === 'complete') {
-            doLoad();
-        } else {
-            window.addEventListener('load', doLoad);
-        }
-    })();
-        
-    </script>
-
-    <!-- Toast Notification -->
-    <script>
-        function showToast(message) {
-            const container = document.getElementById('toast-container');
-            if (!container) {
-                alert(message);
-                return;
-            }
-
-            const item = document.createElement('div');
-            item.className = 'toast-item';
-            item.textContent = message;
-            container.appendChild(item);
-
-            // Trigger enter animation on next frame
-            requestAnimationFrame(() => {
-                requestAnimationFrame(() => item.classList.add('show'));
-            });
-
-            // Auto-dismiss after 3 s
-            const DURATION = 3000;
-            let dismissTimer = setTimeout(() => dismiss(item), DURATION);
-
-            // Click to dismiss early
-            item.addEventListener('click', () => {
-                clearTimeout(dismissTimer);
-                dismiss(item);
-            });
-
-            function dismiss(el) {
-                el.classList.remove('show');
-                el.classList.add('hide');
-                el.addEventListener('transitionend', () => el.remove(), {
-                    once: true
-                });
-                // Safety removal in case transitionend doesn't fire
-                setTimeout(() => el.remove(), 600);
-            }
-        }
-
-    
+    // initial setup
+    switchToSplit();
+</script>
 </body>
-
 </html>
