@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>PDF Manager</title>
+    <title>PDF Manager - Split & Merge</title>
 
     <!-- Favicon -->
-    <!-- <link rel="icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico"> -->
-    <link rel="shortcut icon" type="image/x-icon" href="./images/SOMS-icon.ico">
+    <link rel="icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico">
+    <link rel="shortcut icon" type="image/x-icon" href="../bower_components/images/SOMS-icon.ico">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
@@ -52,13 +52,8 @@
         }
 
         @keyframes gridDrift {
-            from {
-                background-position: 0 0;
-            }
-
-            to {
-                background-position: 48px 48px;
-            }
+            from { background-position: 0 0; }
+            to   { background-position: 48px 48px; }
         }
 
         /* Glow orbs */
@@ -71,37 +66,27 @@
         }
 
         .loader-orb-1 {
-            width: 340px;
-            height: 340px;
+            width: 340px; height: 340px;
             background: radial-gradient(circle, #1a4a8a 0%, transparent 70%);
-            top: -80px;
-            left: -60px;
+            top: -80px; left: -60px;
             animation-delay: 0.1s;
         }
 
         .loader-orb-2 {
-            width: 280px;
-            height: 280px;
+            width: 280px; height: 280px;
             background: radial-gradient(circle, #0f3460 0%, transparent 70%);
-            bottom: -60px;
-            right: -40px;
+            bottom: -60px; right: -40px;
             animation-delay: 0.3s;
         }
 
         .loader-orb-3 {
-            width: 200px;
-            height: 200px;
+            width: 200px; height: 200px;
             background: radial-gradient(circle, #1e3a5f 0%, transparent 70%);
-            top: 40%;
-            left: 60%;
+            top: 40%; left: 60%;
             animation-delay: 0.5s;
         }
 
-        @keyframes orbFloat {
-            to {
-                opacity: 1;
-            }
-        }
+        @keyframes orbFloat { to { opacity: 1; } }
 
         /* Document icon */
         .loader-doc-wrap {
@@ -113,8 +98,7 @@
         }
 
         .loader-doc {
-            width: 64px;
-            height: 80px;
+            width: 64px; height: 80px;
             background: linear-gradient(145deg, #1e3a6e 0%, #0f2040 100%);
             border-radius: 6px 14px 14px 6px;
             border: 1.5px solid rgba(99, 179, 255, 0.25);
@@ -129,10 +113,8 @@
         .loader-doc::before {
             content: '';
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
+            top: 0; right: 0;
+            width: 20px; height: 20px;
             background: linear-gradient(225deg, #0a0e1a 50%, transparent 50%);
             border-bottom-left-radius: 4px;
         }
@@ -140,10 +122,8 @@
         .loader-doc::after {
             content: '';
             position: absolute;
-            top: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
+            top: 0; right: 0;
+            width: 20px; height: 20px;
             background: linear-gradient(225deg, rgba(99, 179, 255, 0.15) 50%, transparent 50%);
             border-bottom-left-radius: 4px;
         }
@@ -151,8 +131,7 @@
         /* Document lines */
         .loader-doc-lines {
             position: absolute;
-            left: 12px;
-            top: 28px;
+            left: 12px; top: 28px;
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -167,42 +146,21 @@
             animation: lineGrow 0.4s ease-out forwards;
         }
 
-        .loader-doc-line:nth-child(1) {
-            width: 32px;
-            animation-delay: 0.65s;
-        }
+        .loader-doc-line:nth-child(1) { width: 32px; animation-delay: 0.65s; }
+        .loader-doc-line:nth-child(2) { width: 26px; animation-delay: 0.75s; }
+        .loader-doc-line:nth-child(3) { width: 30px; animation-delay: 0.85s; }
+        .loader-doc-line:nth-child(4) { width: 22px; animation-delay: 0.95s; }
 
-        .loader-doc-line:nth-child(2) {
-            width: 26px;
-            animation-delay: 0.75s;
-        }
-
-        .loader-doc-line:nth-child(3) {
-            width: 30px;
-            animation-delay: 0.85s;
-        }
-
-        .loader-doc-line:nth-child(4) {
-            width: 22px;
-            animation-delay: 0.95s;
-        }
-
-        @keyframes lineGrow {
-            to {
-                transform: scaleX(1);
-            }
-        }
+        @keyframes lineGrow { to { transform: scaleX(1); } }
 
         /* Second doc (stacked behind) */
         .loader-doc-bg {
             position: absolute;
-            width: 60px;
-            height: 74px;
+            width: 60px; height: 74px;
             background: linear-gradient(145deg, #162d58 0%, #0b1830 100%);
             border-radius: 6px 12px 12px 6px;
             border: 1.5px solid rgba(99, 179, 255, 0.12);
-            top: 6px;
-            left: -8px;
+            top: 6px; left: -8px;
             z-index: -1;
         }
 
@@ -231,9 +189,7 @@
             animation: loaderSlideUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) 1.0s forwards;
         }
 
-        .loader-name span {
-            color: #63b3ff;
-        }
+        .loader-name span { color: #63b3ff; }
 
         /* Progress bar */
         .loader-progress-wrap {
@@ -244,16 +200,14 @@
         }
 
         .loader-progress-track {
-            width: 100%;
-            height: 2px;
+            width: 100%; height: 2px;
             background: rgba(99, 179, 255, 0.12);
             border-radius: 2px;
             overflow: hidden;
         }
 
         .loader-progress-fill {
-            height: 100%;
-            width: 0%;
+            height: 100%; width: 0%;
             background: linear-gradient(90deg, #2563eb, #63b3ff, #93c5fd);
             border-radius: 2px;
             animation: progressFill 1.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s forwards;
@@ -261,21 +215,10 @@
         }
 
         @keyframes progressFill {
-            0% {
-                width: 0%;
-            }
-
-            60% {
-                width: 75%;
-            }
-
-            85% {
-                width: 90%;
-            }
-
-            100% {
-                width: 100%;
-            }
+            0%   { width: 0%;   }
+            60%  { width: 75%;  }
+            85%  { width: 90%;  }
+            100% { width: 100%; }
         }
 
         /* Status text */
@@ -292,46 +235,21 @@
 
         .loader-status-text {
             display: inline-block;
-            animation: statusCycle 2s steps(1) 1.2s forwards;
-        }
-
-        @keyframes statusCycle {
-            0% {
-                content: 'Initializing';
-            }
-
-            33% {
-                content: 'Loading assets';
-            }
-
-            66% {
-                content: 'Preparing workspace';
-            }
-
-            100% {
-                content: 'Ready';
-            }
         }
 
         /* Shared animations */
         @keyframes loaderSlideUp {
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes loaderFadeIn {
-            to {
-                opacity: 1;
-            }
+            to { opacity: 1; }
         }
 
         /* Corner accents */
         .loader-corner {
             position: absolute;
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             opacity: 0;
             animation: loaderFadeIn 0.6s ease 0.5s forwards;
         }
@@ -343,50 +261,60 @@
             background: rgba(99, 179, 255, 0.35);
         }
 
-        .loader-corner::before {
-            width: 2px;
-            height: 100%;
-        }
+        .loader-corner::before { width: 2px;  height: 100%; }
+        .loader-corner::after  { width: 100%; height: 2px;  }
 
-        .loader-corner::after {
-            width: 100%;
-            height: 2px;
-        }
+        .loader-corner-tl { top: 24px;    left: 24px;  }
+        .loader-corner-tl::before { top: 0; left: 0; }
+        .loader-corner-tl::after  { top: 0; left: 0; }
 
-        .loader-corner-tl {
-            top: 24px;
-            left: 24px;
-        }
+        .loader-corner-tr { top: 24px;    right: 24px;  transform: rotate(90deg);  }
+        .loader-corner-br { bottom: 24px; right: 24px;  transform: rotate(180deg); }
+        .loader-corner-bl { bottom: 24px; left: 24px;   transform: rotate(270deg); }
 
-        .loader-corner-tl::before {
-            top: 0;
-            left: 0;
-        }
-
-        .loader-corner-tl::after {
-            top: 0;
-            left: 0;
-        }
-
-        .loader-corner-tr {
-            top: 24px;
-            right: 24px;
-            transform: rotate(90deg);
-        }
-
-        .loader-corner-br {
+        /* ── Toast Stack ─────────────────────────────────────────────────── */
+        #toast-container {
+            position: fixed;
             bottom: 24px;
-            right: 24px;
-            transform: rotate(180deg);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 99999;
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
         }
 
-        .loader-corner-bl {
-            bottom: 24px;
-            left: 24px;
-            transform: rotate(270deg);
+        .toast-item {
+            pointer-events: all;
+            min-width: 220px;
+            max-width: 360px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 12px 18px;
+            font-size: 15px;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+            cursor: pointer;
+            user-select: none;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .toast-item.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast-item.hide {
+            opacity: 0;
+            transform: translateY(8px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
         }
     </style>
-
 
 </head>
 
@@ -428,6 +356,7 @@
             </div>
         </div>
     </div>
+
     <!-- Fixed Sticky Header Container -->
     <div class="sticky-header-container">
         <!-- Top Bar -->
@@ -472,9 +401,6 @@
                 <span>Extract</span>
             </button>
         </div>
-
-
-
 
         <!-- Split Controls -->
         <div class="split-controls" id="splitControls">
@@ -573,7 +499,7 @@
             <div class="upload-section" id="uploadSection">
                 <div class="upload-box" onclick="document.getElementById('fileInput').click()">
                     <div class="upload-icon">📄</div>
-                    <div class="upload-text">Click to upload or drag & drop</div>
+                    <div class="upload-text">Click to upload or drag &amp; drop</div>
                     <div class="upload-subtext">PDF files only (multiple files allowed)</div>
                 </div>
                 <input type="file" id="fileInput" class="file-input" accept=".pdf" multiple onchange="handleFileSelect(event)">
@@ -674,12 +600,13 @@
     <div id="toast-container"></div>
 
     <script>
-        window.PDF_MANAGER_BASE = '<?= $pdfBase ?>';
+        window.PDF_MANAGER_BASE = 'PDF-file-manager-new';
     </script>
-    <script src="<?= $pdfBase ?>/js/common.js"></script>
-    <script src="<?= $pdfBase ?>/js/split.js"></script>
-    <script src="<?= $pdfBase ?>/js/merge.js"></script>
-    <script src="<?= $pdfBase ?>/js/stamp.js"></script>
+    <script src="PDF-file-manager-new/js/common.js"></script>
+    <script src="PDF-file-manager-new/js/split.js"></script>
+    <script src="PDF-file-manager-new/js/merge.js"></script>
+    <script src="PDF-file-manager-new/js/stamp.js"></script>
+
     <!-- Tool switching -->
     <script>
         let activeTool = 'split';
@@ -711,32 +638,27 @@
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('splitTab').classList.add('active');
 
-                    // Hide stamp, restore split/merge UI
                     const stampContainer = document.getElementById('stampContainer');
-                    const uploadSection = document.getElementById('uploadSection');
-                    const pageContainer = document.getElementById('pageContainer');
-                    const leftPanel = document.getElementById('leftPanel');
-                    const mobileToggle = document.getElementById('mobileMenuToggle');
-                    const mergeControls = document.getElementById('mergeControls');
+                    const uploadSection  = document.getElementById('uploadSection');
+                    const leftPanel      = document.getElementById('leftPanel');
+                    const mobileToggle   = document.getElementById('mobileMenuToggle');
+                    const mergeControls  = document.getElementById('mergeControls');
 
                     if (stampContainer) stampContainer.style.display = 'none';
-                    if (uploadSection) uploadSection.style.display = '';
-                    if (leftPanel) leftPanel.style.display = '';
-                    if (mobileToggle) mobileToggle.style.display = '';
-                    if (mergeControls) mergeControls.classList.remove('active');
+                    if (uploadSection)  uploadSection.style.display  = '';
+                    if (leftPanel)      leftPanel.style.display       = '';
+                    if (mobileToggle)   mobileToggle.style.display    = '';
+                    if (mergeControls)  mergeControls.classList.remove('active');
 
                     const titleSpan = document.querySelector('.title span');
                     if (titleSpan) titleSpan.textContent = '✂️ Split PDF';
 
-                    if (typeof window.initSplit === 'function') {
-                        window.initSplit();
-                    }
+                    if (typeof window.initSplit === 'function') window.initSplit();
 
                     hideModeLoading();
                 }, 350));
             };
 
-            // Guard: confirm if stamp has PDF loaded
             if (activeTool === 'stamp' && window.stampHasPdf) {
                 showConfirm('Switch to Split Mode',
                     'You have a PDF loaded in Stamp mode. Switching will discard your stamp session. Continue?',
@@ -763,25 +685,24 @@
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('mergeTab').classList.add('active');
 
-                    // Hide stamp, restore merge UI
                     const stampContainer = document.getElementById('stampContainer');
-                    const splitControls = document.getElementById('splitControls');
-                    const mergeControls = document.getElementById('mergeControls');
-                    const pageContainer = document.getElementById('pageContainer');
-                    const pageGrid = document.getElementById('pageGrid');
-                    const uploadSection = document.getElementById('uploadSection');
-                    const leftPanel = document.getElementById('leftPanel');
-                    const mobileToggle = document.getElementById('mobileMenuToggle');
+                    const splitControls  = document.getElementById('splitControls');
+                    const mergeControls  = document.getElementById('mergeControls');
+                    const pageContainer  = document.getElementById('pageContainer');
+                    const pageGrid       = document.getElementById('pageGrid');
+                    const uploadSection  = document.getElementById('uploadSection');
+                    const leftPanel      = document.getElementById('leftPanel');
+                    const mobileToggle   = document.getElementById('mobileMenuToggle');
 
                     if (stampContainer) stampContainer.style.display = 'none';
-                    if (leftPanel) leftPanel.style.display = '';
-                    if (mobileToggle) mobileToggle.style.display = '';
-                    if (splitControls) splitControls.classList.remove('show');
-                    if (mergeControls) mergeControls.classList.add('active');
-                    if (pageContainer) pageContainer.classList.remove('active');
-                    if (pageGrid) pageGrid.innerHTML = '';
-                    if (uploadSection) uploadSection.classList.remove('hidden');
-                    if (uploadSection) uploadSection.style.display = '';
+                    if (leftPanel)      leftPanel.style.display       = '';
+                    if (mobileToggle)   mobileToggle.style.display    = '';
+                    if (splitControls)  splitControls.classList.remove('show');
+                    if (mergeControls)  mergeControls.classList.add('active');
+                    if (pageContainer)  pageContainer.classList.remove('active');
+                    if (pageGrid)       pageGrid.innerHTML             = '';
+                    if (uploadSection)  uploadSection.classList.remove('hidden');
+                    if (uploadSection)  uploadSection.style.display    = '';
 
                     const titleSpan = document.querySelector('.title span');
                     if (titleSpan) titleSpan.textContent = '🔗 Merge PDF';
@@ -792,22 +713,19 @@
                     const filesContainer = document.getElementById('filesContainer');
                     if (filesContainer) {
                         filesContainer.innerHTML = `
-                    <div class="empty-files">
-                        <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                        <span>Upload PDFs to merge</span>
-                    </div>
-                `;
+                            <div class="empty-files">
+                                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                                <span>Upload PDFs to merge</span>
+                            </div>
+                        `;
                     }
 
-                    if (typeof initMerge === 'function') {
-                        initMerge();
-                    }
+                    if (typeof initMerge === 'function') initMerge();
 
                     hideModeLoading();
                 }, 350));
             };
 
-            // Guard: confirm if stamp has PDF loaded
             if (activeTool === 'stamp' && window.stampHasPdf) {
                 showConfirm('Switch to Merge Mode',
                     'You have a PDF loaded in Stamp mode. Switching will discard your stamp session. Continue?',
@@ -832,13 +750,12 @@
                     activeTool = 'stamp';
                     window.activeTool = 'stamp';
 
-                    // Hide split/merge UI elements
-                    const uploadSection = document.getElementById('uploadSection');
-                    const pageContainer = document.getElementById('pageContainer');
-                    const leftPanel = document.getElementById('leftPanel');
-                    const mobileToggle = document.getElementById('mobileMenuToggle');
-                    const splitControls = document.getElementById('splitControls');
-                    const mergeControls = document.getElementById('mergeControls');
+                    const uploadSection  = document.getElementById('uploadSection');
+                    const pageContainer  = document.getElementById('pageContainer');
+                    const leftPanel      = document.getElementById('leftPanel');
+                    const mobileToggle   = document.getElementById('mobileMenuToggle');
+                    const splitControls  = document.getElementById('splitControls');
+                    const mergeControls  = document.getElementById('mergeControls');
                     const stampContainer = document.getElementById('stampContainer');
 
                     if (uploadSection) uploadSection.style.display = 'none';
@@ -846,7 +763,7 @@
                         pageContainer.classList.remove('active');
                         pageContainer.style.display = 'none';
                     }
-                    if (leftPanel) leftPanel.style.display = 'none';
+                    if (leftPanel)    leftPanel.style.display    = 'none';
                     if (mobileToggle) mobileToggle.style.display = 'none';
                     if (splitControls) {
                         splitControls.classList.remove('active');
@@ -854,10 +771,9 @@
                     }
                     if (mergeControls) mergeControls.classList.remove('active');
 
-                    // Show stamp container
                     if (stampContainer) {
                         stampContainer.style.display = 'block';
-                        stampContainer.style.width = '100%';
+                        stampContainer.style.width   = '100%';
                     }
 
                     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -867,7 +783,6 @@
                     const titleSpan = document.querySelector('.title span');
                     if (titleSpan) titleSpan.textContent = '🖋️ Stamp PDF';
 
-                    // Measure real header height and set CSS variable before initStamp
                     const hdr = document.querySelector('.sticky-header-container');
                     if (hdr) {
                         const h = hdr.getBoundingClientRect().height;
@@ -875,7 +790,6 @@
                         document.documentElement.style.setProperty('--stamp-vh-used', (h + 32) + 'px');
                     }
 
-                    // Init stamp UI
                     if (typeof window.initStamp === 'function') window.initStamp();
 
                     // Override leaveStampMode to restore the layout
@@ -885,14 +799,13 @@
                             window.activeTool = 'split';
                             window.stampHasPdf = false;
                             if (stampContainer) stampContainer.style.display = 'none';
-                            if (leftPanel) leftPanel.style.display = '';
-                            if (mobileToggle) mobileToggle.style.display = '';
+                            if (leftPanel)      leftPanel.style.display       = '';
+                            if (mobileToggle)   mobileToggle.style.display    = '';
                             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
                             const splitTabBtn = document.getElementById('splitTab');
                             if (splitTabBtn) splitTabBtn.classList.add('active');
                             const titleSpan2 = document.querySelector('.title span');
                             if (titleSpan2) titleSpan2.textContent = '✂️ Split PDF';
-                            // initSplit correctly restores uploadSection + pageContainer
                             if (typeof window.initSplit === 'function') window.initSplit();
                             if (typeof onConfirmed === 'function') onConfirmed();
                         }
@@ -909,7 +822,6 @@
                 }, 350));
             };
 
-            // Guard: confirm if split or merge has files loaded
             if (window.hasSplitFiles) {
                 showConfirm('Switch to Stamp Mode',
                     'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
@@ -926,19 +838,14 @@
         // Handle reset for both modes
         window.showResetConfirm = function() {
             if (activeTool === 'merge') {
-                if (typeof resetMerge === 'function') {
-                    resetMerge();
-                }
+                if (typeof resetMerge === 'function') resetMerge();
             } else {
                 showConfirm(
                     'Start Over',
                     'Start over with new files? All current progress will be lost.',
                     () => {
-                        if (typeof window.initSplit === 'function') {
-                            window.initSplit();
-                        } else {
-                            location.reload();
-                        }
+                        if (typeof window.initSplit === 'function') window.initSplit();
+                        else location.reload();
                     }
                 );
             }
@@ -954,26 +861,19 @@
             const filesContainer = document.getElementById('filesContainer');
             if (filesContainer && filesContainer.children.length === 0) {
                 filesContainer.innerHTML = `
-            <div class="empty-files">
-                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
-                <span>No files uploaded yet</span>
-            </div>
-        `;
+                    <div class="empty-files">
+                        <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                        <span>No files uploaded yet</span>
+                    </div>
+                `;
             }
         })();
-
-        // ============================================================
-        // Preview button routing is handled entirely by merge.js (loaded above).
-        // merge.js defines window.zoomPreview, window.navigatePreview, window.rotatePreview,
-        // window.fitPreview, window.deletePreviewPage, and window.closePreview — each routing
-        // to split or merge implementations based on window.activeTool.
 
         // ── Page Loader ──────────────────────────────────────────────
         (function initPageLoader() {
             const loader = document.getElementById('pageLoader');
             if (!loader) return;
 
-            // Only show once per session
             if (sessionStorage.getItem('pdfMgrLoaded')) {
                 loader.style.display = 'none';
                 window._pdfMgrReady = true;
@@ -981,7 +881,6 @@
                 return;
             }
 
-            // Cycle through status messages
             const statusEl = loader.querySelector('.loader-status-text');
             const messages = ['Initializing…', 'Loading assets…', 'Preparing workspace…', 'Almost ready…'];
             let msgIdx = 0;
@@ -990,7 +889,6 @@
                 if (statusEl) statusEl.textContent = messages[msgIdx];
             }, 600);
 
-            // Dismiss after animations complete (~3.2s total)
             setTimeout(function() {
                 clearInterval(msgTimer);
                 if (statusEl) statusEl.textContent = 'Ready ✓';
@@ -1000,7 +898,6 @@
                         loader.style.display = 'none';
                         sessionStorage.setItem('pdfMgrLoaded', '1');
                         window._pdfMgrReady = true;
-                        // Fire ready event — auto-load scripts wait for this
                         window.dispatchEvent(new Event('pdfMgrReady'));
                     }, 650);
                 }, 300);
@@ -1012,10 +909,9 @@
             const params = new URLSearchParams(window.location.search);
             if (params.get('tool') !== 'stamp') return;
 
-            // Read sessionStorage now — values captured in closure
-            const pdfUrl = sessionStorage.getItem('stampPdfUrl');
-            const pdfData = sessionStorage.getItem('stampPdfData');
-            const pdfName = sessionStorage.getItem('stampPdfName');
+            const pdfUrl        = sessionStorage.getItem('stampPdfUrl');
+            const pdfData       = sessionStorage.getItem('stampPdfData');
+            const pdfName       = sessionStorage.getItem('stampPdfName');
             const requestedMode = params.get('mode') || 'formatted';
 
             console.log('[StampAutoLoad] tool=stamp detected');
@@ -1037,10 +933,8 @@
                     })
                     .then(function(blob) {
                         console.log('[StampAutoLoad] Blob ready, size:', blob.size);
-                        const file = new File([blob], pdfName, {
-                            type: 'application/pdf'
-                        });
-                        const dt = new DataTransfer();
+                        const file = new File([blob], pdfName, { type: 'application/pdf' });
+                        const dt   = new DataTransfer();
                         dt.items.add(file);
                         const input = document.getElementById('stampFileInput');
                         if (input) {
@@ -1070,9 +964,7 @@
                     console.log('[StampAutoLoad] stampFileInput found after', attempts * 100, 'ms');
                     callback();
                 } else {
-                    setTimeout(function() {
-                        waitForStampInput(callback, attempts + 1);
-                    }, 100);
+                    setTimeout(function() { waitForStampInput(callback, attempts + 1); }, 100);
                 }
             }
 
@@ -1092,30 +984,23 @@
                 });
             }
 
-            // Race-condition-proof: use a flag in case pdfMgrReady already fired
             if (window._pdfMgrReady) {
-                // Loader already dismissed before this IIFE ran
                 console.log('[StampAutoLoad] pdfMgrReady already fired — running immediately');
                 doLoad();
             } else {
                 window.addEventListener('pdfMgrReady', function() {
                     console.log('[StampAutoLoad] pdfMgrReady received — running doLoad');
                     doLoad();
-                }, {
-                    once: true
-                });
+                }, { once: true });
             }
         })();
     </script>
 
-    <!-- Toast Notification -->
+    <!-- Stacking Toast System -->
     <script>
         function showToast(message) {
             const container = document.getElementById('toast-container');
-            if (!container) {
-                alert(message);
-                return;
-            }
+            if (!container) { alert(message); return; }
 
             const item = document.createElement('div');
             item.className = 'toast-item';
@@ -1127,7 +1012,6 @@
                 requestAnimationFrame(() => item.classList.add('show'));
             });
 
-            // Auto-dismiss after 3 s
             const DURATION = 3000;
             let dismissTimer = setTimeout(() => dismiss(item), DURATION);
 
@@ -1140,13 +1024,12 @@
             function dismiss(el) {
                 el.classList.remove('show');
                 el.classList.add('hide');
-                el.addEventListener('transitionend', () => el.remove(), {
-                    once: true
-                });
-                // Safety removal in case transitionend doesn't fire
+                el.addEventListener('transitionend', () => el.remove(), { once: true });
                 setTimeout(() => el.remove(), 600);
             }
         }
     </script>
+
 </body>
+
 </html>
