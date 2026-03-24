@@ -65,6 +65,7 @@
 
     // ─── Stamp-only mode (no PDF) ─────────────────────────────────────────────
     let stampOnlyMode = false;   // true when "Print Stamp Only" checkbox is checked
+    let bwMode        = false;   // true when "Grayscale page" is checked
     let stampOnlyLastSize = 'A4'; // remembers last paper size used this session
 
     // ─── Presets ──────────────────────────────────────────────────────────────
@@ -127,6 +128,8 @@
     function resetStampState() {
         stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
         stampTotalPages = 0; stampPreviewPage = 1; stampPreviewScale = 1.0; stampMode = 'simple';
+        bwMode = false;
+        window.stampHasPdf = false;
 
         // Start with hardcoded defaults ...
         stampSettings = {
@@ -390,6 +393,9 @@
                   <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange()"> Show Date</label>
                   <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange()"> Show Time</label>
                   <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange()"> Transparent BG</label>
+                  <label class="stamp-check" title="Convert the PDF page to grayscale — stamp color is preserved">
+                    <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked)"> Grayscale PDF
+                  </label>
                 </div>
               </div>
 
@@ -666,6 +672,7 @@
                 stampPreviewPage = 1;
                 pageOverrides    = {};          // reset all per-page overrides
                 pageOverrideActive = false;
+                window.stampHasPdf = true;
 
                 // If stamp-only mode was active, turn it off since we now have a PDF
                 if (stampOnlyMode) {
@@ -709,6 +716,10 @@
         base.height = over.height = viewport.height;
 
         await page.render({ canvasContext: base.getContext('2d'), viewport }).promise;
+
+        // Grayscale page — applied to base canvas only; stamp overlay stays in color
+        if (bwMode) applyGrayscaleToCanvas(base);
+
         document.getElementById('stampPageIndicator').textContent = `Page ${stampPreviewPage} / ${stampTotalPages}`;
 
         // Update Apply to Pages visibility based on page count
@@ -1024,6 +1035,25 @@
     // ─── Per-page override helpers ────────────────────────────────────────────
 
     // Toggle override on/off for the current page
+    // ─── Grayscale page mode ──────────────────────────────────────────────────
+    window.toggleBwMode = function (checked) {
+        bwMode = checked;
+        renderStampPreviewPage();
+    };
+
+    // Converts all pixels of a canvas to grayscale in-place.
+    // Stamp is drawn AFTER this so it stays in full color.
+    function applyGrayscaleToCanvas(canvas) {
+        const ctx  = canvas.getContext('2d');
+        const imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const d    = imgd.data;
+        for (let i = 0; i < d.length; i += 4) {
+            const g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+            d[i] = d[i+1] = d[i+2] = g;
+        }
+        ctx.putImageData(imgd, 0, 0);
+    }
+
     window.togglePageOverride = function (checked) {
         pageOverrideActive = checked;
         const lbl = document.getElementById('pageOverrideLabel');
@@ -2306,6 +2336,9 @@
             ctx.fillStyle  = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             await page.render({ canvasContext: ctx, viewport: vpHigh }).promise;
+
+            // Grayscale page — stamp is drawn after so it stays in color
+            if (bwMode) applyGrayscaleToCanvas(canvas);
 
             if (stampSet.has(pNum)) {
                 // Use per-page override settings if they exist, otherwise global
