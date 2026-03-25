@@ -53,6 +53,21 @@
         pageRange:    ''
     };
 
+    // Received/Released box stamp settings
+    let recvSettings = {
+        schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
+        officeName:     'Office of the College Registrar',
+        stampType:      'RECEIVED',
+        personnelName:  '\n\n\nELENITO GINETE DAVID',
+        personnelDesig: 'Admission and Records Officer',
+        showDate: true, showTime: true,
+        color: '#1a2a6c', opacity: 1.0,
+        positionX: 50, positionY: 50,
+        applyPages: 'all', pageRange: '',
+        scale: 0.50,
+        transparentBg: true
+    };
+
     // Drag state
     let isDragging = false, dragStartX = 0, dragStartY = 0,
         dragStartPosX = 0, dragStartPosY = 0;
@@ -87,12 +102,14 @@
     const LS_KEY_FMT    = 'fmtSettings_v1';
     const LS_KEY_MODE   = 'stampMode_v1';
     const LS_KEY_SEAL   = 'sealSettings_v1';
+    const LS_KEY_RECV   = 'recvSettings_v1';
 
     function saveStampSettings() {
         try {
             localStorage.setItem(LS_KEY_SIMPLE, JSON.stringify(stampSettings));
             localStorage.setItem(LS_KEY_FMT,    JSON.stringify(fmtSettings));
             localStorage.setItem(LS_KEY_SEAL,   JSON.stringify(sealSettings));
+            localStorage.setItem(LS_KEY_RECV,   JSON.stringify(recvSettings));
             localStorage.setItem(LS_KEY_MODE,   stampMode);
         } catch(e) {}
     }
@@ -102,11 +119,13 @@
             const s = localStorage.getItem(LS_KEY_SIMPLE);
             const f = localStorage.getItem(LS_KEY_FMT);
             const e = localStorage.getItem(LS_KEY_SEAL);
+            const rv = localStorage.getItem(LS_KEY_RECV);
             const m = localStorage.getItem(LS_KEY_MODE);
-            if (s) stampSettings = Object.assign(stampSettings, JSON.parse(s));
-            if (f) fmtSettings   = Object.assign(fmtSettings,   JSON.parse(f));
-            if (e) sealSettings  = Object.assign(sealSettings,  JSON.parse(e));
-            if (m) stampMode     = m;
+            if (s)  stampSettings = Object.assign(stampSettings, JSON.parse(s));
+            if (f)  fmtSettings   = Object.assign(fmtSettings,   JSON.parse(f));
+            if (e)  sealSettings  = Object.assign(sealSettings,  JSON.parse(e));
+            if (rv) recvSettings  = Object.assign(recvSettings,  JSON.parse(rv));
+            if (m)  stampMode     = m;
         } catch(e) {}
     }
 
@@ -116,6 +135,7 @@
         localStorage.removeItem(LS_KEY_SIMPLE);
         localStorage.removeItem(LS_KEY_FMT);
         localStorage.removeItem(LS_KEY_SEAL);
+        localStorage.removeItem(LS_KEY_RECV);
         localStorage.removeItem(LS_KEY_MODE);
     };
 
@@ -129,7 +149,6 @@
         stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
         stampTotalPages = 0; stampPreviewPage = 1; stampPreviewScale = 1.0; stampMode = 'simple';
         bwMode = false;
-        window.stampHasPdf = false;
 
         // Start with hardcoded defaults ...
         stampSettings = {
@@ -164,6 +183,20 @@
             positionY:    50,
             applyPages:   'all',
             pageRange:    ''
+        };
+
+        recvSettings = {
+            schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
+            officeName:     'Office of the College Registrar',
+            stampType:      'RECEIVED',
+            personnelName:  '\n\n\nELENITO GINETE DAVID',
+            personnelDesig: 'Admission and Records Officer',
+            showDate: true, showTime: true,
+            color: '#1a2a6c', opacity: 1.0,
+            positionX: 50, positionY: 50,
+            applyPages: 'all', pageRange: '',
+            scale: 0.50,
+            transparentBg: true
         };
 
         // ... then override with whatever was last saved
@@ -218,7 +251,7 @@
               <!-- Print Stamp Only toggle -->
               <label class="stamp-check" style="margin-bottom:8px;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;gap:8px"
                      title="Check this to preview and print the stamp without loading a PDF">
-                <input type="checkbox" id="stampOnlyChk" onchange="toggleStampOnlyMode(this.checked)">
+                <input type="checkbox" id="stampOnlyChk" onchange="toggleStampOnlyMode(this.checked); showToast(this.checked ? '🖨️ Stamp Only mode on' : '🖨️ Stamp Only mode off')">
                 🖨️ Stamp Only (no PDF)
               </label>
 
@@ -246,6 +279,9 @@
               </div>
               <div class="stamp-mode-toggle">
                 <button id="modeSealBtn" class="stamp-mode-btn" onclick="switchStampMode('seal')">🔵 Round Seal</button>
+              </div>
+              <div class="stamp-mode-toggle">
+                <button id="modeRecvBtn" class="stamp-mode-btn" onclick="switchStampMode('received')">📬 Received / Released</button>
               </div>
             </div>
 
@@ -294,9 +330,9 @@
                   <span style="font-size:12px;color:var(--text-secondary)">°</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Bold enabled' : '❌ Bold disabled')"> <b>Bold</b></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Italic enabled' : '❌ Italic disabled')"> <i>Italic</i></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✅ Border enabled' : '❌ Border disabled')"> Border</label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✏️ Bold on' : '✏️ Bold off')"> <b>Bold</b></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✏️ Italic on' : '✏️ Italic off')"> <i>Italic</i></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '🔲 Border on' : '🔲 Border off')"> Border</label>
                 </div>
               </div>
 
@@ -393,9 +429,6 @@
                   <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show Date</label>
                   <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🕐 Time shown' : '🕐 Time hidden')"> Show Time</label>
                   <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🪟 Transparent BG on' : '🪟 Transparent BG off')"> Transparent BG</label>
-                  <label class="stamp-check" title="Convert the PDF page to grayscale — stamp color is preserved">
-                    <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked)"> Grayscale PDF
-                  </label>
                 </div>
               </div>
 
@@ -530,6 +563,120 @@
 
             </div><!-- end sealStampControls -->
 
+            <!-- ══════ RECEIVED/RELEASED CONTROLS ══════ -->
+            <div id="recvStampControls" style="display:none">
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">🏫 School Name</div>
+                <input class="stamp-input" id="recvSchoolName" type="text" value="${recvSettings.schoolName}" oninput="onRecvSettingChange()">
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">🏢 Office Name</div>
+                <input class="stamp-input" id="recvOfficeName" type="text" value="${recvSettings.officeName}" oninput="onRecvSettingChange()">
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">🔖 Stamp Type</div>
+                <div style="display:flex;gap:8px;margin-bottom:6px">
+                  <button class="stamp-preset-btn" style="border-color:#1a5276;color:#1a5276" onclick="document.getElementById('recvStampType').value='RECEIVED';onRecvSettingChange()">RECEIVED</button>
+                  <button class="stamp-preset-btn" style="border-color:#1e8449;color:#1e8449" onclick="document.getElementById('recvStampType').value='RELEASED';onRecvSettingChange()">RELEASED</button>
+                </div>
+                <input class="stamp-input" id="recvStampType" type="text" value="${recvSettings.stampType}" oninput="onRecvSettingChange()" placeholder="e.g. RECEIVED">
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">👤 Personnel Name</div>
+                <input class="stamp-input" id="recvPersonnelName" type="text" value="${recvSettings.personnelName}" oninput="onRecvSettingChange()">
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">🏷️ Personnel Designation</div>
+                <input class="stamp-input" id="recvPersonnelDesig" type="text" value="${recvSettings.personnelDesig}" oninput="onRecvSettingChange()">
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">🎨 Appearance</div>
+                <div class="stamp-row">
+                  <label class="stamp-label">Color</label>
+                  <input type="color" id="recvColor" value="${recvSettings.color}" onchange="onRecvSettingChange()"
+                         style="width:44px;height:32px;border:none;cursor:pointer;background:none">
+                </div>
+                <div class="stamp-row">
+                  <label class="stamp-label">Opacity</label>
+                  <input type="range" id="recvOpacity" min="0.1" max="1" step="0.05"
+                         value="${recvSettings.opacity}" oninput="onRecvSettingChange()" style="flex:1">
+                  <span id="recvOpacityVal" style="width:36px;text-align:right">${Math.round(recvSettings.opacity * 100)}%</span>
+                </div>
+                <div class="stamp-row">
+                  <label class="stamp-label">Scale</label>
+                  <input type="range" id="recvScale" min="0.2" max="2.5" step="0.05"
+                         value="${recvSettings.scale}" oninput="onRecvSettingChange()" style="flex:1">
+                  <input type="number" id="recvScaleNum" min="20" max="250" step="5"
+                         value="${Math.round(recvSettings.scale * 100)}"
+                         onchange="syncRecvScaleFromInput()" oninput="syncRecvScaleFromInput()"
+                         class="stamp-input" style="width:60px;text-align:center;padding:4px 6px">
+                  <span style="font-size:12px;color:var(--text-secondary)">%</span>
+                </div>
+                <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
+                  <label class="stamp-check"><input type="checkbox" id="recvShowDate" ${recvSettings.showDate ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show Date</label>
+                  <label class="stamp-check"><input type="checkbox" id="recvShowTime" ${recvSettings.showTime ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '🕐 Time shown' : '🕐 Time hidden')"> Show Time</label>
+                  <label class="stamp-check"><input type="checkbox" id="recvTransparent" ${recvSettings.transparentBg ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '🪟 Transparent BG on' : '🪟 Transparent BG off')"> Transparent BG</label>
+                </div>
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title">📍 Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
+                <div class="stamp-row">
+                  <label class="stamp-label">Horizontal</label>
+                  <input type="range" id="recvPosX" min="5" max="95" value="${recvSettings.positionX}" oninput="onRecvPositionChange()" style="flex:1">
+                  <span id="recvPosXVal" style="width:36px;text-align:right">${recvSettings.positionX}%</span>
+                </div>
+                <div class="stamp-row">
+                  <label class="stamp-label">Vertical</label>
+                  <input type="range" id="recvPosY" min="5" max="95" value="${recvSettings.positionY}" oninput="onRecvPositionChange()" style="flex:1">
+                  <span id="recvPosYVal" style="width:36px;text-align:right">${recvSettings.positionY}%</span>
+                </div>
+                <label class="stamp-check" style="font-size:12px;margin-top:4px">
+                  <input type="checkbox" onchange="document.getElementById('recvPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
+                  Show position shortcuts
+                </label>
+                <div id="recvPosGrid" class="stamp-pos-grid" style="display:none">
+                  ${makePosBtns('received')}
+                </div>
+              </div>
+
+              <div class="stamp-section stamp-apply-pages-section" id="recvApplyPages" style="display:none">
+              <br>
+                <div class="stamp-section-title">📋 Apply to Pages</div>
+                <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
+                  <label class="stamp-check"><input type="radio" name="recvPages" value="all" ${recvSettings.applyPages === 'all' ? 'checked' : ''} onchange="onStampPagesChange(this,'received')"> All pages</label>
+                  <label class="stamp-check"><input type="radio" name="recvPages" value="current" ${recvSettings.applyPages === 'current' ? 'checked' : ''} onchange="onStampPagesChange(this,'received')"> Current only</label>
+                  <label class="stamp-check"><input type="radio" name="recvPages" value="range" ${recvSettings.applyPages === 'range' ? 'checked' : ''} onchange="onStampPagesChange(this,'received')"> Page range</label>
+                </div>
+                <div id="recvRangeRow" class="stamp-row" style="display:${recvSettings.applyPages === 'range' ? 'flex' : 'none'}">
+                  <label class="stamp-label">Pages</label>
+                  <input class="stamp-input" id="recvPageRange" type="text" value="${recvSettings.pageRange}" placeholder="e.g. 1,3,5-8" oninput="onRecvSettingChange()" style="flex:1">
+                </div>
+              </div>
+
+            </div><!-- end recvStampControls -->
+
+            <!-- Grayscale PDF — only available in normal mode (PDF loaded), hidden in stamp-only mode -->
+            <div id="grayscalePdfSection" class="stamp-section" style="padding-top:4px;display:none">
+              <label class="stamp-check" style="padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;gap:8px"
+                     title="Convert the PDF pages to grayscale — stamp color is preserved">
+                <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked); showToast(this.checked ? '🖤 Grayscale on' : '🖤 Grayscale off')"> 🖤 Grayscale PDF
+              </label>
+            </div>
+
             <!-- Download / Print / Print Stamp Only -->
             <div class="stamp-section" style="padding-top:4px;display:flex;gap:8px;flex-wrap:wrap">
               <!-- Normal PDF buttons — visible in normal mode, hidden in stamp-only mode -->
@@ -550,12 +697,12 @@
           <!-- RIGHT: Preview -->
           <div class="stamp-preview-panel">
             <div class="stamp-preview-toolbar">
-              <button class="stamp-tool-btn" onclick="changeStampPreviewPage(-1)">◀ Prev</button>
+              <button id="stampPrevBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(-1)">◀ Prev</button>
               <span id="stampPageIndicator">Page - / -</span>
-              <button class="stamp-tool-btn" onclick="changeStampPreviewPage(1)">Next ▶</button>
+              <button id="stampNextBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(1)">Next ▶</button>
               <span style="flex:1"></span>
               <!-- Orientation selector — only visible in stamp-only mode -->
-              <select id="stampOnlyOrient" onchange="stampOnlyOrientChange()"
+              <select id="stampOnlyOrient" onchange="stampOnlyOrientChange(); showToast(this.value === 'landscape' ? '🔄 Landscape orientation' : '🔄 Portrait orientation')"
                       style="display:none;font-size:12px;padding:4px 6px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);cursor:pointer">
                 <option value="portrait">Portrait</option>
                 <option value="landscape">Landscape</option>
@@ -563,7 +710,7 @@
               <!-- Per-page override checkbox — only visible when PDF loaded & >1 page -->
               <label id="pageOverrideLabel" class="stamp-check" style="display:none;font-size:12px;gap:5px;white-space:nowrap;cursor:pointer"
                      title="When checked, settings on this page are independent from other pages">
-                <input type="checkbox" id="pageOverrideChk" onchange="togglePageOverride(this.checked)">
+                <input type="checkbox" id="pageOverrideChk" onchange="togglePageOverride(this.checked); showToast(this.checked ? '📌 Custom page override on' : '📌 Custom page override off')">
                 Custom this page
               </label>
               <button class="stamp-tool-btn" onclick="changeStampZoom(-0.2)">−</button>
@@ -588,8 +735,8 @@
         setupStampDropZone();
         setupOverlayDrag();   // attach drag listeners once after DOM is built
 
-        // Restore the saved mode tab (simple / formatted / seal)
-        if (stampMode === 'formatted' || stampMode === 'seal') {
+        // Restore the saved mode tab (simple / formatted / seal / received)
+        if (stampMode === 'formatted' || stampMode === 'seal' || stampMode === 'received') {
             window.switchStampMode(stampMode);
         }
     }
@@ -608,15 +755,65 @@
         document.getElementById('simpleStampControls').style.display    = mode === 'simple'    ? '' : 'none';
         document.getElementById('formattedStampControls').style.display = mode === 'formatted' ? '' : 'none';
         document.getElementById('sealStampControls').style.display      = mode === 'seal'      ? '' : 'none';
+        document.getElementById('recvStampControls').style.display      = mode === 'received'  ? '' : 'none';
         document.getElementById('modeSimpleBtn').classList.toggle('active',    mode === 'simple');
         document.getElementById('modeFormattedBtn').classList.toggle('active', mode === 'formatted');
         document.getElementById('modeSealBtn').classList.toggle('active',      mode === 'seal');
+        document.getElementById('modeRecvBtn').classList.toggle('active',      mode === 'received');
         saveStampSettings();
-        if (stampOnlyMode) {
-            renderStampOnlyPreview();
-        } else {
-            refreshOverlay();
+
+        // Toast for stamp type switch
+        const modeLabels = { simple: '✏️ Simple Text', formatted: '📋 Official Stamp', seal: '🔵 Round Seal', received: '📬 Received / Released' };
+        showToast('Stamp type: ' + (modeLabels[mode] || mode));
+
+        // Show loading animation on canvas, then render
+        const previewScroll = document.getElementById('stampPreviewScroll');
+        let modeOverlay = null;
+        if (previewScroll) {
+            modeOverlay = document.createElement('div');
+            modeOverlay.style.cssText = `
+                position:absolute;inset:0;z-index:50;
+                background:var(--bg-primary);
+                display:flex;flex-direction:column;
+                align-items:center;justify-content:center;
+                gap:12px;opacity:0;
+                transition:opacity 0.15s ease;
+                pointer-events:all;
+            `;
+            modeOverlay.innerHTML = `
+                <div style="width:32px;height:32px;border-radius:50%;
+                    border:3px solid var(--border-color);
+                    border-top-color:var(--accent-color);
+                    animation:modeSpinAnim 0.7s linear infinite;"></div>
+                <div style="font-size:13px;color:var(--text-secondary);font-weight:500">Switching stamp type…</div>
+            `;
+            previewScroll.style.position = 'relative';
+            previewScroll.appendChild(modeOverlay);
+            requestAnimationFrame(() => { modeOverlay.style.opacity = '1'; });
         }
+
+        setTimeout(function () {
+            if (stampOnlyMode) {
+                // Apply default vertical position based on current orientation when switching stamp type
+                const orient = document.getElementById('stampOnlyOrient')?.value || 'portrait';
+                const defaultPosY = orient === 'landscape' ? 85 : 90;
+                const s = getActiveSettings();
+                s.positionY = defaultPosY;
+                const sliderMap = { simple: 'stampPosY', formatted: 'fmtPosY', seal: 'sealPosY', received: 'recvPosY' };
+                const valMap    = { simple: 'stampPosYVal', formatted: 'fmtPosYVal', seal: 'sealPosYVal', received: 'recvPosYVal' };
+                const sl = document.getElementById(sliderMap[mode]);
+                const vl = document.getElementById(valMap[mode]);
+                if (sl) sl.value = defaultPosY;
+                if (vl) vl.textContent = defaultPosY + '%';
+                renderStampOnlyPreview();
+            } else {
+                refreshOverlay();
+            }
+            if (modeOverlay) {
+                modeOverlay.style.opacity = '0';
+                setTimeout(() => modeOverlay.remove(), 200);
+            }
+        }, 220);
     };
 
     // ─── Presets ──────────────────────────────────────────────────────────────
@@ -672,7 +869,6 @@
                 stampPreviewPage = 1;
                 pageOverrides    = {};          // reset all per-page overrides
                 pageOverrideActive = false;
-                window.stampHasPdf = true;
 
                 // If stamp-only mode was active, turn it off since we now have a PDF
                 if (stampOnlyMode) {
@@ -694,6 +890,9 @@
                 const printBtn = document.getElementById('stampPrintBtn');
                 if (printBtn) printBtn.disabled = false;
                 document.getElementById('stampPreviewEmpty').style.display = 'none';
+                // Show Grayscale PDF option now that a PDF is loaded
+                const graySection = document.getElementById('grayscalePdfSection');
+                if (graySection) graySection.style.display = '';
                 await renderStampPreviewPage();
             } catch (err) {
                 showNotification('Could not read PDF: ' + err.message, 'error');
@@ -727,6 +926,7 @@
             { sectionId: 'simpleApplyPages', rangeRowId: 'stampRangeRow' },
             { sectionId: 'fmtApplyPages',    rangeRowId: 'fmtRangeRow'   },
             { sectionId: 'sealApplyPages',   rangeRowId: 'sealRangeRow'  },
+            { sectionId: 'recvApplyPages',   rangeRowId: 'recvRangeRow'  },
         ];
         modes.forEach(function(m) {
             const section  = document.getElementById(m.sectionId);
@@ -801,6 +1001,13 @@
                 readSealSettings();
                 drawCircularSeal(ctx, w, h, sealSettings, new Date());
             }
+        } else if (stampMode === 'received') {
+            if (ovr) {
+                drawReceivedStamp(ctx, w, h, ovr, new Date());
+            } else {
+                readRecvSettings();
+                drawReceivedStamp(ctx, w, h, recvSettings, new Date());
+            }
         } else {
             if (ovr) {
                 drawSimpleStamp(ctx, w, h, ovr);
@@ -834,7 +1041,6 @@
 
     // ─── Stamp-Only Mode toggle ───────────────────────────────────────────────
     window.toggleStampOnlyMode = function (checked) {
-        showToast(checked ? '🖨️ Stamp-only mode enabled' : '📄 Stamp-only mode disabled');
         // ── Show a brief loading overlay on the preview panel ─────────────────
         const previewScroll = document.getElementById('stampPreviewScroll');
         let loadingEl = null;
@@ -886,12 +1092,32 @@
                 if (overrideLbl) overrideLbl.style.display     = 'none';
                 if (emptyMsg)    emptyMsg.textContent          = 'Adjust settings to preview the stamp';
 
+                // Hide Prev/Next page buttons — no pages in stamp-only mode
+                const prevBtn = document.getElementById('stampPrevBtn');
+                const nextBtn = document.getElementById('stampNextBtn');
+                if (prevBtn) prevBtn.style.display = 'none';
+                if (nextBtn) nextBtn.style.display = 'none';
+
+                // Hide Grayscale PDF option in stamp-only mode
+                const graySection = document.getElementById('grayscalePdfSection');
+                if (graySection) graySection.style.display = 'none';
+
                 // Show orientation dropdown
                 const orientSel = document.getElementById('stampOnlyOrient');
                 if (orientSel) orientSel.style.display = '';
 
+                // Set default vertical position to 90% for portrait (initial orientation)
+                const s0 = getActiveSettings();
+                s0.positionY = 90;
+                const sliderIds0 = { simple: 'stampPosY', formatted: 'fmtPosY', seal: 'sealPosY', received: 'recvPosY' };
+                const valIds0    = { simple: 'stampPosYVal', formatted: 'fmtPosYVal', seal: 'sealPosYVal', received: 'recvPosYVal' };
+                const sl0 = document.getElementById(sliderIds0[stampMode]);
+                const vl0 = document.getElementById(valIds0[stampMode]);
+                if (sl0) sl0.value = 90;
+                if (vl0) vl0.textContent = '90%';
+
                 // Hide Apply to Pages in all three modes
-                ['simpleApplyPages','fmtApplyPages','sealApplyPages'].forEach(id => {
+                ['simpleApplyPages','fmtApplyPages','sealApplyPages','recvApplyPages'].forEach(id => {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 });
@@ -906,13 +1132,23 @@
                 if (printOnly) { printOnly.disabled = true;    printOnly.style.display = 'none'; }
                 if (emptyMsg)  emptyMsg.textContent = 'Upload a PDF to preview the stamp';
 
+                // Restore Grayscale PDF option only if a PDF is loaded
+                const graySection = document.getElementById('grayscalePdfSection');
+                if (graySection) graySection.style.display = hasPdf ? '' : 'none';
+
+                // Restore Prev/Next page buttons
+                const prevBtn = document.getElementById('stampPrevBtn');
+                const nextBtn = document.getElementById('stampNextBtn');
+                if (prevBtn) prevBtn.style.display = '';
+                if (nextBtn) nextBtn.style.display = '';
+
                 // Hide orientation dropdown
                 const orientSel = document.getElementById('stampOnlyOrient');
                 if (orientSel) orientSel.style.display = 'none';
 
                 // Restore Apply to Pages — only show if PDF loaded with 2+ pages
                 if (!hasPdf || stampTotalPages <= 1) {
-                    ['simpleApplyPages','fmtApplyPages','sealApplyPages'].forEach(id => {
+                    ['simpleApplyPages','fmtApplyPages','sealApplyPages','recvApplyPages'].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.style.display = 'none';
                     });
@@ -958,6 +1194,25 @@
 
     // Loading effect wrapper for orientation change
     window.stampOnlyOrientChange = function () {
+        const orient = document.getElementById('stampOnlyOrient')?.value || 'portrait';
+
+        // Set default vertical position based on orientation
+        const defaultPosY = orient === 'landscape' ? 85 : 90;
+
+        // Apply to the active stamp settings object and sync the UI slider
+        const s = getActiveSettings();
+        s.positionY = defaultPosY;
+
+        // Sync whichever posY slider is currently visible
+        const sliderIds = { simple: 'stampPosY', formatted: 'fmtPosY', seal: 'sealPosY', received: 'recvPosY' };
+        const valIds    = { simple: 'stampPosYVal', formatted: 'fmtPosYVal', seal: 'sealPosYVal', received: 'recvPosYVal' };
+        const sliderId  = sliderIds[stampMode];
+        const valId     = valIds[stampMode];
+        const slider = document.getElementById(sliderId);
+        const valEl  = document.getElementById(valId);
+        if (slider) slider.value = defaultPosY;
+        if (valEl)  valEl.textContent = defaultPosY + '%';
+
         const scroll = document.getElementById('stampPreviewScroll');
         if (!scroll) { renderStampOnlyPreview(); return; }
 
@@ -1039,7 +1294,6 @@
     // ─── Grayscale page mode ──────────────────────────────────────────────────
     window.toggleBwMode = function (checked) {
         bwMode = checked;
-        showToast(checked ? '🩶 Grayscale PDF enabled' : '🎨 Grayscale PDF disabled');
         renderStampPreviewPage();
     };
 
@@ -1066,14 +1320,12 @@
         if (checked) {
             // Snapshot current global settings as the starting point for this page
             saveCurrentPageOverride();
-            showToast(`✏️ Custom override on for page ${stampPreviewPage}`);
             showNotification(`Page ${stampPreviewPage} now has custom stamp settings.`, 'info');
         } else {
             // Remove override — revert to global settings
             delete pageOverrides[stampPreviewPage];
             loadSettingsIntoUI(null);   // restore global settings into UI controls
             refreshOverlay();
-            showToast(`↩️ Page ${stampPreviewPage} reverted to global settings`);
             showNotification(`Page ${stampPreviewPage} reverted to global settings.`, 'info');
         }
     };
@@ -1115,6 +1367,24 @@
                 positionY:    parseInt(g('sealPosY')?.value)        || sealSettings.positionY,
                 applyPages:   sealSettings.applyPages,
                 pageRange:    g('sealPageRange')?.value     ?? sealSettings.pageRange,
+            };
+        } else if (stampMode === 'received') {
+            snapshot = {
+                schoolName:     g('recvSchoolName')?.value     ?? recvSettings.schoolName,
+                officeName:     g('recvOfficeName')?.value     ?? recvSettings.officeName,
+                stampType:      g('recvStampType')?.value      ?? recvSettings.stampType,
+                personnelName:  g('recvPersonnelName')?.value  ?? recvSettings.personnelName,
+                personnelDesig: g('recvPersonnelDesig')?.value ?? recvSettings.personnelDesig,
+                showDate:       g('recvShowDate')?.checked     ?? recvSettings.showDate,
+                showTime:       g('recvShowTime')?.checked     ?? recvSettings.showTime,
+                transparentBg:  g('recvTransparent')?.checked  ?? recvSettings.transparentBg,
+                color:          g('recvColor')?.value          ?? recvSettings.color,
+                opacity:        parseFloat(g('recvOpacity')?.value)  || recvSettings.opacity,
+                scale:          parseFloat(g('recvScale')?.value)    || recvSettings.scale,
+                positionX:      parseInt(g('recvPosX')?.value)       || recvSettings.positionX,
+                positionY:      parseInt(g('recvPosY')?.value)       || recvSettings.positionY,
+                applyPages:     recvSettings.applyPages,
+                pageRange:      g('recvPageRange')?.value      ?? recvSettings.pageRange,
             };
         } else {
             snapshot = {
@@ -1185,6 +1455,24 @@
                                      const xv = g('sealPosXVal'); if (xv) xv.textContent = (s.positionX ?? sealSettings.positionX) + '%'; }
             if (g('sealPosY'))     { g('sealPosY').value        = s.positionY   ?? sealSettings.positionY;
                                      const yv = g('sealPosYVal'); if (yv) yv.textContent = (s.positionY ?? sealSettings.positionY) + '%'; }
+        } else if (stampMode === 'received') {
+            const s = ovr || recvSettings;
+            if (g('recvSchoolName'))     g('recvSchoolName').value     = s.schoolName     ?? recvSettings.schoolName;
+            if (g('recvOfficeName'))     g('recvOfficeName').value     = s.officeName     ?? recvSettings.officeName;
+            if (g('recvStampType'))      g('recvStampType').value      = s.stampType      ?? recvSettings.stampType;
+            if (g('recvPersonnelName'))  g('recvPersonnelName').value  = s.personnelName  ?? recvSettings.personnelName;
+            if (g('recvPersonnelDesig')) g('recvPersonnelDesig').value = s.personnelDesig ?? recvSettings.personnelDesig;
+            if (g('recvColor'))          g('recvColor').value          = s.color          ?? recvSettings.color;
+            if (g('recvOpacity'))      { g('recvOpacity').value        = s.opacity        ?? recvSettings.opacity;
+                                         const opV = g('recvOpacityVal');
+                                         if (opV) opV.textContent = Math.round((s.opacity ?? recvSettings.opacity) * 100) + '%'; }
+            if (g('recvScale'))        { g('recvScale').value          = s.scale          ?? recvSettings.scale;
+                                         const sn = g('recvScaleNum');
+                                         if (sn) sn.value = Math.round((s.scale ?? recvSettings.scale) * 100); }
+            if (g('recvPosX'))         { g('recvPosX').value           = s.positionX      ?? recvSettings.positionX;
+                                         const xv = g('recvPosXVal'); if (xv) xv.textContent = (s.positionX ?? recvSettings.positionX) + '%'; }
+            if (g('recvPosY'))         { g('recvPosY').value           = s.positionY      ?? recvSettings.positionY;
+                                         const yv = g('recvPosYVal'); if (yv) yv.textContent = (s.positionY ?? recvSettings.positionY) + '%'; }
         }
     }
 
@@ -1400,6 +1688,9 @@
         } else if (stampMode === 'seal') {
             readSealSettings();
             drawCircularSeal(ctx, w, h, sealSettings, now);
+        } else if (stampMode === 'received') {
+            readRecvSettings();
+            drawReceivedStamp(ctx, w, h, recvSettings, now);
         } else {
             readStampSettings();
             const ratio = w / 595;
@@ -1614,6 +1905,7 @@
 
         if (stampMode === 'formatted') readFmtSettings();
         else if (stampMode === 'seal') readSealSettings();
+        else if (stampMode === 'received') readRecvSettings();
         else readStampSettings();
 
         // Draw stamp exactly as shown in preview — no rotation.
@@ -1671,6 +1963,7 @@
     function drawStampOnCanvas(ctx, w, h, dateObj) {
         if (stampMode === 'formatted') drawFormattedStamp(ctx, w, h, fmtSettings, dateObj);
         else if (stampMode === 'seal') drawCircularSeal(ctx, w, h, sealSettings, dateObj);
+        else if (stampMode === 'received') drawReceivedStamp(ctx, w, h, recvSettings, dateObj);
         else {
             const ratio = w / 595;
             const s2 = Object.assign({}, stampSettings, {
@@ -1687,6 +1980,8 @@
             drawFormattedStamp(ctx, w, h, Object.assign({}, fmtSettings, { positionX: posX, positionY: posY }), dateObj);
         } else if (stampMode === 'seal') {
             drawCircularSeal(ctx, w, h, Object.assign({}, sealSettings, { positionX: posX, positionY: posY }), dateObj);
+        } else if (stampMode === 'received') {
+            drawReceivedStamp(ctx, w, h, Object.assign({}, recvSettings, { positionX: posX, positionY: posY }), dateObj);
         } else {
             const ratio = w / 595;
             const s2 = Object.assign({}, stampSettings, {
@@ -1925,6 +2220,177 @@
         sealSettings.positionX    =  parseInt(g('sealPosX')?.value)      || 50;
         sealSettings.positionY    =  parseInt(g('sealPosY')?.value)      || 50;
         sealSettings.pageRange    =  g('sealPageRange')?.value    || '';
+    }
+
+    function readRecvSettings() {
+        const g = id => document.getElementById(id);
+        recvSettings.schoolName     =  g('recvSchoolName')?.value     || '';
+        recvSettings.officeName     =  g('recvOfficeName')?.value     || '';
+        recvSettings.stampType      =  g('recvStampType')?.value      || 'RECEIVED';
+        recvSettings.personnelName  =  g('recvPersonnelName')?.value  || '';
+        recvSettings.personnelDesig =  g('recvPersonnelDesig')?.value || '';
+        recvSettings.showDate       =  g('recvShowDate')?.checked     ?? true;
+        recvSettings.showTime       =  g('recvShowTime')?.checked     ?? true;
+        recvSettings.transparentBg  =  g('recvTransparent')?.checked  ?? true;
+        recvSettings.color          =  g('recvColor')?.value          || '#1a2a6c';
+        recvSettings.opacity        =  parseFloat(g('recvOpacity')?.value)  || 1.0;
+        recvSettings.scale          =  parseFloat(g('recvScale')?.value)    || 0.50;
+        recvSettings.positionX      =  parseInt(g('recvPosX')?.value)       || 50;
+        recvSettings.positionY      =  parseInt(g('recvPosY')?.value)       || 50;
+        recvSettings.pageRange      =  g('recvPageRange')?.value      || '';
+    }
+
+    // ─── Received stamp event callbacks ───────────────────────────────────────
+    window.onRecvSettingChange = function () {
+        const op = document.getElementById('recvOpacity'), opV = document.getElementById('recvOpacityVal');
+        if (op && opV) opV.textContent = Math.round(op.value * 100) + '%';
+        const sc = document.getElementById('recvScale'), sn = document.getElementById('recvScaleNum');
+        if (sc && sn && document.activeElement !== sn) sn.value = Math.round(sc.value * 100);
+        refreshOverlay();
+    };
+
+    window.syncRecvScaleFromInput = function () {
+        const sn = document.getElementById('recvScaleNum'), sl = document.getElementById('recvScale');
+        let v = Math.min(250, Math.max(20, parseInt(sn.value) || 45));
+        sn.value = v;
+        if (sl) sl.value = v / 100;
+        if (!isOnCustomPage()) recvSettings.scale = v / 100;
+        refreshOverlay();
+    };
+
+    window.onRecvPositionChange = function () {
+        const x = parseInt(document.getElementById('recvPosX')?.value) || 50;
+        const y = parseInt(document.getElementById('recvPosY')?.value) || 50;
+        const xv = document.getElementById('recvPosXVal'), yv = document.getElementById('recvPosYVal');
+        if (xv) xv.textContent = x + '%'; if (yv) yv.textContent = y + '%';
+        if (!isOnCustomPage()) { recvSettings.positionX = x; recvSettings.positionY = y; }
+        refreshOverlay();
+    };
+
+    // ─── Received / Released box stamp drawing ────────────────────────────────
+    // Layout (matching the photo):
+    //   ┌─────────────────────────────────┐
+    //   │  SCHOOL NAME (bold)             │
+    //   │  Office Name                    │
+    //   │                                 │
+    //   │        RECEIVED                 │  ← large bold stamp type
+    //   │                                 │
+    //   │   PERSONNEL NAME (bold, uline)  │
+    //   │   Personnel Designation         │
+    //   │   Date | Time                   │
+    //   └─────────────────────────────────┘
+    function drawReceivedStamp(ctx, w, h, s, dateObj) {
+        const shortSide = Math.min(w, h);
+        const sc        = s.scale * (shortSide / 600);
+
+        const cx = (s.positionX / 100) * w;
+        const cy = (s.positionY / 100) * h;
+
+        // Box dimensions — wider than tall to match the photo aspect ratio
+        const bW = 420 * sc;
+        const bH = 220 * sc;
+        const bX = cx - bW / 2;
+        const bY = cy - bH / 2;
+        const clr = s.color;
+        const pad = 14 * sc;
+
+        ctx.save();
+        ctx.globalAlpha = s.opacity;
+
+        // Background
+        if (!s.transparentBg) {
+            ctx.fillStyle = '#ffffff';
+            roundRect(ctx, bX, bY, bW, bH, 4 * sc);
+            ctx.fill();
+        }
+
+        // Outer border
+        ctx.strokeStyle = clr;
+        ctx.lineWidth   = 2.5 * sc;
+        roundRect(ctx, bX, bY, bW, bH, 2 * sc);
+        ctx.stroke();
+
+        // Inner border (tight inset)
+        ctx.lineWidth = 1 * sc;
+        roundRect(ctx, bX + 4 * sc, bY + 4 * sc, bW - 8 * sc, bH - 8 * sc, 1 * sc);
+        ctx.stroke();
+
+        ctx.fillStyle    = clr;
+        ctx.textAlign    = 'center';
+        ctx.textBaseline = 'middle';
+
+        let curY = bY + pad + 8 * sc;
+
+        // ── School Name (bold, larger) ────────────────────────────────────────
+        // const schoolFs = 14 * sc;
+        const schoolFs = 17 * sc;
+        ctx.font = `bold ${schoolFs}px Arial`;
+        ctx.fillText(s.schoolName, cx, curY);
+        curY += schoolFs * 1.4;
+
+        // ── Office Name ───────────────────────────────────────────────────────
+        // const officeFs = 11.5 * sc;
+        const officeFs = 15 * sc;
+        ctx.font = `${officeFs}px Arial`;
+        ctx.fillText(s.officeName, cx, curY);
+        curY += officeFs * 1.5;
+
+        // ── Stamp Type (large bold center text) ───────────────────────────────
+        // const typeFs = 38 * sc;
+        const typeFs = 70 * sc;
+
+        ctx.font = `bold ${typeFs}px Arial`;
+        ctx.fillText(s.stampType, cx, curY + typeFs * 0.3);
+        curY += typeFs * 1.1;
+
+        // ── Personnel Name (bold, underlined) ─────────────────────────────────
+        // const nameFs = 13 * sc;
+        const nameFs = 19 * sc;
+        ctx.font = `bold ${nameFs}px Arial`;
+        ctx.fillText(s.personnelName, cx, curY);
+        // underline
+        const nW = ctx.measureText(s.personnelName).width;
+        ctx.beginPath();
+        ctx.moveTo(cx - nW / 2, curY + nameFs * 0.65);
+        ctx.lineTo(cx + nW / 2, curY + nameFs * 0.65);
+        ctx.lineWidth   = 1.2 * sc;
+        ctx.strokeStyle = clr;
+        ctx.stroke();
+        curY += nameFs * 1.5;
+
+        // ── Personnel Designation ─────────────────────────────────────────────
+        // const desigFs = 11 * sc;
+        const desigFs = 15 * sc;
+        ctx.font = `${desigFs}px Arial`;
+        ctx.fillText(s.personnelDesig, cx, curY);
+        curY += desigFs * 1.4;
+
+        // ── Date / Time ───────────────────────────────────────────────────────
+        if (s.showDate || s.showTime) {
+            // const dtFs    = 11 * sc;
+            const dtFs    = 15 * sc;
+            const dateStr = dateObj.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+            const timeStr = dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            ctx.font = `${dtFs}px Arial`;
+
+            let dtLine = '';
+            if (s.showDate && s.showTime) dtLine = `${dateStr}  |  ${timeStr}`;
+            else if (s.showDate)          dtLine = dateStr;
+            else                          dtLine = timeStr;
+
+            ctx.fillText(dtLine, cx, curY);
+        }
+
+        ctx.restore();
+
+        // Drag dot
+        ctx.save();
+        ctx.globalAlpha = 0.2;
+        ctx.fillStyle   = clr;
+        ctx.beginPath();
+        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
     }
 
     // ─── Seal event callbacks ─────────────────────────────────────────────────
@@ -2186,6 +2652,10 @@
             fmtSettings.applyPages = radio.value;
             const r = document.getElementById('fmtRangeRow');
             if (r) r.style.display = radio.value === 'range' ? 'flex' : 'none';
+        } else if (mode === 'received') {
+            recvSettings.applyPages = radio.value;
+            const r = document.getElementById('recvRangeRow');
+            if (r) r.style.display = radio.value === 'range' ? 'flex' : 'none';
         } else {
             sealSettings.applyPages = radio.value;
             const r = document.getElementById('sealRangeRow');
@@ -2196,10 +2666,10 @@
     window.setStampPosition = function (x, y, mode) {
         const isFmt  = (mode === 'formatted');
         const isSeal = (mode === 'seal');
-        const pfx    = isFmt ? 'fmt' : (isSeal ? 'seal' : 'stamp');
-        // Only update global settings when NOT on a custom page
+        const isRecv = (mode === 'received');
+        const pfx    = isFmt ? 'fmt' : (isSeal ? 'seal' : (isRecv ? 'recv' : 'stamp'));
         if (!isOnCustomPage()) {
-            const s = isFmt ? fmtSettings : (isSeal ? sealSettings : stampSettings);
+            const s = isFmt ? fmtSettings : (isSeal ? sealSettings : (isRecv ? recvSettings : stampSettings));
             s.positionX = x; s.positionY = y;
         }
         const px = document.getElementById(pfx + 'PosX'),   py = document.getElementById(pfx + 'PosY');
@@ -2232,6 +2702,7 @@
         if (!stampPdfBytes) { showNotification('Please upload a PDF first.', 'warning'); return; }
         if (stampMode === 'formatted') readFmtSettings();
         else if (stampMode === 'seal') readSealSettings();
+        else if (stampMode === 'received') readRecvSettings();
         else readStampSettings();
         const active = getActiveSettings();
         const pages  = resolvePages(active);
@@ -2254,6 +2725,7 @@
         if (!stampPdfBytes) { showNotification('Please upload a PDF first.', 'warning'); return; }
         if (stampMode === 'formatted') readFmtSettings();
         else if (stampMode === 'seal') readSealSettings();
+        else if (stampMode === 'received') readRecvSettings();
         else readStampSettings();
         const active = getActiveSettings();
         const pages  = resolvePages(active);
@@ -2300,6 +2772,7 @@
     function getActiveSettings() {
         if (stampMode === 'formatted') return fmtSettings;
         if (stampMode === 'seal')      return sealSettings;
+        if (stampMode === 'received')  return recvSettings;
         return stampSettings;
     }
 
@@ -2353,6 +2826,9 @@
                 } else if (stampMode === 'seal') {
                     const s = ovr ? Object.assign({}, sealSettings, ovr) : sealSettings;
                     drawCircularSeal(ctx, canvas.width, canvas.height, s, now);
+                } else if (stampMode === 'received') {
+                    const s = ovr ? Object.assign({}, recvSettings, ovr) : recvSettings;
+                    drawReceivedStamp(ctx, canvas.width, canvas.height, s, now);
                 } else {
                     const base = ovr ? Object.assign({}, stampSettings, ovr) : stampSettings;
                     const ratio = canvas.width / 595;
