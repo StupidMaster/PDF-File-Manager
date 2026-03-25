@@ -56,7 +56,7 @@
     // Received/Released box stamp settings
     let recvSettings = {
         schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
-        officeName:     'Office of the College Registrar',
+        officeName:     'Office of the College Registrar\n\n\n',
         stampType:      'RECEIVED',
         personnelName:  '\n\n\nELENITO GINETE DAVID',
         personnelDesig: 'Admission and Records Officer',
@@ -187,7 +187,7 @@
 
         recvSettings = {
             schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
-            officeName:     'Office of the College Registrar',
+            officeName:     'Office of the College Registrar\n\n\n',
             stampType:      'RECEIVED',
             personnelName:  '\n\n\nELENITO GINETE DAVID',
             personnelDesig: 'Admission and Records Officer',
@@ -2008,6 +2008,7 @@
             const ovr = pageOverrideActive ? pageOverrides[stampPreviewPage] : null;
             const globalS = stampMode === 'formatted' ? fmtSettings
                           : stampMode === 'seal'       ? sealSettings
+                          : stampMode === 'received'   ? recvSettings
                           : stampSettings;
             const s = ovr ? Object.assign({}, globalS, ovr) : globalS;
             dragStartPosX = s.positionX; dragStartPosY = s.positionY;
@@ -2339,14 +2340,14 @@
         // const typeFs = 38 * sc;
         const typeFs = 70 * sc;
 
-        ctx.font = `bold ${typeFs}px Arial`;
+        ctx.font = `900 ${typeFs}px Arial`;
         ctx.fillText(s.stampType, cx, curY + typeFs * 0.3);
         curY += typeFs * 1.1;
 
         // ── Personnel Name (bold, underlined) ─────────────────────────────────
         // const nameFs = 13 * sc;
         const nameFs = 19 * sc;
-        ctx.font = `bold ${nameFs}px Arial`;
+        ctx.font = `700 ${nameFs}px Arial`;
         ctx.fillText(s.personnelName, cx, curY);
         // underline
         const nW = ctx.measureText(s.personnelName).width;
