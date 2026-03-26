@@ -411,12 +411,12 @@ async function loadPageSequentially(wrapper, skeleton, pdfDoc, pageNum, fileInde
             const container = document.getElementById('filesContainer');
             const panelTitle = document.getElementById('panelTitle');
             
-            panelTitle.textContent = `📁 Uploaded Files (${pdfDocuments.length})`;
+            panelTitle.innerHTML = `<i class="fa fa-folder-open"></i> Uploaded Files (${pdfDocuments.length})`;
 
             if (pdfDocuments.length === 0) {
                 container.innerHTML = `
                     <div class="empty-files">
-                        <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                        <div style="font-size:28px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div>
                         <span>No files uploaded yet</span>
                     </div>
                 `;
@@ -428,7 +428,7 @@ async function loadPageSequentially(wrapper, skeleton, pdfDoc, pageNum, fileInde
                 const color = fileColors[(pdfData.fileIndex - 1) % fileColors.length];
                 html += `
                     <div class="file-card" data-file-index="${pdfData.fileIndex}" onmouseenter="highlightFilePages(${pdfData.fileIndex})" onmouseleave="unhighlightFilePages(${pdfData.fileIndex})">
-                        <div class="file-icon" style="color: ${color}">📄</div>
+                        <div class="file-icon" style="color: ${color}"><i class="fa fa-file-pdf-o"></i></div>
                         <div class="file-info">
                             <div class="file-name">${pdfData.fileName}</div>
                             <div class="file-meta">
@@ -1719,13 +1719,13 @@ window.initSplit = function() {
 
     // Reset left panel
     const panelTitle = document.getElementById('panelTitle');
-    if (panelTitle) panelTitle.textContent = '📁 Uploaded Files (0)';
+    if (panelTitle) panelTitle.innerHTML = '<i class="fa fa-folder-open"></i> Uploaded Files (0)';
 
     const filesContainer = document.getElementById('filesContainer');
     if (filesContainer) {
         filesContainer.innerHTML = `
             <div class="empty-files">
-                <div style="font-size: 32px; margin-bottom: 10px;">📄</div>
+                <div style="font-size:32px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div>
                 <span>No files uploaded yet</span>
             </div>
         `;
@@ -1733,5 +1733,5 @@ window.initSplit = function() {
 
     // Reset title
     const titleSpan = document.querySelector('.title span');
-    if (titleSpan) titleSpan.textContent = '✂️ Split PDF';
+    if (titleSpan) titleSpan.innerHTML = '<div><i class="fa fa-scissors"></i> Split PDF</div>';
 };

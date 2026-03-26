@@ -56,7 +56,7 @@
     // Received/Released box stamp settings
     let recvSettings = {
         schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
-        officeName:     'Office of the College Registrar\n\n\n',
+        officeName:     'Office of the College Registrar',
         stampType:      'RECEIVED',
         personnelName:  '\n\n\nELENITO GINETE DAVID',
         personnelDesig: 'Admission and Records Officer',
@@ -187,7 +187,7 @@
 
         recvSettings = {
             schoolName:     'CRONASIA FOUNDATION COLLEGE, INC.',
-            officeName:     'Office of the College Registrar\n\n\n',
+            officeName:     'Office of the College Registrar',
             stampType:      'RECEIVED',
             personnelName:  '\n\n\nELENITO GINETE DAVID',
             personnelDesig: 'Admission and Records Officer',
@@ -246,20 +246,20 @@
 
             <!-- Upload -->
             <div class="stamp-section">
-              <div class="stamp-section-title">📄 PDF File</div>
+              <div class="stamp-section-title"><i class="fa fa-file-pdf-o"></i> PDF File</div>
 
               <!-- Print Stamp Only toggle -->
               <label class="stamp-check" style="margin-bottom:8px;padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;gap:8px"
                      title="Check this to preview and print the stamp without loading a PDF">
-                <input type="checkbox" id="stampOnlyChk" onchange="toggleStampOnlyMode(this.checked); showToast(this.checked ? '🖨️ Stamp Only mode on' : '🖨️ Stamp Only mode off')">
-                🖨️ Stamp Only (no PDF)
+                <input type="checkbox" id="stampOnlyChk" onchange="toggleStampOnlyMode(this.checked); showToast(this.checked ? 'Stamp Only mode on' : 'Stamp Only mode off')">
+                <i class="fa fa-print"></i> Stamp Only (no PDF)
               </label>
 
               <!-- PDF drop zone — hidden when stamp-only mode is active -->
               <div id="stampDropZoneWrap">
                 <div class="stamp-upload-area" id="stampDropZone" onclick="document.getElementById('stampFileInput').click()">
                   <div id="stampUploadLabel">
-                    <div style="font-size:28px;margin-bottom:6px">📄</div>
+                    <div style="font-size:28px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div>
                     <div>Click or drag a PDF here</div>
                   </div>
                 </div>
@@ -270,18 +270,18 @@
             <!-- Mode Toggle -->
             <div class="stamp-section">
             <br>
-              <div class="stamp-section-title">🔖 Stamp Type</div>
+              <div class="stamp-section-title"><i class="fa fa-tag"></i> Stamp Type</div>
               <div class="stamp-mode-toggle">
-                <button id="modeSimpleBtn" class="stamp-mode-btn active" onclick="switchStampMode('simple')">✏️ Simple Text</button>
+                <button id="modeSimpleBtn" class="stamp-mode-btn active" onclick="switchStampMode('simple')"><i class="fa fa-pencil"></i> Simple Text</button>
               </div>
               <div class="stamp-mode-toggle">
-                <button id="modeFormattedBtn" class="stamp-mode-btn" onclick="switchStampMode('formatted')">📋 Official Stamp</button>
+                <button id="modeFormattedBtn" class="stamp-mode-btn" onclick="switchStampMode('formatted')"><i class="fa fa-id-card-o"></i> Official Stamp</button>
               </div>
               <div class="stamp-mode-toggle">
-                <button id="modeSealBtn" class="stamp-mode-btn" onclick="switchStampMode('seal')">🔵 Round Seal</button>
+                <button id="modeSealBtn" class="stamp-mode-btn" onclick="switchStampMode('seal')"><i class="fa fa-circle-o"></i> Round Seal</button>
               </div>
               <div class="stamp-mode-toggle">
-                <button id="modeRecvBtn" class="stamp-mode-btn" onclick="switchStampMode('received')">📬 Received / Released</button>
+                <button id="modeRecvBtn" class="stamp-mode-btn" onclick="switchStampMode('received')"><i class="fa fa-inbox"></i> Received / Released</button>
               </div>
             </div>
 
@@ -290,20 +290,20 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">⚡ Quick Presets</div>
+                <div class="stamp-section-title"><i class="fa fa-bolt"></i> Quick Presets</div>
                 <div class="stamp-presets" id="stampPresets"></div>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">✏️ Stamp Text</div>
+                <div class="stamp-section-title"><i class="fa fa-pencil"></i> Stamp Text</div>
                 <input class="stamp-input" id="stampText" type="text" value="${stampSettings.text}"
                        placeholder="Enter stamp text…" oninput="onStampSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🎨 Style</div>
+                <div class="stamp-section-title"><i class="fa fa-paint-brush"></i> Style</div>
                 <div class="stamp-row">
                   <label class="stamp-label">Color</label>
                   <input type="color" id="stampColor" value="${stampSettings.color}" onchange="onStampSettingChange()"
@@ -330,15 +330,15 @@
                   <span style="font-size:12px;color:var(--text-secondary)">°</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✏️ Bold on' : '✏️ Bold off')"> <b>Bold</b></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '✏️ Italic on' : '✏️ Italic off')"> <i>Italic</i></label>
-                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? '🔲 Border on' : '🔲 Border off')"> Border</label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBold" ${stampSettings.bold ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? 'Bold on' : 'Bold off')"> <b>Bold</b></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampItalic" ${stampSettings.italic ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? 'Italic on' : 'Italic off')"> <i>Italic</i></label>
+                  <label class="stamp-check"><input type="checkbox" id="stampBorder" ${stampSettings.border ? 'checked' : ''} onchange="onStampSettingChange(); showToast(this.checked ? 'Border on' : 'Border off')"> Border</label>
                 </div>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📍 Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
+                <div class="stamp-section-title"><i class="fa fa-crosshairs"></i> Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
                 <div class="stamp-row">
                   <label class="stamp-label">Horizontal</label>
                   <input type="range" id="stampPosX" min="5" max="95" value="${stampSettings.positionX}" oninput="onStampPositionChange()" style="flex:1">
@@ -350,7 +350,7 @@
                   <span id="stampPosYVal" style="width:36px;text-align:right">${stampSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('simplePosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
+                  <input type="checkbox" onchange="document.getElementById('simplePosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? 'Position shortcuts shown' : 'Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="simplePosGrid" class="stamp-pos-grid" style="display:none">
@@ -360,7 +360,7 @@
 
               <div class="stamp-section stamp-apply-pages-section" id="simpleApplyPages" style="display:none">
               <br>
-                <div class="stamp-section-title">📋 Apply to Pages</div>
+                <div class="stamp-section-title"><i class="fa fa-files-o"></i> Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
                   <label class="stamp-check"><input type="radio" name="stampPages" value="all" ${stampSettings.applyPages === 'all' ? 'checked' : ''} onchange="onStampPagesChange(this,'simple')"> All pages</label>
                   <label class="stamp-check"><input type="radio" name="stampPages" value="current" ${stampSettings.applyPages === 'current' ? 'checked' : ''} onchange="onStampPagesChange(this,'simple')"> Current only</label>
@@ -379,31 +379,31 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📝 Header Text</div>
+                <div class="stamp-section-title"><i class="fa fa-align-left"></i> Header Text</div>
                 <textarea class="stamp-input" id="fmtTitle" rows="2" oninput="onFmtSettingChange()" style="resize:vertical">${fmtSettings.title}</textarea>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">👤 Signatory Name</div>
+                <div class="stamp-section-title"><i class="fa fa-user"></i> Signatory Name</div>
                 <input class="stamp-input" id="fmtName" type="text" value="${fmtSettings.name}" oninput="onFmtSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🏷️ Position / Title</div>
+                <div class="stamp-section-title"><i class="fa fa-id-badge"></i> Position / Title</div>
                 <input class="stamp-input" id="fmtSubName" type="text" value="${fmtSettings.subName}" oninput="onFmtSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🏫 Institution</div>
+                <div class="stamp-section-title"><i class="fa fa-university"></i> Institution</div>
                 <input class="stamp-input" id="fmtInstitution" type="text" value="${fmtSettings.institution}" oninput="onFmtSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🎨 Appearance</div>
+                <div class="stamp-section-title"><i class="fa fa-sliders"></i> Appearance</div>
                 <div class="stamp-row">
                   <label class="stamp-label">Color</label>
                   <input type="color" id="fmtColor" value="${fmtSettings.color}" onchange="onFmtSettingChange()"
@@ -426,15 +426,15 @@
                   <span style="font-size:12px;color:var(--text-secondary)">%</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show Date</label>
-                  <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🕐 Time shown' : '🕐 Time hidden')"> Show Time</label>
-                  <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? '🪟 Transparent BG on' : '🪟 Transparent BG off')"> Transparent BG</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtShowDate" ${fmtSettings.showDate ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? 'Date shown' : 'Date hidden')"> Show Date</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtShowTime" ${fmtSettings.showTime ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? 'Time shown' : 'Time hidden')"> Show Time</label>
+                  <label class="stamp-check"><input type="checkbox" id="fmtTransparent" ${fmtSettings.transparentBg ? 'checked' : ''} onchange="onFmtSettingChange(); showToast(this.checked ? 'Transparent BG on' : 'Transparent BG off')"> Transparent BG</label>
                 </div>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📍 Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
+                <div class="stamp-section-title"><i class="fa fa-crosshairs"></i> Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
                 <div class="stamp-row">
                   <label class="stamp-label">Horizontal</label>
                   <input type="range" id="fmtPosX" min="5" max="95" value="${fmtSettings.positionX}" oninput="onFmtPositionChange()" style="flex:1">
@@ -446,7 +446,7 @@
                   <span id="fmtPosYVal" style="width:36px;text-align:right">${fmtSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('fmtPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
+                  <input type="checkbox" onchange="document.getElementById('fmtPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? 'Position shortcuts shown' : 'Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="fmtPosGrid" class="stamp-pos-grid" style="display:none">
@@ -456,7 +456,7 @@
 
               <div class="stamp-section stamp-apply-pages-section" id="fmtApplyPages" style="display:none">
               <br>
-                <div class="stamp-section-title">📋 Apply to Pages</div>
+                <div class="stamp-section-title"><i class="fa fa-files-o"></i> Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
                   <label class="stamp-check"><input type="radio" name="fmtPages" value="all" ${fmtSettings.applyPages === 'all' ? 'checked' : ''} onchange="onStampPagesChange(this,'formatted')"> All pages</label>
                   <label class="stamp-check"><input type="radio" name="fmtPages" value="current" ${fmtSettings.applyPages === 'current' ? 'checked' : ''} onchange="onStampPagesChange(this,'formatted')"> Current only</label>
@@ -475,33 +475,33 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">⬆️ Top Arc Text</div>
+                <div class="stamp-section-title"><i class="fa fa-arrow-up"></i> Top Arc Text</div>
                 <input class="stamp-input" id="sealTopText" type="text" value="${sealSettings.topText}" oninput="onSealSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">⬇️ Bottom Arc Text</div>
+                <div class="stamp-section-title"><i class="fa fa-arrow-down"></i> Bottom Arc Text</div>
                 <input class="stamp-input" id="sealBottomText" type="text" value="${sealSettings.bottomText}" oninput="onSealSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🔤 School Abbreviation</div>
+                <div class="stamp-section-title"><i class="fa fa-font"></i> School Abbreviation</div>
                 <input class="stamp-input" id="sealSchoolAbbrev" type="text" value="${sealSettings.schoolAbbrev}" oninput="onSealSettingChange()" placeholder="e.g. CFC">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📅 Show Date</div>
+                <div class="stamp-section-title"><i class="fa fa-calendar"></i> Show Date</div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="sealShowDate" ${sealSettings.showDate ? 'checked' : ''} onchange="onSealSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show current date above DATE line</label>
+                  <label class="stamp-check"><input type="checkbox" id="sealShowDate" ${sealSettings.showDate ? 'checked' : ''} onchange="onSealSettingChange(); showToast(this.checked ? 'Date shown' : 'Date hidden')"> Show current date above DATE line</label>
                 </div>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🎨 Appearance</div>
+                <div class="stamp-section-title"><i class="fa fa-sliders"></i> Appearance</div>
                 <div class="stamp-row">
                   <label class="stamp-label">Color</label>
                   <input type="color" id="sealColor" value="${sealSettings.color}" onchange="onSealSettingChange()"
@@ -527,7 +527,7 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📍 Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
+                <div class="stamp-section-title"><i class="fa fa-crosshairs"></i> Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
                 <div class="stamp-row">
                   <label class="stamp-label">Horizontal</label>
                   <input type="range" id="sealPosX" min="5" max="95" value="${sealSettings.positionX}" oninput="onSealPositionChange()" style="flex:1">
@@ -539,7 +539,7 @@
                   <span id="sealPosYVal" style="width:36px;text-align:right">${sealSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('sealPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
+                  <input type="checkbox" onchange="document.getElementById('sealPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? 'Position shortcuts shown' : 'Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="sealPosGrid" class="stamp-pos-grid" style="display:none">
@@ -549,7 +549,7 @@
 
               <div class="stamp-section stamp-apply-pages-section" id="sealApplyPages" style="display:none">
               <br>
-                <div class="stamp-section-title">📋 Apply to Pages</div>
+                <div class="stamp-section-title"><i class="fa fa-files-o"></i> Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
                   <label class="stamp-check"><input type="radio" name="sealPages" value="all" ${sealSettings.applyPages === 'all' ? 'checked' : ''} onchange="onStampPagesChange(this,'seal')"> All pages</label>
                   <label class="stamp-check"><input type="radio" name="sealPages" value="current" ${sealSettings.applyPages === 'current' ? 'checked' : ''} onchange="onStampPagesChange(this,'seal')"> Current only</label>
@@ -568,19 +568,19 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🏫 School Name</div>
+                <div class="stamp-section-title"><i class="fa fa-university"></i> School Name</div>
                 <input class="stamp-input" id="recvSchoolName" type="text" value="${recvSettings.schoolName}" oninput="onRecvSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🏢 Office Name</div>
+                <div class="stamp-section-title"><i class="fa fa-building"></i> Office Name</div>
                 <input class="stamp-input" id="recvOfficeName" type="text" value="${recvSettings.officeName}" oninput="onRecvSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🔖 Stamp Type</div>
+                <div class="stamp-section-title"><i class="fa fa-tag"></i> Stamp Type</div>
                 <div style="display:flex;gap:8px;margin-bottom:6px">
                   <button class="stamp-preset-btn" style="border-color:#1a5276;color:#1a5276" onclick="document.getElementById('recvStampType').value='RECEIVED';onRecvSettingChange()">RECEIVED</button>
                   <button class="stamp-preset-btn" style="border-color:#1e8449;color:#1e8449" onclick="document.getElementById('recvStampType').value='RELEASED';onRecvSettingChange()">RELEASED</button>
@@ -590,19 +590,19 @@
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">👤 Personnel Name</div>
+                <div class="stamp-section-title"><i class="fa fa-user"></i> Personnel Name</div>
                 <input class="stamp-input" id="recvPersonnelName" type="text" value="${recvSettings.personnelName}" oninput="onRecvSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🏷️ Personnel Designation</div>
+                <div class="stamp-section-title"><i class="fa fa-id-badge"></i> Personnel Designation</div>
                 <input class="stamp-input" id="recvPersonnelDesig" type="text" value="${recvSettings.personnelDesig}" oninput="onRecvSettingChange()">
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">🎨 Appearance</div>
+                <div class="stamp-section-title"><i class="fa fa-sliders"></i> Appearance</div>
                 <div class="stamp-row">
                   <label class="stamp-label">Color</label>
                   <input type="color" id="recvColor" value="${recvSettings.color}" onchange="onRecvSettingChange()"
@@ -625,15 +625,15 @@
                   <span style="font-size:12px;color:var(--text-secondary)">%</span>
                 </div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
-                  <label class="stamp-check"><input type="checkbox" id="recvShowDate" ${recvSettings.showDate ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '📅 Date shown' : '📅 Date hidden')"> Show Date</label>
-                  <label class="stamp-check"><input type="checkbox" id="recvShowTime" ${recvSettings.showTime ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '🕐 Time shown' : '🕐 Time hidden')"> Show Time</label>
-                  <label class="stamp-check"><input type="checkbox" id="recvTransparent" ${recvSettings.transparentBg ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? '🪟 Transparent BG on' : '🪟 Transparent BG off')"> Transparent BG</label>
+                  <label class="stamp-check"><input type="checkbox" id="recvShowDate" ${recvSettings.showDate ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? 'Date shown' : 'Date hidden')"> Show Date</label>
+                  <label class="stamp-check"><input type="checkbox" id="recvShowTime" ${recvSettings.showTime ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? 'Time shown' : 'Time hidden')"> Show Time</label>
+                  <label class="stamp-check"><input type="checkbox" id="recvTransparent" ${recvSettings.transparentBg ? 'checked' : ''} onchange="onRecvSettingChange(); showToast(this.checked ? 'Transparent BG on' : 'Transparent BG off')"> Transparent BG</label>
                 </div>
               </div>
 
               <div class="stamp-section">
               <br>
-                <div class="stamp-section-title">📍 Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
+                <div class="stamp-section-title"><i class="fa fa-crosshairs"></i> Position <small style="font-weight:400;color:var(--text-secondary)">(or drag in preview)</small></div>
                 <div class="stamp-row">
                   <label class="stamp-label">Horizontal</label>
                   <input type="range" id="recvPosX" min="5" max="95" value="${recvSettings.positionX}" oninput="onRecvPositionChange()" style="flex:1">
@@ -645,7 +645,7 @@
                   <span id="recvPosYVal" style="width:36px;text-align:right">${recvSettings.positionY}%</span>
                 </div>
                 <label class="stamp-check" style="font-size:12px;margin-top:4px">
-                  <input type="checkbox" onchange="document.getElementById('recvPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? '📍 Position shortcuts shown' : '📍 Position shortcuts hidden')">
+                  <input type="checkbox" onchange="document.getElementById('recvPosGrid').style.display=this.checked?'grid':'none'; showToast(this.checked ? 'Position shortcuts shown' : 'Position shortcuts hidden')">
                   Show position shortcuts
                 </label>
                 <div id="recvPosGrid" class="stamp-pos-grid" style="display:none">
@@ -655,7 +655,7 @@
 
               <div class="stamp-section stamp-apply-pages-section" id="recvApplyPages" style="display:none">
               <br>
-                <div class="stamp-section-title">📋 Apply to Pages</div>
+                <div class="stamp-section-title"><i class="fa fa-files-o"></i> Apply to Pages</div>
                 <div class="stamp-row" style="gap:10px;flex-wrap:wrap">
                   <label class="stamp-check"><input type="radio" name="recvPages" value="all" ${recvSettings.applyPages === 'all' ? 'checked' : ''} onchange="onStampPagesChange(this,'received')"> All pages</label>
                   <label class="stamp-check"><input type="radio" name="recvPages" value="current" ${recvSettings.applyPages === 'current' ? 'checked' : ''} onchange="onStampPagesChange(this,'received')"> Current only</label>
@@ -673,7 +673,7 @@
             <div id="grayscalePdfSection" class="stamp-section" style="padding-top:4px;display:none">
               <label class="stamp-check" style="padding:8px;border:1px solid var(--border-color);border-radius:6px;cursor:pointer;font-size:13px;font-weight:500;gap:8px"
                      title="Convert the PDF pages to grayscale — stamp color is preserved">
-                <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked); showToast(this.checked ? '🖤 Grayscale on' : '🖤 Grayscale off')"> 🖤 Grayscale PDF
+                <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked); showToast(this.checked ? 'Grayscale on' : 'Grayscale off')"> <i class="fa fa-adjust"></i> Grayscale PDF
               </label>
             </div>
 
@@ -681,14 +681,14 @@
             <div class="stamp-section" style="padding-top:4px;display:flex;gap:8px;flex-wrap:wrap">
               <!-- Normal PDF buttons — visible in normal mode, hidden in stamp-only mode -->
               <button class="btn btn-primary stamp-apply-btn" id="stampApplyBtn" onclick="applyStampAndDownload()" disabled style="flex:1;text-align:center; justify-content: center;">
-                ⬇️ Download
+                <i class="fa fa-download"></i> Download
               </button>
               <button class="btn stamp-apply-btn stamp-print-btn" id="stampPrintBtn" onclick="applyStampAndPrint()" disabled style="flex:1;text-align:center; justify-content: center;">
-                🖨️ Print
+                <i class="fa fa-print"></i> Print
               </button>
               <!-- Stamp-only print button — hidden in normal mode, visible+enabled in stamp-only mode -->
               <button class="btn stamp-apply-btn stamp-print-btn" id="stampPrintOnlyBtn" onclick="openPrintStampOnly()" disabled style="flex:1;width:100%;display:none;text-align:center; justify-content: center;">
-                🖨️ Print
+                <i class="fa fa-print"></i> Print
               </button>
             </div>
 
@@ -697,12 +697,12 @@
           <!-- RIGHT: Preview -->
           <div class="stamp-preview-panel">
             <div class="stamp-preview-toolbar">
-              <button id="stampPrevBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(-1)">◀ Prev</button>
+              <button id="stampPrevBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(-1)"><i class="fa fa-chevron-left"></i> Prev</button>
               <span id="stampPageIndicator">Page - / -</span>
-              <button id="stampNextBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(1)">Next ▶</button>
+              <button id="stampNextBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(1)">Next <i class="fa fa-chevron-right"></i></button>
               <span style="flex:1"></span>
               <!-- Orientation selector — only visible in stamp-only mode -->
-              <select id="stampOnlyOrient" onchange="stampOnlyOrientChange(); showToast(this.value === 'landscape' ? '🔄 Landscape orientation' : '🔄 Portrait orientation')"
+              <select id="stampOnlyOrient" onchange="stampOnlyOrientChange(); showToast(this.value === 'landscape' ? 'Landscape orientation' : 'Portrait orientation')"
                       style="display:none;font-size:12px;padding:4px 6px;border-radius:6px;border:1px solid var(--border-color);background:var(--bg-primary);color:var(--text-primary);cursor:pointer">
                 <option value="portrait">Portrait</option>
                 <option value="landscape">Landscape</option>
@@ -710,12 +710,12 @@
               <!-- Per-page override checkbox — only visible when PDF loaded & >1 page -->
               <label id="pageOverrideLabel" class="stamp-check" style="display:none;font-size:12px;gap:5px;white-space:nowrap;cursor:pointer"
                      title="When checked, settings on this page are independent from other pages">
-                <input type="checkbox" id="pageOverrideChk" onchange="togglePageOverride(this.checked); showToast(this.checked ? '📌 Custom page override on' : '📌 Custom page override off')">
+                <input type="checkbox" id="pageOverrideChk" onchange="togglePageOverride(this.checked); showToast(this.checked ? 'Custom page override on' : 'Custom page override off')">
                 Custom this page
               </label>
-              <button class="stamp-tool-btn" onclick="changeStampZoom(-0.2)">−</button>
+              <button class="stamp-tool-btn" onclick="changeStampZoom(-0.2)"><i class="fa fa-search-minus"></i></button>
               <span id="stampZoomLabel" style="min-width:44px;text-align:center">${Math.round(stampPreviewScale * 100)}%</span>
-              <button class="stamp-tool-btn" onclick="changeStampZoom(0.2)">+</button>
+              <button class="stamp-tool-btn" onclick="changeStampZoom(0.2)"><i class="fa fa-search-plus"></i></button>
             </div>
             <div class="stamp-preview-scroll" id="stampPreviewScroll">
               <div class="stamp-preview-canvas-wrap" id="stampCanvasWrap">
@@ -723,7 +723,7 @@
                 <canvas id="stampOverlayCanvas"></canvas>
               </div>
               <div class="stamp-preview-empty" id="stampPreviewEmpty">
-                <div style="font-size:48px;margin-bottom:12px">🖋️</div>
+                <div style="font-size:48px;margin-bottom:12px"><i class="fa fa-pencil-square-o"></i></div>
                 <div id="stampPreviewEmptyMsg">Upload a PDF to preview the stamp</div>
               </div>
             </div>
@@ -742,7 +742,7 @@
     }
 
     function makePosBtns(mode) {
-        const arrows = ['↖','↑','↗','←','✛','→','↙','↓','↘'];
+        const arrows = ['<i class="fa fa-arrow-up" style="transform:rotate(-45deg)"></i>','<i class="fa fa-arrow-up"></i>','<i class="fa fa-arrow-up" style="transform:rotate(45deg)"></i>','<i class="fa fa-arrow-left"></i>','<i class="fa fa-plus"></i>','<i class="fa fa-arrow-right"></i>','<i class="fa fa-arrow-down" style="transform:rotate(45deg)"></i>','<i class="fa fa-arrow-down"></i>','<i class="fa fa-arrow-down" style="transform:rotate(-45deg)"></i>'];
         const positions = [[20,20],[50,20],[80,20],[20,50],[50,50],[80,50],[20,80],[50,80],[80,80]];
         return arrows.map((a, i) =>
             `<button class="stamp-pos-btn" onclick="setStampPosition(${positions[i][0]},${positions[i][1]},'${mode}')">${a}</button>`
@@ -763,7 +763,7 @@
         saveStampSettings();
 
         // Toast for stamp type switch
-        const modeLabels = { simple: '✏️ Simple Text', formatted: '📋 Official Stamp', seal: '🔵 Round Seal', received: '📬 Received / Released' };
+        const modeLabels = { simple: 'Simple Text', formatted: 'Official Stamp', seal: 'Round Seal', received: 'Received / Released' };
         showToast('Stamp type: ' + (modeLabels[mode] || mode));
 
         // Show loading animation on canvas, then render
@@ -1505,7 +1505,7 @@
           ">
             <!-- Header -->
             <div style="padding:18px 24px 14px;border-bottom:1px solid var(--border-color);flex-shrink:0">
-              <div style="font-size:16px;font-weight:700;color:var(--text-primary)">🖨️ Print Stamp Only</div>
+              <div style="font-size:16px;font-weight:700;color:var(--text-primary)"><i class="fa fa-print"></i> Print Stamp Only</div>
               <div style="font-size:12px;color:var(--text-secondary);margin-top:4px">
                 Prints the stamp on a blank page — use this to stamp an already-printed document.
               </div>
@@ -1549,7 +1549,7 @@
                     padding:12px 14px;
                     display:flex;flex-direction:column;gap:8px;
                 ">
-                  <div style="font-size:12px;font-weight:700;color:var(--text-primary)" id="psoFeedTitle">📄 Portrait — How to Feed the Paper</div>
+                  <div style="font-size:12px;font-weight:700;color:var(--text-primary)" id="psoFeedTitle">Portrait — How to Feed the Paper</div>
                   <div id="psoFeedSvg" style="width:100%;overflow-x:auto"></div>
                   <div style="font-size:11px;color:var(--text-secondary);line-height:1.6" id="psoFeedDesc"></div>
                 </div>
@@ -1598,7 +1598,7 @@
               display:flex;gap:8px;
               flex-shrink:0;
             ">
-              <button onclick="executePrintStampOnly()" class="btn btn-primary" style="flex:1;justify-content:center;">🖨️ Print</button>
+              <button onclick="executePrintStampOnly()" class="btn btn-primary" style="flex:1;justify-content:center;"><i class="fa fa-print"></i> Print</button>
               <button onclick="document.getElementById('printStampOnlyModal').remove()" class="btn" style="flex:1;background:var(--bg-tertiary);border:1px solid var(--border-color);color:var(--text-primary);justify-content:center;">Cancel</button>
             </div>
           </div>
@@ -1715,7 +1715,7 @@
         if (!svgEl || !titleEl || !descEl) return;
 
         if (orient === 'portrait') {
-            titleEl.textContent = '📄 Portrait — How to Feed the Paper';
+            titleEl.textContent = 'Portrait — How to Feed the Paper';
             // Flow: printed doc (face-down, bottom first) → flip → feed face-up bottom first → output
             svgEl.innerHTML = `
 <svg width="100%" viewBox="0 0 380 130" xmlns="http://www.w3.org/2000/svg"
@@ -1805,7 +1805,7 @@
                 ④ The stamp prints exactly where you placed it in the preview. ✅`;
 
         } else {
-            titleEl.textContent = '🔄 Landscape — How to Feed the Paper';
+            titleEl.textContent = 'Landscape — How to Feed the Paper';
             svgEl.innerHTML = `
 <svg width="100%" viewBox="0 0 380 140" xmlns="http://www.w3.org/2000/svg"
      style="font-family:Arial,sans-serif;max-width:380px;display:block;margin:0 auto">

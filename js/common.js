@@ -53,7 +53,7 @@ function toggleTheme() {
     const themeIcon = document.getElementById('themeIcon');
     const themeText = document.getElementById('themeText');
     
-    if (themeIcon) themeIcon.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    if (themeIcon) themeIcon.innerHTML = newTheme === 'dark' ? '<i class="fa fa-sun-o"></i>' : '<i class="fa fa-moon-o"></i>';
     if (themeText) themeText.textContent = newTheme === 'dark' ? 'Light' : 'Dark';
 }
 
@@ -64,7 +64,7 @@ function toggleTheme() {
         document.documentElement.setAttribute('data-theme', 'dark');
         const themeIcon = document.getElementById('themeIcon');
         const themeText = document.getElementById('themeText');
-        if (themeIcon) themeIcon.textContent = '☀️';
+        if (themeIcon) themeIcon.innerHTML = '<i class="fa fa-sun-o"></i>';
         if (themeText) themeText.textContent = 'Light';
     }
 })();
@@ -79,15 +79,15 @@ function showNotification(message, type = 'info', title = null) {
     if (!modal) return;
 
     const configs = {
-        success: { icon: '✅', title: 'Success', class: 'success' },
-        error: { icon: '❌', title: 'Error', class: 'error' },
-        warning: { icon: '⚠️', title: 'Warning', class: 'warning' },
-        info: { icon: 'ℹ️', title: 'Information', class: 'info' }
+        success: { icon: '<i class="fa fa-check-circle"></i>', title: 'Success', class: 'success' },
+        error:   { icon: '<i class="fa fa-times-circle"></i>', title: 'Error', class: 'error' },
+        warning: { icon: '<i class="fa fa-exclamation-triangle"></i>', title: 'Warning', class: 'warning' },
+        info:    { icon: '<i class="fa fa-info-circle"></i>', title: 'Information', class: 'info' }
     };
 
     const config = configs[type] || configs.info;
     if (icon) {
-        icon.textContent = config.icon;
+        icon.innerHTML = config.icon;
         icon.className = 'notification-icon ' + config.class;
     }
     if (titleEl) titleEl.textContent = title || config.title;

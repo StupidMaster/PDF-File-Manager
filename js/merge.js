@@ -36,7 +36,7 @@ window.initMerge = function() {
     if (splitControls) splitControls.classList.remove('show');
     if (mergeControls) mergeControls.classList.add('active');
     const titleSpan = document.querySelector('.title span');
-    if (titleSpan) titleSpan.textContent = '🔗 Merge PDF';
+    if (titleSpan) titleSpan.innerHTML = '<div><i class="fa fa-link"></i> Merge PDF</div>';
     resetMergeState();
 };
 
@@ -923,11 +923,11 @@ async function rebuildMergePageGrid() {
 function updateMergeFileList() {
     const container = document.getElementById('filesContainer');
     const panelTitle = document.getElementById('panelTitle');
-    if (panelTitle) panelTitle.textContent = `📁 Files to Merge (${mergeFiles.length})`;
+    if (panelTitle) panelTitle.innerHTML = `<i class="fa fa-folder-open"></i> Files to Merge (${mergeFiles.length})`;
     if (!container) return;
 
     if (!mergeFiles.length) {
-        container.innerHTML = `<div class="empty-files"><div style="font-size:32px;margin-bottom:10px;">📄</div><span>Upload PDFs to merge</span></div>`;
+        container.innerHTML = `<div class="empty-files"><div style="font-size:32px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div><span>Upload PDFs to merge</span></div>`;
         return;
     }
 
@@ -939,7 +939,7 @@ function updateMergeFileList() {
                  ondragstart="handleMergeFileDragStart(event,${index})" ondragover="handleMergeFileDragOver(event)"
                  ondrop="handleMergeFileDrop(event,${index})" ondragend="handleMergeFileDragEnd(event)"
                  ondragleave="handleMergeFileDragLeave(event)">
-                <div class="file-icon" style="color:${color}">📄</div>
+                <div class="file-icon" style="color:${color}"><div style="font-size:28px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div></div>
                 <div class="file-info">
                     <div class="file-name">${file.fileName}</div>
                     <div class="file-meta">
