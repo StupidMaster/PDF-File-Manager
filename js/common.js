@@ -415,3 +415,90 @@ function showConfirm(title, message, onConfirm) {
 function resetApp() {
     location.reload();
 }
+
+
+// ─── Global unload guard ──────────────────────────────────────────────────────
+// Shows a custom modal confirmation when the user tries to refresh or navigate
+// away while any mode has unsaved work.
+//
+// HOW TO ADD A NEW MODE:
+//   window._unloadCheckers.push(() => myMode.hasUnsavedData);
+//
+// Intercepts:
+//   • F5 / Ctrl+R / Cmd+R  (keyboard refresh)
+//   • Browser back/forward (History API popstate)
+//   • Tab close / URL change (native beforeunload — cannot show custom modal,
+//     so falls back to the browser's built-in dialog for those cases only)
+// ─────────────────────────────────────────────────────────────────────────────
+
+window._unloadCheckers = window._unloadCheckers || [];
+
+// Built-in checkers for the three core modes.
+// Each returns true if that mode has data the user would lose on refresh.
+window._unloadCheckers.push(
+    () => typeof pdfDocuments !== 'undefined' && pdfDocuments.length > 0,  // Split
+    () => typeof mergeFiles   !== 'undefined' && mergeFiles.length   > 0,  // Merge
+    () => !!window.stampHasPdf || !!window.stampOnlyMode                    // Stamp
+);
+
+function _hasUnsavedWork() {
+    return window._unloadCheckers.some(fn => {
+        try { return !!fn(); } catch (_) { return false; }
+    });
+}
+
+// ── 1. Keyboard refresh (F5, Ctrl+R, Cmd+R) ──────────────────────────────────
+// We intercept these in the keydown phase and show our custom modal instead.
+(function interceptKeyboardRefresh() {
+    document.addEventListener('keydown', function (e) {
+        const isRefresh =
+            e.key === 'F5' ||
+            ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'r');
+
+        if (!isRefresh) return;
+        if (!_hasUnsavedWork()) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        showConfirm(
+            'Leave Page?',
+            'You have unsaved work. Refreshing will clear all your current files and progress. Continue?',
+            () => { window.location.reload(); }
+        );
+    }, true); // capture phase so we beat any other listeners
+})();
+
+// ── 2. Browser back / forward (popstate) ─────────────────────────────────────
+// Push a dummy state on load so the back button triggers popstate instead of
+// immediately leaving. On popstate we show the modal; if confirmed we go back.
+(function interceptHistoryNavigation() {
+    // Push a sentinel state so we always have something to pop back to
+    history.pushState({ _guardActive: true }, '');
+
+    window.addEventListener('popstate', function (e) {
+        if (!_hasUnsavedWork()) return;
+
+        // Re-push the sentinel so the URL stays the same while modal is open
+        history.pushState({ _guardActive: true }, '');
+
+        showConfirm(
+            'Leave Page?',
+            'You have unsaved work. Leaving will clear all your current files and progress. Continue?',
+            () => {
+                // Remove our sentinel then go back for real
+                history.go(-2);
+            }
+        );
+    });
+})();
+
+// ── 3. Tab close / address-bar navigation (native fallback) ──────────────────
+// Browsers block custom UI in beforeunload — only the native dialog is possible.
+// This is a last-resort safety net for the cases we can't intercept above.
+window.addEventListener('beforeunload', function (e) {
+    if (_hasUnsavedWork()) {
+        e.preventDefault();
+        e.returnValue = ''; // required for Chrome to show the native dialog
+    }
+});

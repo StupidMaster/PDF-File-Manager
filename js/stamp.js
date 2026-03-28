@@ -3,6 +3,11 @@
 (function () {
     'use strict';
 
+    // ─── Init guard — suppresses toasts fired during initial UI restore ────────
+    // Set to true only after renderStampUI() finishes, so switchStampMode()
+    // called during init (to restore a saved mode) never shows a toast.
+    let _stampModeReady = false;
+
     // ─── State ────────────────────────────────────────────────────────────────
     let stampPdfDoc       = null;
     let stampPdfBytes     = null;
@@ -149,6 +154,7 @@
         stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
         stampTotalPages = 0; stampPreviewPage = 1; stampPreviewScale = 1.0; stampMode = 'simple';
         bwMode = false;
+        window.stampHasPdf = false;
 
         // Start with hardcoded defaults ...
         stampSettings = {
@@ -736,9 +742,13 @@
         setupOverlayDrag();   // attach drag listeners once after DOM is built
 
         // Restore the saved mode tab (simple / formatted / seal / received)
+        // _stampModeReady is still false here so the toast is suppressed
         if (stampMode === 'formatted' || stampMode === 'seal' || stampMode === 'received') {
             window.switchStampMode(stampMode);
         }
+
+        // UI is fully built — from now on, mode switches fire toasts
+        _stampModeReady = true;
     }
 
     function makePosBtns(mode) {
@@ -762,9 +772,11 @@
         document.getElementById('modeRecvBtn').classList.toggle('active',      mode === 'received');
         saveStampSettings();
 
-        // Toast for stamp type switch
-        const modeLabels = { simple: 'Simple Text', formatted: 'Official Stamp', seal: 'Round Seal', received: 'Received / Released' };
-        showToast('Stamp type: ' + (modeLabels[mode] || mode));
+        // Toast for stamp type switch — only after initial UI setup is complete
+        if (_stampModeReady) {
+            const modeLabels = { simple: 'Simple Text', formatted: 'Official Stamp', seal: 'Round Seal', received: 'Received / Released' };
+            showToast('Stamp type: ' + (modeLabels[mode] || mode));
+        }
 
         // Show loading animation on canvas, then render
         const previewScroll = document.getElementById('stampPreviewScroll');
@@ -869,6 +881,7 @@
                 stampPreviewPage = 1;
                 pageOverrides    = {};          // reset all per-page overrides
                 pageOverrideActive = false;
+                window.stampHasPdf = true;
 
                 // If stamp-only mode was active, turn it off since we now have a PDF
                 if (stampOnlyMode) {

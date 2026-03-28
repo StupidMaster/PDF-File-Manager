@@ -28,6 +28,17 @@ const mergeFileColors = [
 
 Object.defineProperty(window, 'hasMergeFiles', { get: () => mergeFiles.length > 0 });
 
+// Data-only reset — clears merge state without touching the UI.
+// Called by index_enhanced.php when switching AWAY from merge mode.
+window.clearMergeState = function() {
+    mergeFiles        = [];
+    mergePageOrder    = [];
+    mergeRenderedPages.clear();
+    mergePageRotations.clear();
+    mergeDupCounter        = 0;
+    currentMergeFileIndex  = 0;
+};
+
 // ─── Init / Reset ─────────────────────────────────────────────────────────────
 window.initMerge = function() {
     isMergeMode = true;
@@ -62,7 +73,7 @@ function resetMergeState() {
 
 window.resetMerge = function() {
     showConfirm('Start New Merge', 'Clear all files and start a new merge? This cannot be undone.',
-        () => { resetMergeState(); showNotification('Ready for new merge', 'success'); });
+        () => { resetMergeState(); showNotification('Ready for new merge', 'success'); showToast('Merge operation reset!', 'success'); }); 
 };
 
 // ─── File highlight ────────────────────────────────────────────────────────────
@@ -89,8 +100,8 @@ async function handleMergeFileSelect(event) {
         if (!files.length) { event.target.value = ''; return; }
 
         for (const f of files) {
-            if (f.type !== 'application/pdf') { showNotification('Please select only PDF files.', 'error'); event.target.value = ''; return; }
-            if (f.size > 50 * 1024 * 1024)   { showNotification(`"${f.name}" exceeds 50MB.`, 'error'); event.target.value = ''; return; }
+            if (f.type !== 'application/pdf') { showNotification('Please select only PDF files.', 'error'); showToast('File type is not available.', 'danger');  event.target.value = ''; return; }
+            if (f.size > 50 * 1024 * 1024)   { showNotification(`"${f.name}" exceeds 50MB.`, 'error'); showToast(`"${f.name}" exceeds 50MB.`, 'warning'); event.target.value = ''; return; }
         }
 
         showProcessing('Inserting document…');
@@ -151,9 +162,11 @@ async function handleMergeFileSelect(event) {
             updateMergeFileList();
             updateMergeButton();
             showNotification(`Inserted ${inserted.reduce((s, f) => s + f.numPages, 0)} page(s)`, 'success');
+            showToast('Inserted (' + inserted.reduce((s, f) => s + f.numPages, 0) + ') page(s)!', 'info');
         } catch (err) {
             hideProcessing();
             showNotification('Insert failed: ' + err.message, 'error');
+            showToast('Insert failed.', 'error');
         }
         event.target.value = '';
         return; // ← done, don't fall through to normal append flow
@@ -163,13 +176,13 @@ async function handleMergeFileSelect(event) {
     const files = Array.from(event.target.files);
     if (!files.length) return;
 
-    if (files.length > 20) { showNotification('Maximum 20 PDF files allowed at once.', 'error'); event.target.value = ''; return; }
+    if (files.length > 20) { showNotification('Maximum 20 PDF files allowed at once.', 'error');  showToast('Maximum 20 PDF files allowed at once.', 'error'); event.target.value = ''; return; }
     for (const f of files) {
-        if (f.type !== 'application/pdf') { showNotification('Please select only PDF files.', 'error'); event.target.value = ''; return; }
-        if (f.size > 50 * 1024 * 1024) { showNotification(`File "${f.name}" is too large. Maximum 50MB.`, 'error'); event.target.value = ''; return; }
+        if (f.type !== 'application/pdf') { showNotification('Please select only PDF files.', 'error'); showToast('Please select only PDF files.', 'error'); event.target.value = ''; return; }
+        if (f.size > 50 * 1024 * 1024) { showNotification(`File "${f.name}" is too large. Maximum 50MB.`, 'error'); showToast(`File "${f.name}" is too large. Maximum 50MB.`, 'error'); event.target.value = ''; return; }
     }
     if (files.reduce((s, f) => s + f.size, 0) > 100 * 1024 * 1024) {
-        showNotification('Total file size exceeds 100MB.', 'error'); event.target.value = ''; return;
+        showNotification('Total file size exceeds 100MB.', 'error'); showToast('Total file size exceeds 100MB.', 'error'); event.target.value = ''; return;
     }
 
     showProcessing('Preparing files...');
@@ -194,6 +207,7 @@ async function handleMergeFileSelect(event) {
         if (currentTotal + newTotal > 500) {
             hideProcessing();
             showNotification(`Total pages would be ${currentTotal + newTotal}. Maximum 500 pages allowed.`, 'error');
+            showToast('Total pages would be ' + (currentTotal + newTotal) + '. Maximum 500 pages allowed.', 'error');
             event.target.value = ''; return;
         }
 
@@ -208,10 +222,12 @@ async function handleMergeFileSelect(event) {
             await appendNewMergeFiles(files.length);
             updateMergeFileList();
             showNotification(`Successfully uploaded ${files.length} file(s)!`, 'success');
+            showToast('Successfully uploaded (' + files.length + ') file(s)!', 'info');
         }
     } catch (err) {
         hideProcessing();
         showNotification('Error uploading files: ' + err.message, 'error');
+        showToast('Error uploading files.', 'error');
     }
     event.target.value = '';
 }
@@ -340,11 +356,11 @@ async function createMergePageItem(pdfDoc, pageNum, fileIndex, globalPageIndex, 
     overlay.className = 'page-hover-overlay';
     overlay.innerHTML = `
         <div class="page-hover-actions">
-            <button class="page-action-btn primary" title="Preview"      data-action="preview">👁</button>
-            <button class="page-action-btn"         title="Rotate Left"  data-action="rotate-left">↺</button>
-            <button class="page-action-btn"         title="Rotate Right" data-action="rotate-right">↻</button>
-            <button class="page-action-btn"         title="Duplicate"    data-action="duplicate">⧉</button>
-            <button class="page-action-btn danger"  title="Delete"       data-action="delete">🗑</button>
+            <button class="page-action-btn primary" title="Preview"      data-action="preview"><i class="fa fa-eye"></i></button>
+            <button class="page-action-btn" title="Rotate Left"  data-action="rotate-left"><i class="fa fa-rotate-left"></i></button>
+            <button class="page-action-btn" title="Rotate Right" data-action="rotate-right"><i class="fa fa-rotate-right"></i></button>
+            <button class="page-action-btn" title="Duplicate"    data-action="duplicate"><i class="fa fa-copy"></i></button>
+            <button class="page-action-btn danger"  title="Delete"       data-action="delete"><i class="fa fa-trash-o"></i></button>
         </div>`;
 
     overlay.querySelectorAll('.page-action-btn').forEach(btn => {
@@ -353,10 +369,10 @@ async function createMergePageItem(pdfDoc, pageNum, fileIndex, globalPageIndex, 
             const gIdx = parseInt(div.dataset.page);
             const key  = div.dataset.pageKey;
             switch (btn.dataset.action) {
-                case 'preview':      openMergePreviewByIndex(gIdx); break;
-                case 'rotate-left':  rotateMergePageItem(div, pdfDoc, pageNum, key, -90); break;
-                case 'rotate-right': rotateMergePageItem(div, pdfDoc, pageNum, key, 90); break;
-                case 'duplicate':    duplicateMergePage(gIdx); break;
+                case 'preview':      openMergePreviewByIndex(gIdx), showToast('Previewing PDF page.', 'info'); break;
+                case 'rotate-left':  rotateMergePageItem(div, pdfDoc, pageNum, key, -90), showToast('Rotated to left side.', 'info'); break;
+                case 'rotate-right': rotateMergePageItem(div, pdfDoc, pageNum, key, 90), showToast('Rotated to right side.', 'info'); break;
+                case 'duplicate':    duplicateMergePage(gIdx), showToast('Duplicating PDF page...', 'warning'); break;
                 case 'delete':       deleteMergePage(gIdx); break;
             }
         });
@@ -402,10 +418,10 @@ function createMergeAddBetweenButton(afterWrapperIndex) {
     btn.dataset.afterIndex = afterWrapperIndex;
     btn.innerHTML = `
         <div class="merge-add-line"></div>
-        <button class="merge-add-btn" title="Insert here">＋</button>
+        <button class="merge-add-btn" title="Insert here"><i class="fa fa-plus"></i></button>
         <div class="merge-add-tooltip" style="display:none;">
-            <button class="merge-add-option" data-action="blank">📄 Add blank page</button>
-            <button class="merge-add-option" data-action="document">📁 Add document</button>
+            <button class="merge-add-option" data-action="blank"><i class="fa fa-file-o"></i> Add blank page</button>
+            <button class="merge-add-option" data-action="document"><i class="fa fa-folder-open"></i> Add document</button>
         </div>`;
 
     const addBtn    = btn.querySelector('.merge-add-btn');
@@ -567,9 +583,11 @@ async function insertMergeBlankPage(insertAfterPos) {
         updateMergeFileList();
         updateMergeButton();
         showNotification('Blank page inserted', 'success');
+        showToast('Blank page inserted!', 'success');
     } catch (err) {
         hideProcessing();
         showNotification('Failed to insert blank page: ' + err.message, 'error');
+        showToast('Failed to insert blank page.', 'error');
     }
 }
 
@@ -646,6 +664,7 @@ async function duplicateMergePage(globalIndex) {
     rebuildMergePageOrder();
     refreshMergeAddBetweenButtons();
     showNotification('Page duplicated', 'success');
+    showToast('Page duplicated!', 'info');
 }
 
 // ─── Delete ───────────────────────────────────────────────────────────────────
@@ -660,9 +679,29 @@ function deleteMergePage(globalIndex) {
         if (wrapper) wrapper.remove();
         renumberMergePageItems();
         rebuildMergePageOrder();
+
+        // ── Remove file cards for files whose pages are all gone from the grid ──
+        const remainingFileIndexes = new Set(
+            Array.from(pageGrid.querySelectorAll('.page-item:not(.add-page-item)'))
+                .map(pi => parseInt(pi.dataset.fileIndex))
+        );
+        const removedAny = mergeFiles.some(f => !remainingFileIndexes.has(f.fileIndex));
+        mergeFiles = mergeFiles.filter(f => remainingFileIndexes.has(f.fileIndex));
+
         refreshMergeAddBetweenButtons();
+        updateMergeFileList();
         updateMergeButton();
+
+        // If no pages remain at all, reset to upload view
+        if (mergePageOrder.length === 0) {
+            const uploadSection = document.getElementById('uploadSection');
+            const pageContainer = document.getElementById('pageContainer');
+            if (pageContainer) { pageContainer.classList.remove('active'); pageContainer.style.display = 'none'; }
+            if (uploadSection) { uploadSection.classList.remove('hidden'); uploadSection.style.display = ''; }
+        }
+
         showNotification('Page removed', 'success');
+        showToast('Page removed!', 'info');
     });
 }
 
@@ -837,6 +876,7 @@ function swapMergePagesByPos(fromPos, toPos, pageWrappers) {
     rebuildMergePageOrder();
     refreshMergeAddBetweenButtons();
     showNotification('Pages swapped', 'success');
+    showToast('Pages swapped!', 'info');
 }
 
 // ─── Insert page at target wrapper position ───────────────────────────────────
@@ -858,6 +898,7 @@ function insertMergePageByPos(fromPos, insertPos, pageWrappers) {
     rebuildMergePageOrder();
     refreshMergeAddBetweenButtons();
     showNotification('Page inserted', 'success');
+    showToast('Page inserted!', 'info');
 }
 
 // ─── File drag ────────────────────────────────────────────────────────────────
@@ -1095,7 +1136,8 @@ window.removeMergeFile = function(index, event) {
         updateMergeFileList();
         updateMergeButton();
         showNotification('File removed', 'success');
-    });
+        showToast('File removed!', 'info');
+    }); 
 };
 
 window.addMoreMergeFiles = function() { document.getElementById('fileInput').click(); };
@@ -1103,7 +1145,7 @@ window.addMoreMergeFiles = function() { document.getElementById('fileInput').cli
 window.clearAllMergeFiles = function() {
     if (!mergeFiles.length) return;
     showConfirm('Clear All Files', 'Remove all files from the merge list?', () => {
-        resetMergeState(); showNotification('All files cleared', 'success');
+        resetMergeState(); showNotification('All files cleared', 'success'); showToast('Selected files cleared!', 'success');
     });
 };
 
@@ -1169,9 +1211,11 @@ window.executeMerge = async function() {
         const baseName = mergeFiles[0]?.fileName?.replace(/\.pdf$/i, '') || 'merged';
         downloadFile(btoa(binary), `${baseName}_merged.pdf`);
         showNotification(`Successfully merged ${allPageItems.length} pages into 1 PDF!`, 'success');
+        showToast('Successfully merged (' + allPageItems.length + ') pages into 1 PDF!', 'success');
     } catch (err) {
         hideProgress();
         showNotification('Merge failed: ' + err.message, 'error');
+        showToast('Merge failed.', 'error');
         console.error(err);
     }
 };

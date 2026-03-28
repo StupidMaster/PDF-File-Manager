@@ -4,12 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>PDF Manager - Split & Merge</title>
+    <title>PDF Manager</title>
 
     <!-- Favicon -->
     <link rel="shortcut icon" type="image/x-icon" href="./images/SOMS-icon.ico">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    
     <script src="https://kit.fontawesome.com/f7a2288045.js" crossorigin="anonymous"></script>
     <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
     <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
@@ -52,8 +53,13 @@
         }
 
         @keyframes gridDrift {
-            from { background-position: 0 0; }
-            to   { background-position: 48px 48px; }
+            from {
+                background-position: 0 0;
+            }
+
+            to {
+                background-position: 48px 48px;
+            }
         }
 
         /* Glow orbs */
@@ -66,27 +72,37 @@
         }
 
         .loader-orb-1 {
-            width: 340px; height: 340px;
+            width: 340px;
+            height: 340px;
             background: radial-gradient(circle, #1a4a8a 0%, transparent 70%);
-            top: -80px; left: -60px;
+            top: -80px;
+            left: -60px;
             animation-delay: 0.1s;
         }
 
         .loader-orb-2 {
-            width: 280px; height: 280px;
+            width: 280px;
+            height: 280px;
             background: radial-gradient(circle, #0f3460 0%, transparent 70%);
-            bottom: -60px; right: -40px;
+            bottom: -60px;
+            right: -40px;
             animation-delay: 0.3s;
         }
 
         .loader-orb-3 {
-            width: 200px; height: 200px;
+            width: 200px;
+            height: 200px;
             background: radial-gradient(circle, #1e3a5f 0%, transparent 70%);
-            top: 40%; left: 60%;
+            top: 40%;
+            left: 60%;
             animation-delay: 0.5s;
         }
 
-        @keyframes orbFloat { to { opacity: 1; } }
+        @keyframes orbFloat {
+            to {
+                opacity: 1;
+            }
+        }
 
         /* Document icon */
         .loader-doc-wrap {
@@ -98,7 +114,8 @@
         }
 
         .loader-doc {
-            width: 64px; height: 80px;
+            width: 64px;
+            height: 80px;
             background: linear-gradient(145deg, #1e3a6e 0%, #0f2040 100%);
             border-radius: 6px 14px 14px 6px;
             border: 1.5px solid rgba(99, 179, 255, 0.25);
@@ -113,8 +130,10 @@
         .loader-doc::before {
             content: '';
             position: absolute;
-            top: 0; right: 0;
-            width: 20px; height: 20px;
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
             background: linear-gradient(225deg, #0a0e1a 50%, transparent 50%);
             border-bottom-left-radius: 4px;
         }
@@ -122,8 +141,10 @@
         .loader-doc::after {
             content: '';
             position: absolute;
-            top: 0; right: 0;
-            width: 20px; height: 20px;
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
             background: linear-gradient(225deg, rgba(99, 179, 255, 0.15) 50%, transparent 50%);
             border-bottom-left-radius: 4px;
         }
@@ -131,7 +152,8 @@
         /* Document lines */
         .loader-doc-lines {
             position: absolute;
-            left: 12px; top: 28px;
+            left: 12px;
+            top: 28px;
             display: flex;
             flex-direction: column;
             gap: 6px;
@@ -146,21 +168,42 @@
             animation: lineGrow 0.4s ease-out forwards;
         }
 
-        .loader-doc-line:nth-child(1) { width: 32px; animation-delay: 0.65s; }
-        .loader-doc-line:nth-child(2) { width: 26px; animation-delay: 0.75s; }
-        .loader-doc-line:nth-child(3) { width: 30px; animation-delay: 0.85s; }
-        .loader-doc-line:nth-child(4) { width: 22px; animation-delay: 0.95s; }
+        .loader-doc-line:nth-child(1) {
+            width: 32px;
+            animation-delay: 0.65s;
+        }
 
-        @keyframes lineGrow { to { transform: scaleX(1); } }
+        .loader-doc-line:nth-child(2) {
+            width: 26px;
+            animation-delay: 0.75s;
+        }
+
+        .loader-doc-line:nth-child(3) {
+            width: 30px;
+            animation-delay: 0.85s;
+        }
+
+        .loader-doc-line:nth-child(4) {
+            width: 22px;
+            animation-delay: 0.95s;
+        }
+
+        @keyframes lineGrow {
+            to {
+                transform: scaleX(1);
+            }
+        }
 
         /* Second doc (stacked behind) */
         .loader-doc-bg {
             position: absolute;
-            width: 60px; height: 74px;
+            width: 60px;
+            height: 74px;
             background: linear-gradient(145deg, #162d58 0%, #0b1830 100%);
             border-radius: 6px 12px 12px 6px;
             border: 1.5px solid rgba(99, 179, 255, 0.12);
-            top: 6px; left: -8px;
+            top: 6px;
+            left: -8px;
             z-index: -1;
         }
 
@@ -189,7 +232,9 @@
             animation: loaderSlideUp 0.6s cubic-bezier(0.34, 1.2, 0.64, 1) 1.0s forwards;
         }
 
-        .loader-name span { color: #63b3ff; }
+        .loader-name span {
+            color: #63b3ff;
+        }
 
         /* Progress bar */
         .loader-progress-wrap {
@@ -200,14 +245,16 @@
         }
 
         .loader-progress-track {
-            width: 100%; height: 2px;
+            width: 100%;
+            height: 2px;
             background: rgba(99, 179, 255, 0.12);
             border-radius: 2px;
             overflow: hidden;
         }
 
         .loader-progress-fill {
-            height: 100%; width: 0%;
+            height: 100%;
+            width: 0%;
             background: linear-gradient(90deg, #2563eb, #63b3ff, #93c5fd);
             border-radius: 2px;
             animation: progressFill 1.8s cubic-bezier(0.4, 0, 0.2, 1) 1.2s forwards;
@@ -215,10 +262,21 @@
         }
 
         @keyframes progressFill {
-            0%   { width: 0%;   }
-            60%  { width: 75%;  }
-            85%  { width: 90%;  }
-            100% { width: 100%; }
+            0% {
+                width: 0%;
+            }
+
+            60% {
+                width: 75%;
+            }
+
+            85% {
+                width: 90%;
+            }
+
+            100% {
+                width: 100%;
+            }
         }
 
         /* Status text */
@@ -235,21 +293,46 @@
 
         .loader-status-text {
             display: inline-block;
+            animation: statusCycle 2s steps(1) 1.2s forwards;
+        }
+
+        @keyframes statusCycle {
+            0% {
+                content: 'Initializing';
+            }
+
+            33% {
+                content: 'Loading assets';
+            }
+
+            66% {
+                content: 'Preparing workspace';
+            }
+
+            100% {
+                content: 'Ready';
+            }
         }
 
         /* Shared animations */
         @keyframes loaderSlideUp {
-            to { opacity: 1; transform: translateY(0); }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         @keyframes loaderFadeIn {
-            to { opacity: 1; }
+            to {
+                opacity: 1;
+            }
         }
 
         /* Corner accents */
         .loader-corner {
             position: absolute;
-            width: 20px; height: 20px;
+            width: 20px;
+            height: 20px;
             opacity: 0;
             animation: loaderFadeIn 0.6s ease 0.5s forwards;
         }
@@ -261,62 +344,53 @@
             background: rgba(99, 179, 255, 0.35);
         }
 
-        .loader-corner::before { width: 2px;  height: 100%; }
-        .loader-corner::after  { width: 100%; height: 2px;  }
+        .loader-corner::before {
+            width: 2px;
+            height: 100%;
+        }
 
-        .loader-corner-tl { top: 24px;    left: 24px;  }
-        .loader-corner-tl::before { top: 0; left: 0; }
-        .loader-corner-tl::after  { top: 0; left: 0; }
+        .loader-corner::after {
+            width: 100%;
+            height: 2px;
+        }
 
-        .loader-corner-tr { top: 24px;    right: 24px;  transform: rotate(90deg);  }
-        .loader-corner-br { bottom: 24px; right: 24px;  transform: rotate(180deg); }
-        .loader-corner-bl { bottom: 24px; left: 24px;   transform: rotate(270deg); }
+        .loader-corner-tl {
+            top: 24px;
+            left: 24px;
+        }
 
-        /* ── Toast Stack ─────────────────────────────────────────────────── */
-        #toast-container {
-            position: fixed;
+        .loader-corner-tl::before {
+            top: 0;
+            left: 0;
+        }
+
+        .loader-corner-tl::after {
+            top: 0;
+            left: 0;
+        }
+
+        .loader-corner-tr {
+            top: 24px;
+            right: 24px;
+            transform: rotate(90deg);
+        }
+
+        .loader-corner-br {
             bottom: 24px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 99999;
-            display: flex;
-            flex-direction: column-reverse;
-            align-items: center;
-            gap: 8px;
-            pointer-events: none;
+            right: 24px;
+            transform: rotate(180deg);
         }
 
-        .toast-item {
-            pointer-events: all;
-            min-width: 220px;
-            max-width: 360px;
-            background-color: #333;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 12px 18px;
-            font-size: 15px;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-            cursor: pointer;
-            user-select: none;
-            opacity: 0;
-            transform: translateY(12px);
-            transition: opacity 0.3s ease, transform 0.3s ease;
-        }
-
-        .toast-item.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        .toast-item.hide {
-            opacity: 0;
-            transform: translateY(8px);
-            transition: opacity 0.4s ease, transform 0.4s ease;
+        .loader-corner-bl {
+            bottom: 24px;
+            left: 24px;
+            transform: rotate(270deg);
         }
     </style>
 
-</head>
+
+
+
 
 <body>
 
@@ -387,15 +461,15 @@
                 <span><i class="fa fa-pencil-square-o"></i></span>
                 <span>Stamp</span>
             </button>
-            <button class="tab-btn" onclick="showToast('Rotate Pages feature coming soon!')">
+            <button class="tab-btn" onclick="showToast('Rotate Pages feature coming soon!', 'info')">
                 <span><i class="fa fa-rotate-right"></i></span>
                 <span>Rotate</span>
             </button>
-            <button class="tab-btn" onclick="showToast('Delete Pages feature coming soon!')">
+            <button class="tab-btn" onclick="showToast('Delete Pages feature coming soon!', 'info')">
                 <span><i class="fa fa-trash-o"></i></span>
                 <span>Delete Pages</span>
             </button>
-            <button class="tab-btn" onclick="showToast('Extract Pages feature coming soon!')">
+            <button class="tab-btn" onclick="showToast('Extract Pages feature coming soon!', 'info')">
                 <span><i class="fa fa-file-o"></i></span>
                 <span>Extract</span>
             </button>
@@ -418,7 +492,7 @@
                     </label>
                 </div>
                 <div class="split-actions">
-                    <button class="btn btn-secondary" onclick="clearAllSplitPoints()">
+                    <button class="btn btn-secondary" id="clearAllBtn" onclick="clearAllSplitPoints()" disabled>
                         <span><i class="fa fa-trash-o"></i></span>
                         <span>Clear All</span>
                     </button>
@@ -631,11 +705,16 @@
             if (activeTool === 'split') return;
 
             const doSwitch = () => {
+                // Clear stale state from the mode we're leaving
+                if (typeof window.clearMergeState === 'function') window.clearMergeState();
+                window.stampHasPdf = false;
+
                 showModeLoading('Loading Split mode...');
 
                 requestAnimationFrame(() => setTimeout(() => {
                     activeTool = 'split';
                     window.activeTool = 'split';
+                    window.stampHasPdf = false; // clear stale stamp flag when leaving stamp
 
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('splitTab').classList.add('active');
@@ -656,6 +735,8 @@
 
                     const titleSpan = document.querySelector('.title span');
                     if (titleSpan) titleSpan.innerHTML = '<i class="fa fa-scissors"></i> Split PDF';
+
+                    showToast('Split Mode Activated!', 'success')
 
                     if (typeof window.initSplit === 'function') {
                         window.initSplit();
@@ -683,11 +764,17 @@
             if (activeTool === 'merge') return;
 
             const doSwitch = () => {
+                // Clear stale state from the mode we're leaving
+                if (typeof window.clearSplitState === 'function') window.clearSplitState();
+                window.stampHasPdf = false;
+
                 showModeLoading('Loading Merge mode...');
 
                 requestAnimationFrame(() => setTimeout(() => {
+
                     activeTool = 'merge';
                     window.activeTool = 'merge';
+                    window.stampHasPdf = false; // clear stale stamp flag when leaving stamp
 
                     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
                     document.getElementById('mergeTab').classList.add('active');
@@ -726,6 +813,8 @@
                         <span>Upload PDFs to merge</span>
                     </div>
                 `;
+
+                        showToast('Merge Mode Activated!', 'success')
                     }
 
                     if (typeof initMerge === 'function') {
@@ -755,6 +844,10 @@
             if (activeTool === 'stamp') return;
 
             const doSwitch = () => {
+                // Clear stale state from the mode we're leaving
+                if (typeof window.clearSplitState === 'function') window.clearSplitState();
+                if (typeof window.clearMergeState === 'function') window.clearMergeState();
+
                 showModeLoading('Loading Stamp mode...');
 
                 requestAnimationFrame(() => setTimeout(() => {
@@ -803,6 +896,8 @@
                         document.documentElement.style.setProperty('--stamp-header-h', h + 'px');
                         document.documentElement.style.setProperty('--stamp-vh-used', (h + 32) + 'px');
                     }
+
+                    showToast('Stamp Mode Activated!', 'success')
 
                     // Init stamp UI
                     if (typeof window.initStamp === 'function') window.initStamp();
@@ -863,6 +958,8 @@
                     'Start Over',
                     'Start over with new files? All current progress will be lost.',
                     () => {
+                        showToast('Split operation reset!', 'info')
+
                         if (typeof window.initSplit === 'function') {
                             window.initSplit();
                         } else {
@@ -1039,7 +1136,7 @@
 
     <!-- Toast Notification -->
     <script>
-        function showToast(message) {
+        function showToast(message, type = 'info') {
             const container = document.getElementById('toast-container');
             if (!container) {
                 alert(message);
@@ -1047,8 +1144,31 @@
             }
 
             const item = document.createElement('div');
-            item.className = 'toast-item';
-            item.textContent = message;
+            item.className = `toast-item ${type}`;
+
+            // Icons with colors
+            const icons = {
+                success: {
+                    char: '✓',
+                    color: '#c8e6c9'
+                },
+                error: {
+                    char: '✕',
+                    color: '#ffcdd2'
+                },
+                warning: {
+                    char: '!',
+                    color: '#ffe0b2'
+                },
+                info: {
+                    char: 'ℹ',
+                    color: '#bbdef5'
+                }
+            };
+
+            const icon = icons[type] || icons.info;
+            item.innerHTML = `<span style="margin-right: 8px; font-weight: bold; color: ${icon.color};">${icon.char}</span> ${message}`;
+
             container.appendChild(item);
 
             // Trigger enter animation on next frame

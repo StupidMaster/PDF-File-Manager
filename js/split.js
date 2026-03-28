@@ -147,14 +147,14 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
             const messageEl = document.getElementById('notificationMessage');
 
             const configs = {
-                success: { icon: '✅', title: 'Success', class: 'success' },
-                error: { icon: '❌', title: 'Error', class: 'error' },
-                warning: { icon: '⚠️', title: 'Warning', class: 'warning' },
-                info: { icon: 'ℹ️', title: 'Information', class: 'info' }
+                success: { icon: '<i class="fa fa-check-circle"></i>', title: 'Success', class: 'success' },
+                error: { icon: '<i class="fa fa-times-circle"></i>', title: 'Error', class: 'error' },
+                warning: { icon: '<i class="fa fa-exclamation-triangle"></i>', title: 'Warning', class: 'warning' },
+                info: { icon: '<i class="fa fa-info-circle"></i>', title: 'Information', class: 'info' }
             };
 
             const config = configs[type] || configs.info;
-            icon.textContent = config.icon;
+            icon.innerHTML = config.icon;
             icon.className = 'notification-icon ' + config.class;
             titleEl.textContent = title || config.title;
             messageEl.textContent = message;
@@ -261,10 +261,12 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
             updateFileList();
             
             showNotification(`Successfully uploaded ${files.length} file(s)!`, 'success');
+            showToast('Successfully uploaded (' + files.length + ') file(s)!', 'info');
         }
     } catch (error) {
         hideProcessing();
         showNotification('Error uploading files: ' + error.message, 'error');
+        showToast('Error uploading files.', 'error');
     }
 
     event.target.value = '';
@@ -786,11 +788,11 @@ function createSkeletonItem(pageIndex, totalPages) {
             overlay.className = 'page-hover-overlay';
             overlay.innerHTML = `
                 <div class="page-hover-actions">
-                    <button class="page-action-btn primary" title="Preview" data-action="preview">👁</button>
-                    <button class="page-action-btn" title="Rotate Left" data-action="rotate-left">↺</button>
-                    <button class="page-action-btn" title="Rotate Right" data-action="rotate-right">↻</button>
-                    <button class="page-action-btn" title="Duplicate" data-action="duplicate">⧉</button>
-                    <button class="page-action-btn danger" title="Delete" data-action="delete">🗑</button>
+                    <button class="page-action-btn primary" title="Preview" data-action="preview"><i class="fa fa-eye"></i></button>
+                    <button class="page-action-btn" title="Rotate Left" data-action="rotate-left"><i class="fa fa-rotate-left"></i></button>
+                    <button class="page-action-btn" title="Rotate Right" data-action="rotate-right"><i class="fa fa-rotate-right"></i></button>
+                    <button class="page-action-btn" title="Duplicate" data-action="duplicate"><i class="fa fa-copy"></i></button>
+                    <button class="page-action-btn danger" title="Delete" data-action="delete"><i class="fa fa-trash-o"></i></button>
                 </div>
             `;
 
@@ -801,10 +803,10 @@ function createSkeletonItem(pageIndex, totalPages) {
                     const action = btn.dataset.action;
                     const gIdx = parseInt(div.dataset.page);
                     const key  = div.dataset.pageKey;
-                    if (action === 'preview')      openSplitPreview(gIdx);
-                    if (action === 'rotate-left')  rotatePageItem(div, pdfDoc, pageNum, key, -90);
-                    if (action === 'rotate-right') rotatePageItem(div, pdfDoc, pageNum, key, 90);
-                    if (action === 'duplicate')    duplicateSplitPage(gIdx);
+                    if (action === 'preview')      openSplitPreview(gIdx), showToast('Previewing PDF page.', 'info');
+                    if (action === 'rotate-left')  rotatePageItem(div, pdfDoc, pageNum, key, -90), showToast('Rotated to left side.', 'info');
+                    if (action === 'rotate-right') rotatePageItem(div, pdfDoc, pageNum, key, 90), showToast('Rotated to right side.', 'info');
+                    if (action === 'duplicate')    duplicateSplitPage(gIdx), showToast('Duplicating PDF page...', 'warning');
                     if (action === 'delete')       deleteSplitPage(gIdx);
                 });
             });
@@ -830,7 +832,7 @@ function createSkeletonItem(pageIndex, totalPages) {
             div.appendChild(thumbnail);
             div.appendChild(footer);
 
-            // No click handler on the card itself — preview only via the 👁 button
+            // No click handler on the card itself — preview only via the eye button
 
             return div;
         }
@@ -941,12 +943,8 @@ function createSkeletonItem(pageIndex, totalPages) {
             newItem.appendChild(dupBadge);
 
             const newWrapper = document.createElement('div');
-            newWrapper.className = 'page-item-wrapper split-point-wrapper';
-
-            const tempAfterPage = globalIndex + 0.5;
-            const splitPoint = createSplitPoint(tempAfterPage);
+            newWrapper.className = 'page-item-wrapper';
             newWrapper.appendChild(newItem);
-            newWrapper.appendChild(splitPoint);
 
             const nextSibling = allWrappers[sourceIndex + 1];
             if (nextSibling) {
@@ -956,9 +954,11 @@ function createSkeletonItem(pageIndex, totalPages) {
             }
 
             renumberPageItems();
-            rebuildSplitPointIndices();
+
+            syncScissorPoints();
 
             showNotification('Page duplicated', 'success');
+            showToast('Page duplicated', 'info');
             applyGroupHighlights();
         }
 
@@ -977,11 +977,55 @@ function createSkeletonItem(pageIndex, totalPages) {
                     }
                     // Renumber remaining pages visually
                     renumberPageItems();
+                    syncScissorPoints();   // add/remove scissors so last page never has one
+                    rebuildSplitPointIndices();
                     updateSplitCount();
                     applyGroupHighlights();
+
+                    // ── Remove file cards for files whose pages are all gone ──
+                    const pageGrid = document.getElementById('pageGrid');
+                    const remainingFileIndexes = new Set(
+                        Array.from(pageGrid.querySelectorAll('.page-item:not(.add-page-item)'))
+                            .map(pi => parseInt(pi.dataset.fileIndex))
+                    );
+                    pdfDocuments = pdfDocuments.filter(p => remainingFileIndexes.has(p.fileIndex));
+                    updateFileList();
+
+                    // If no pages remain, reset to upload view
+                    if (pageGrid.querySelectorAll('.page-item:not(.add-page-item)').length === 0) {
+                        document.getElementById('uploadSection').classList.remove('hidden');
+                        document.getElementById('pageContainer').classList.remove('active');
+                        document.getElementById('splitControls').classList.remove('show');
+                    }
+
                     showNotification('Page removed', 'success');
+                    showToast('Page removed from split view.', 'info');
                 }
             );
+        }
+
+        // ── Ensure scissors exist on all real pages except the last ────────────
+        // Call this after any DOM change that adds or removes page wrappers.
+        function syncScissorPoints() {
+            const pageGrid = document.getElementById('pageGrid');
+            const allRealWrappers = Array.from(
+                pageGrid.querySelectorAll('.page-item-wrapper:not(:has(.add-page-item))')
+            );
+            allRealWrappers.forEach((wrapper, idx) => {
+                const isLast   = idx === allRealWrappers.length - 1;
+                const hasSplit = !!wrapper.querySelector('.split-point');
+                if (!isLast && !hasSplit) {
+                    // Non-last page missing its scissor — add one
+                    wrapper.classList.add('split-point-wrapper');
+                    const pageItem = wrapper.querySelector('.page-item:not(.add-page-item)');
+                    const afterPage = pageItem ? parseInt(pageItem.dataset.page) : idx;
+                    wrapper.appendChild(createSplitPoint(afterPage));
+                } else if (isLast && hasSplit) {
+                    // Last page must never have a scissor
+                    wrapper.querySelector('.split-point').remove();
+                    wrapper.classList.remove('split-point-wrapper');
+                }
+            });
         }
 
         // Renumber page-number spans after a deletion or duplication
@@ -1264,7 +1308,7 @@ function createSkeletonItem(pageIndex, totalPages) {
             
             const scissorIcon = document.createElement('span');
             scissorIcon.className = 'scissor-icon';
-            scissorIcon.innerHTML = '<span style="font-size:15px;">✂️</span>';
+            scissorIcon.innerHTML = '<i class="fa fa-scissors" style="font-size:15px;"></i>';
             
             scissorBtn.appendChild(scissorIcon);
 
@@ -1310,9 +1354,36 @@ function createSkeletonItem(pageIndex, totalPages) {
 function updateSplitCount() {
     const count = splitPoints.size + 1; // Number of resulting PDFs
     document.getElementById('splitCountBtn').textContent = count;
-    
-    const splitBtn = document.getElementById('splitBtn');
+
+    const splitBtn        = document.getElementById('splitBtn');
+    const clearAllBtn     = document.getElementById('clearAllBtn');
+    const splitEveryChk   = document.getElementById('splitEveryCheckbox');
+    const splitEveryInput = document.getElementById('splitEveryInput');
+
+    // Split button — only enabled when at least one split point is active
     splitBtn.disabled = (splitPoints.size === 0);
+
+    // Clear All button — only enabled when there are active split points
+    if (clearAllBtn) clearAllBtn.disabled = (splitPoints.size === 0);
+
+    // Split Every checkbox — only enabled when 2+ page thumbnails exist
+    const domPageCount = document.querySelectorAll('.page-item:not(.add-page-item)').length;
+    const splitEveryEnabled = domPageCount >= 2;
+    if (splitEveryChk) {
+        splitEveryChk.disabled = !splitEveryEnabled;
+
+        // Show toast when user clicks the checkbox while it is disabled
+        if (!splitEveryChk._disabledToastBound) {
+            splitEveryChk._disabledToastBound = true;
+            splitEveryChk.addEventListener('click', function (e) {
+                if (this.disabled) {
+                    e.preventDefault();
+                    showToast('Upload a PDF with 2 or more pages first');
+                }
+            });
+        }
+    }
+    if (splitEveryInput && !splitEveryChk?.checked) splitEveryInput.disabled = true;
 }
 
         // Toggle "Split after every" checkbox
@@ -1323,8 +1394,10 @@ function updateSplitCount() {
             input.disabled = !checkbox.checked;
 
             if (checkbox.checked) {
+                showToast('Split Every enabled');
                 applySplitEvery();
             } else {
+                showToast('Split Every disabled');
                 _clearSplitPointsOnly();
             }
         }
@@ -1392,6 +1465,7 @@ function applySplitEvery() {
             const splitEveryInput = document.getElementById('splitEveryInput');
             if (splitEveryCheckbox) splitEveryCheckbox.checked = false;
             if (splitEveryInput) splitEveryInput.disabled = true;
+            showToast('All split points cleared', 'info');
         }
 
         // Execute split — fully client-side via pdf-lib (handles duplicates, rotations, deletions)
@@ -1515,6 +1589,7 @@ async function performClientSideSplit() {
     }
 
     showNotification(`Successfully split into ${outputFiles.length} PDF${outputFiles.length > 1 ? 's' : ''}!`, 'success');
+    showToast('Successfully split into ' + outputFiles.length + ' PDF' + (outputFiles.length > 1 ? 's' : '') + '!', 'info');
 }
         // Download single file
         function downloadFile(base64Content, filename) {
@@ -1682,6 +1757,21 @@ Object.defineProperty(window, 'hasSplitFiles', {
     get: () => pdfDocuments.length > 0
 });
 
+// Data-only reset — clears split state without touching the UI.
+// Called by index_enhanced.php when switching AWAY from split mode.
+window.clearSplitState = function() {
+    pdfDocuments      = [];
+    splitPoints       = new Set();
+    currentFileIndex  = 0;
+    renderedPages     = new Map();
+    pageRotations     = new Map();
+    deletedPages      = new Set();
+    dupCounter        = 0;
+    previewGlobalIndex = 0;
+};
+
+// beforeunload is handled globally in common.js via window._unloadCheckers
+
 // Initialize / reset split mode without page reload
 window.initSplit = function() {
     // Reset all split state
@@ -1711,11 +1801,13 @@ window.initSplit = function() {
     if (splitBtn) splitBtn.disabled = true;
     if (splitCountBtn) splitCountBtn.textContent = '1';
 
-    // Reset split-every checkbox
+    // Reset split-every checkbox and Clear All button
     const splitEveryCheckbox = document.getElementById('splitEveryCheckbox');
-    const splitEveryInput = document.getElementById('splitEveryInput');
-    if (splitEveryCheckbox) splitEveryCheckbox.checked = false;
-    if (splitEveryInput) { splitEveryInput.value = 1; splitEveryInput.disabled = true; }
+    const splitEveryInput    = document.getElementById('splitEveryInput');
+    const clearAllBtn        = document.getElementById('clearAllBtn');
+    if (splitEveryCheckbox) { splitEveryCheckbox.checked = false; splitEveryCheckbox.disabled = true; }
+    if (splitEveryInput)    { splitEveryInput.value = 1; splitEveryInput.disabled = true; }
+    if (clearAllBtn)        clearAllBtn.disabled = true;
 
     // Reset left panel
     const panelTitle = document.getElementById('panelTitle');
