@@ -1,7 +1,9 @@
 // js/common.js - Common utilities and initialization
 
 // Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+const PDF_MANAGER_BASE = window.PDF_MANAGER_BASE || '.';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${PDF_MANAGER_BASE}/ScriptsJS/3.11.174-pdf.worker.min.js`;
+window.PDF_LIB_SRC = `${PDF_MANAGER_BASE}/ScriptsJS/1.17.1-pdf-lib.min.js`;
 
 // Format file size
 function formatFileSize(bytes) {

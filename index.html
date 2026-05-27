@@ -3,6 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
+    <script>
+        if ((location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&
+            location.pathname.replace(/\/+$/, '') === '/PDF-File-Manager') {
+            location.replace('/PDF-File-Manager.php');
+        }
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>PDF Manager</title>
 
@@ -15,7 +21,7 @@
     <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
     <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
 
-    <link rel="stylesheet" href="./CSS/index.css">
+    <link rel="stylesheet" href="./CSS/index.css?v=20260527-4">
 
     <style>
         /* ── Page Loader ─────────────────────────────────────────── */
@@ -461,13 +467,17 @@
                 <span><i class="fa fa-pencil-square-o"></i></span>
                 <span>Stamp</span>
             </button>
+            <button class="tab-btn" id="deleteTab" onclick="switchToDelete()">
+                <span><i class="fa fa-trash-o"></i></span>
+                <span>Delete Pages</span>
+            </button>
+            <button class="tab-btn" id="compressTab" onclick="switchToCompress()">
+                <span><i class="fa fa-compress"></i></span>
+                <span>Compress</span>
+            </button>
             <button class="tab-btn" onclick="showToast('Rotate Pages feature coming soon!', 'info')">
                 <span><i class="fa fa-rotate-right"></i></span>
                 <span>Rotate</span>
-            </button>
-            <button class="tab-btn" onclick="showToast('Delete Pages feature coming soon!', 'info')">
-                <span><i class="fa fa-trash-o"></i></span>
-                <span>Delete Pages</span>
             </button>
             <button class="tab-btn" onclick="showToast('Extract Pages feature coming soon!', 'info')">
                 <span><i class="fa fa-file-o"></i></span>
@@ -535,6 +545,76 @@
                         <span>Merge</span>
                         <span class="split-count-badge" id="mergeCountBtn">0</span>
                         <span id="mergeFilesText">files</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Compress Controls -->
+        <div class="split-controls" id="compressControls">
+            <div class="split-controls-content">
+                <div class="merge-info-section">
+                    <span><i class="fa fa-file-archive-o"></i>
+                        <strong id="compressFileCount">0 files</strong>
+                    </span>
+                    <span style="margin-left:12px;color:var(--text-secondary);font-size:12px">
+                        Select PDFs to compress
+                    </span>
+                </div>
+                <div class="split-actions">
+                    <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">
+                        <span><i class="fa fa-plus"></i></span>
+                        <span>Add Files</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearAllCompressFiles()">
+                        <span><i class="fa fa-trash-o"></i></span>
+                        <span>Clear All</span>
+                    </button>
+                    <button class="btn btn-primary" id="compressExecuteBtn" onclick="executeCompress()" disabled>
+                        <span><i class="fa fa-bolt"></i></span>
+                        <span>Compress</span>
+                    </button>
+                    <button class="btn btn-secondary" id="compressDownloadBtn" onclick="openCompressDownloadModal()" disabled
+                        style="border-color:var(--accent-color);color:var(--accent-color)">
+                        <span><i class="fa fa-download"></i></span>
+                        <span>Download</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Pages Controls -->
+        <div class="split-controls" id="deleteControls">
+            <div class="split-controls-content">
+                <div class="merge-info-section" style="display:flex;align-items:center;gap:12px">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                        <input type="checkbox" id="deleteSelectAllChk"
+                            onchange="deleteToggleSelectAll(this.checked)"
+                            style="width:15px;height:15px;cursor:pointer">
+                        <span>Select all</span>
+                    </label>
+                    <span id="deleteSelCount" style="color:var(--text-secondary);font-size:12px">Select pages to delete</span>
+                </div>
+                <div class="split-actions">
+                    <button class="btn btn-secondary" onclick="rotateSelectedDeletePages(-90)" title="Rotate selected left">
+                        <span><i class="fa fa-rotate-left"></i></span>
+                        <span class="hide-xs">Rotate Left</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="rotateSelectedDeletePages(90)" title="Rotate selected right">
+                        <span><i class="fa fa-rotate-right"></i></span>
+                        <span class="hide-xs">Rotate Right</span>
+                    </button>
+                    <button class="btn btn-secondary" onclick="deleteLoadNewFile()">
+                        <span><i class="fa fa-folder-open-o"></i></span>
+                        <span>New File</span>
+                    </button>
+                    <button class="btn btn-danger" id="deleteExecuteBtn" onclick="deleteSelectedFromGrid()" disabled
+                        style="background:var(--danger-color,#ef4444);border-color:var(--danger-color,#ef4444);color:#fff">
+                        <span><i class="fa fa-trash-o"></i></span>
+                        <span>Delete Selected</span>
+                    </button>
+                    <button class="btn btn-primary" id="deleteSavePdfBtn" onclick="executeDeletePages()" disabled>
+                        <span><i class="fa fa-download"></i></span>
+                        <span>Save PDF</span>
                     </button>
                 </div>
             </div>
@@ -679,10 +759,12 @@
     <script>
         window.PDF_MANAGER_BASE = '.';
     </script>
-    <script src="./js/common.js"></script>
-    <script src="./js/split.js"></script>
-    <script src="./js/merge.js"></script>
-    <script src="./js/stamp.js"></script>
+    <script src="./js/common.js?v=20260527-4"></script>
+    <script src="./js/split.js?v=20260527-4"></script>
+    <script src="./js/merge.js?v=20260527-4"></script>
+    <script src="./js/stamp.js?v=20260527-4"></script>
+    <script src="./js/delete.js?v=20260527-4"></script>
+    <script src="./js/compress.js?v=20260527-4"></script>
     <!-- Tool switching -->
     <script>
         let activeTool = 'split';
@@ -701,12 +783,98 @@
             if (overlay) overlay.classList.remove('active');
         }
 
+        function isElementVisible(el) {
+            if (!el) return false;
+            const style = window.getComputedStyle ? window.getComputedStyle(el) : el.style;
+            return style.display !== 'none' && style.visibility !== 'hidden';
+        }
+
+        function getCurrentTool() {
+            const activeTab = document.querySelector('.tab-btn.active');
+            const pageContainer = document.getElementById('pageContainer');
+            const splitControls = document.getElementById('splitControls');
+            const mergeControls = document.getElementById('mergeControls');
+            const stampContainer = document.getElementById('stampContainer');
+            const deleteControls = document.getElementById('deleteControls');
+            let current = window.activeTool || activeTool || 'split';
+            if (isElementVisible(stampContainer)) current = 'stamp';
+            else if (deleteControls && deleteControls.classList.contains('active')) current = 'delete';
+            else if (activeTab && activeTab.id === 'splitTab') current = 'split';
+            else if (activeTab && activeTab.id === 'mergeTab') current = 'merge';
+            else if (activeTab && activeTab.id === 'deleteTab') current = 'delete';
+            else if (activeTab && activeTab.id === 'compressTab') current = 'compress';
+            else if (mergeControls && mergeControls.classList.contains('active')) current = 'merge';
+            else if ((splitControls && splitControls.classList.contains('show')) ||
+                     (pageContainer && pageContainer.classList.contains('active'))) current = 'split';
+            if (current !== activeTool) activeTool = current;
+            if (window.activeTool !== current) window.activeTool = current;
+            return current;
+        }
+
+        function confirmLoadedModeSwitch(targetLabel, doSwitch) {
+            const currentTool = getCurrentTool();
+            const splitHasFiles = typeof window._splitHasFiles === 'function' ? window._splitHasFiles() : !!window.hasSplitFiles;
+            const mergeHasFiles = !!window.hasMergeFiles;
+            const stampHasFile = typeof window._stampHasFile === 'function' ? window._stampHasFile() : !!window.stampHasPdf;
+            const deleteHasFile = !!(window._deleteHasFile && window._deleteHasFile());
+            const compressHasFiles = !!(window._compressHasFiles && window._compressHasFiles());
+
+            if (currentTool === 'split' && splitHasFiles) {
+                showConfirm(
+                    'Switch to ' + targetLabel,
+                    'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
+                    doSwitch
+                );
+                return true;
+            }
+
+            if (currentTool === 'merge' && mergeHasFiles) {
+                showConfirm(
+                    'Switch to ' + targetLabel,
+                    'You have files loaded in Merge mode. Switching will clear all current files and progress. Continue?',
+                    doSwitch
+                );
+                return true;
+            }
+
+            if (currentTool === 'stamp' && stampHasFile) {
+                showConfirm(
+                    'Switch to ' + targetLabel,
+                    'You have a PDF loaded in Stamp mode. Switching will discard your stamp session. Continue?',
+                    doSwitch
+                );
+                return true;
+            }
+
+            if (currentTool === 'delete' && deleteHasFile) {
+                showConfirm(
+                    'Switch to ' + targetLabel,
+                    'You have a PDF loaded in Delete Pages mode. Switching will discard your current session. Continue?',
+                    doSwitch
+                );
+                return true;
+            }
+
+            if (currentTool === 'compress' && compressHasFiles) {
+                showConfirm(
+                    'Switch to ' + targetLabel,
+                    'You have files loaded in Compress mode. Switching will discard your current session. Continue?',
+                    doSwitch
+                );
+                return true;
+            }
+
+            return false;
+        }
+
         function switchToSplit() {
-            if (activeTool === 'split') return;
+            if (getCurrentTool() === 'split') return;
 
             const doSwitch = () => {
                 // Clear stale state from the mode we're leaving
                 if (typeof window.clearMergeState === 'function') window.clearMergeState();
+                if (typeof window.clearDeleteState === 'function') window.clearDeleteState();
+                if (typeof window.clearCompressState === 'function') window.clearCompressState();
                 window.stampHasPdf = false;
 
                 showModeLoading('Loading Split mode...');
@@ -726,12 +894,16 @@
                     const leftPanel = document.getElementById('leftPanel');
                     const mobileToggle = document.getElementById('mobileMenuToggle');
                     const mergeControls = document.getElementById('mergeControls');
+                    const deleteControls = document.getElementById('deleteControls');
+                    const compressControls = document.getElementById('compressControls');
 
                     if (stampContainer) stampContainer.style.display = 'none';
                     if (uploadSection) uploadSection.style.display = '';
                     if (leftPanel) leftPanel.style.display = '';
                     if (mobileToggle) mobileToggle.style.display = '';
                     if (mergeControls) mergeControls.classList.remove('active');
+                    if (deleteControls) deleteControls.classList.remove('active');
+                    if (compressControls) compressControls.classList.remove('active');
 
                     const titleSpan = document.querySelector('.title span');
                     if (titleSpan) titleSpan.innerHTML = '<i class="fa fa-scissors"></i> Split PDF';
@@ -746,26 +918,19 @@
                 }, 350));
             };
 
-            // Guard: confirm if stamp has PDF loaded
-            if (activeTool === 'stamp' && window.stampHasPdf) {
-                showConfirm('Switch to Split Mode',
-                    'You have a PDF loaded in Stamp mode. Switching will discard your stamp session. Continue?',
-                    doSwitch);
-            } else if (window.hasMergeFiles) {
-                showConfirm('Switch to Split Mode',
-                    'You have files loaded in Merge mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch);
-            } else {
+            if (!confirmLoadedModeSwitch('Split Mode', doSwitch)) {
                 doSwitch();
             }
         }
 
         function switchToMerge() {
-            if (activeTool === 'merge') return;
+            if (getCurrentTool() === 'merge') return;
 
             const doSwitch = () => {
                 // Clear stale state from the mode we're leaving
                 if (typeof window.clearSplitState === 'function') window.clearSplitState();
+                if (typeof window.clearDeleteState === 'function') window.clearDeleteState();
+                if (typeof window.clearCompressState === 'function') window.clearCompressState();
                 window.stampHasPdf = false;
 
                 showModeLoading('Loading Merge mode...');
@@ -788,12 +953,16 @@
                     const uploadSection = document.getElementById('uploadSection');
                     const leftPanel = document.getElementById('leftPanel');
                     const mobileToggle = document.getElementById('mobileMenuToggle');
+                    const deleteControls = document.getElementById('deleteControls');
+                    const compressControls = document.getElementById('compressControls');
 
                     if (stampContainer) stampContainer.style.display = 'none';
                     if (leftPanel) leftPanel.style.display = '';
                     if (mobileToggle) mobileToggle.style.display = '';
                     if (splitControls) splitControls.classList.remove('show');
                     if (mergeControls) mergeControls.classList.add('active');
+                    if (deleteControls) deleteControls.classList.remove('active');
+                    if (compressControls) compressControls.classList.remove('active');
                     if (pageContainer) pageContainer.classList.remove('active');
                     if (pageGrid) pageGrid.innerHTML = '';
                     if (uploadSection) uploadSection.classList.remove('hidden');
@@ -825,28 +994,21 @@
                 }, 350));
             };
 
-            // Guard: confirm if stamp has PDF loaded
-            if (activeTool === 'stamp' && window.stampHasPdf) {
-                showConfirm('Switch to Merge Mode',
-                    'You have a PDF loaded in Stamp mode. Switching will discard your stamp session. Continue?',
-                    doSwitch);
-            } else if (window.hasSplitFiles) {
-                showConfirm('Switch to Merge Mode',
-                    'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch);
-            } else {
+            if (!confirmLoadedModeSwitch('Merge Mode', doSwitch)) {
                 doSwitch();
             }
         }
 
         // ── Stamp Tool ───────────────────────────────────────────────────────
         window.switchToStamp = function() {
-            if (activeTool === 'stamp') return;
+            if (getCurrentTool() === 'stamp') return;
 
             const doSwitch = () => {
                 // Clear stale state from the mode we're leaving
                 if (typeof window.clearSplitState === 'function') window.clearSplitState();
                 if (typeof window.clearMergeState === 'function') window.clearMergeState();
+                if (typeof window.clearDeleteState === 'function') window.clearDeleteState();
+                if (typeof window.clearCompressState === 'function') window.clearCompressState();
 
                 showModeLoading('Loading Stamp mode...');
 
@@ -862,6 +1024,8 @@
                     const splitControls = document.getElementById('splitControls');
                     const mergeControls = document.getElementById('mergeControls');
                     const stampContainer = document.getElementById('stampContainer');
+                    const deleteControls = document.getElementById('deleteControls');
+                    const compressControls = document.getElementById('compressControls');
 
                     if (uploadSection) uploadSection.style.display = 'none';
                     if (pageContainer) {
@@ -875,6 +1039,8 @@
                         splitControls.classList.remove('show');
                     }
                     if (mergeControls) mergeControls.classList.remove('active');
+                    if (deleteControls) deleteControls.classList.remove('active');
+                    if (compressControls) compressControls.classList.remove('active');
 
                     // Show stamp container
                     if (stampContainer) {
@@ -933,16 +1099,122 @@
                 }, 350));
             };
 
-            // Guard: confirm if split or merge has files loaded
-            if (window.hasSplitFiles) {
-                showConfirm('Switch to Stamp Mode',
-                    'You have files loaded in Split mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch);
-            } else if (window.hasMergeFiles) {
-                showConfirm('Switch to Stamp Mode',
-                    'You have files loaded in Merge mode. Switching will clear all current files and progress. Continue?',
-                    doSwitch);
-            } else {
+            if (!confirmLoadedModeSwitch('Stamp Mode', doSwitch)) {
+                doSwitch();
+            }
+        };
+
+        // Delete Pages Tool
+        window.switchToDelete = function() {
+            if (getCurrentTool() === 'delete') return;
+
+            const doSwitch = () => {
+                showModeLoading('Loading Delete Pages mode...');
+                requestAnimationFrame(() => setTimeout(() => {
+                    activeTool = 'delete';
+                    window.activeTool = 'delete';
+                    window.stampHasPdf = false;
+
+                    if (typeof window.clearCompressState === 'function') window.clearCompressState();
+
+                    const uploadSection = document.getElementById('uploadSection');
+                    const pageContainer = document.getElementById('pageContainer');
+                    const leftPanel = document.getElementById('leftPanel');
+                    const mobileToggle = document.getElementById('mobileMenuToggle');
+                    const splitControls = document.getElementById('splitControls');
+                    const mergeControls = document.getElementById('mergeControls');
+                    const stampContainer = document.getElementById('stampContainer');
+                    const deleteControls = document.getElementById('deleteControls');
+                    const compressControls = document.getElementById('compressControls');
+
+                    if (stampContainer) stampContainer.style.display = 'none';
+                    if (splitControls) {
+                        splitControls.classList.remove('show');
+                        splitControls.classList.remove('active');
+                    }
+                    if (mergeControls) mergeControls.classList.remove('active');
+                    if (compressControls) compressControls.classList.remove('active');
+                    if (uploadSection) uploadSection.style.display = '';
+                    if (pageContainer) pageContainer.style.display = '';
+                    if (leftPanel) leftPanel.style.display = '';
+                    if (mobileToggle) mobileToggle.style.display = '';
+                    if (deleteControls) deleteControls.classList.add('active');
+
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    const deleteTabBtn = document.getElementById('deleteTab');
+                    if (deleteTabBtn) deleteTabBtn.classList.add('active');
+
+                    const titleSpan = document.querySelector('.title span');
+                    if (titleSpan) titleSpan.innerHTML = '<i class="fa fa-trash-o"></i> Delete Pages';
+
+                    if (typeof window.initDelete === 'function') window.initDelete();
+
+                    showToast('Delete Pages Mode Activated!', 'success');
+                    hideModeLoading();
+                }, 350));
+            };
+
+            if (!confirmLoadedModeSwitch('Delete Pages Mode', doSwitch)) {
+                doSwitch();
+            }
+        };
+
+        // Compress Tool
+        window.switchToCompress = function() {
+            if (getCurrentTool() === 'compress') return;
+
+            const doSwitch = () => {
+                showModeLoading('Loading Compress mode...');
+                requestAnimationFrame(() => setTimeout(() => {
+                    activeTool = 'compress';
+                    window.activeTool = 'compress';
+                    window.stampHasPdf = false;
+
+                    if (typeof window.clearDeleteState === 'function') window.clearDeleteState();
+
+                    const uploadSection = document.getElementById('uploadSection');
+                    const pageContainer = document.getElementById('pageContainer');
+                    const pageGrid = document.getElementById('pageGrid');
+                    const stampContainer = document.getElementById('stampContainer');
+                    const splitControls = document.getElementById('splitControls');
+                    const mergeControls = document.getElementById('mergeControls');
+                    const deleteControls = document.getElementById('deleteControls');
+                    const compressControls = document.getElementById('compressControls');
+                    const leftPanel = document.getElementById('leftPanel');
+                    const mobileToggle = document.getElementById('mobileMenuToggle');
+
+                    if (stampContainer) stampContainer.style.display = 'none';
+                    if (splitControls) {
+                        splitControls.classList.remove('show');
+                        splitControls.classList.remove('active');
+                    }
+                    if (mergeControls) mergeControls.classList.remove('active');
+                    if (deleteControls) deleteControls.classList.remove('active');
+                    if (compressControls) compressControls.classList.add('active');
+                    if (uploadSection) uploadSection.style.display = '';
+                    if (pageContainer) {
+                        pageContainer.classList.remove('active');
+                        pageContainer.style.display = '';
+                    }
+                    if (pageGrid) pageGrid.innerHTML = '';
+                    if (leftPanel) leftPanel.style.display = '';
+                    if (mobileToggle) mobileToggle.style.display = '';
+
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    const compressTabBtn = document.getElementById('compressTab');
+                    if (compressTabBtn) compressTabBtn.classList.add('active');
+
+                    const titleSpan = document.querySelector('.title span');
+                    if (titleSpan) titleSpan.innerHTML = '<i class="fa fa-compress"></i> Compress PDF';
+
+                    if (typeof window.initCompress === 'function') window.initCompress();
+
+                    showToast('Compress Mode Activated!', 'success');
+                    hideModeLoading();
+                }, 350));
+            };
+
+            if (!confirmLoadedModeSwitch('Compress Mode', doSwitch)) {
                 doSwitch();
             }
         };

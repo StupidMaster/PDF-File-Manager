@@ -301,9 +301,14 @@ async function loadMergePageSequentially(wrapper, skeleton, pdfDoc, pageNum, fil
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
-function createMergeSkeletonItem() {
+function createMergeSkeletonItem(globalPageIndex) {
     const div = document.createElement('div');
     div.className = 'skeleton-item';
+ 
+    const pageLabel = globalPageIndex != null
+        ? `Page ${globalPageIndex + 1}`
+        : 'Loading…';
+ 
     div.innerHTML = `
         <div class="skeleton-thumbnail">
             <div class="page-progress-loader">
@@ -311,10 +316,12 @@ function createMergeSkeletonItem() {
                     <div class="progress-bar-fill"></div>
                     <div class="progress-percentage">0%</div>
                 </div>
-                <div class="progress-label">Waiting...</div>
+                <div class="progress-label">${pageLabel}</div>
             </div>
         </div>
-        <div class="skeleton-footer"></div>`;
+        <div class="skeleton-footer"></div>
+    `;
+ 
     return div;
 }
 
@@ -404,9 +411,11 @@ function createAddMergeFileButton() {
     div.onclick = () => document.getElementById('fileInput').click();
     div.innerHTML = `
         <div class="page-thumbnail">
-            <div style="text-align:center;color:var(--text-secondary);font-size:12px;line-height:1.5;">
-                <div style="font-size:32px;margin-bottom:8px;">+</div>Add PDF
-            </div>
+                <div style="text-align:center;color:var(--text-secondary);font-size:12px;line-height:1.5;">
+                <div style="font-size:28px;margin-bottom:6px;color:var(--accent-color);"><i class="fa fa-plus-circle"></i></div>
+                    <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;">Add PDF</div>
+                </div>
+
         </div>`;
     return div;
 }
@@ -513,7 +522,7 @@ async function insertMergeBlankPage(insertAfterPos) {
         if (!window.PDFLib) {
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
                 s.onload = resolve; s.onerror = () => reject(new Error('Failed to load pdf-lib'));
                 document.head.appendChild(s);
             });
@@ -989,7 +998,7 @@ function updateMergeFileList() {
                     </div>
                 </div>
                 <button class="file-remove" onclick="removeMergeFile(${index},event)" title="Remove">
-                    <i class="fa fa-trash-o" style="font-size:20px;"></i>
+                    <i class="fa fa-trash-o" style="font-size:20px;"></i> 
                 </button>
             </div>`;
     }).join('');
@@ -1159,7 +1168,7 @@ window.executeMerge = async function() {
             updateProgress(5, 'Loading pdf-lib…');
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
                 s.onload = resolve;
                 s.onerror = () => reject(new Error('Failed to load pdf-lib'));
                 document.head.appendChild(s);

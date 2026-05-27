@@ -15,6 +15,11 @@
     let stampTotalPages   = 0;
     let stampPreviewPage  = 1;
     let stampPreviewScale = 1.0;
+    let stampPdfPaperSize = 'original';
+    let stampViewMode = 'single';
+    let stampDocuments = [];
+    let activeStampDocIndex = -1;
+    let stampRenderToken = 0;
 
     // 'simple' | 'formatted'
     let stampMode = 'simple';
@@ -76,6 +81,8 @@
     // Drag state
     let isDragging = false, dragStartX = 0, dragStartY = 0,
         dragStartPosX = 0, dragStartPosY = 0;
+    let stampOverlayRedrawFrame = null;
+    let stampScrollUpdateFrame = null;
 
     // ─── Per-page overrides ───────────────────────────────────────────────────
     // pageOverrides[pageNum] = deep copy of settings for that page (if customized)
@@ -101,6 +108,37 @@
         { label: 'VOID',                color: '#922b21', text: 'VOID' },
         { label: 'FOR REVIEW',          color: '#d35400', text: 'FOR REVIEW', fontSize: 42 },
     ];
+
+    function escHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, ch => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;'
+        }[ch]));
+    }
+
+    function deepClone(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+
+    function cloneStampState() {
+        return {
+            stampSettings: deepClone(stampSettings),
+            fmtSettings: deepClone(fmtSettings),
+            sealSettings: deepClone(sealSettings),
+            recvSettings: deepClone(recvSettings)
+        };
+    }
+
+    function applyStampState(state) {
+        if (!state) return;
+        if (state.stampSettings) stampSettings = deepClone(state.stampSettings);
+        if (state.fmtSettings) fmtSettings = deepClone(state.fmtSettings);
+        if (state.sealSettings) sealSettings = deepClone(state.sealSettings);
+        if (state.recvSettings) recvSettings = deepClone(state.recvSettings);
+    }
 
     // ─── Persist settings to localStorage ────────────────────────────────────
     const LS_KEY_SIMPLE = 'stampSettings_v1';
@@ -150,9 +188,17 @@
         renderStampUI();
     };
 
+    window._stampHasFile = function () {
+        return !!stampPdfDoc || stampDocuments.length > 0 || !!window.stampHasPdf;
+    };
+
     function resetStampState() {
+        stampRenderToken++;
         stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
         stampTotalPages = 0; stampPreviewPage = 1; stampPreviewScale = 1.0; stampMode = 'simple';
+        stampPdfPaperSize = 'original';
+        stampDocuments = [];
+        activeStampDocIndex = -1;
         bwMode = false;
         window.stampHasPdf = false;
 
@@ -265,11 +311,26 @@
               <div id="stampDropZoneWrap">
                 <div class="stamp-upload-area" id="stampDropZone" onclick="document.getElementById('stampFileInput').click()">
                   <div id="stampUploadLabel">
-                    <div style="font-size:28px;margin-bottom:6px"><i class="fa fa-file-pdf-o"></i></div>
-                    <div>Click or drag a PDF here</div>
+                    <div style="font-size:28px;margin-bottom:6px"class="upload-icon"><i class="fa fa-cloud-upload"></i></div>
+                    <div>Click or drag PDFs here</div>
                   </div>
                 </div>
-                <input type="file" id="stampFileInput" accept=".pdf" style="display:none" onchange="handleStampFile(event)">
+                <input type="file" id="stampFileInput" accept=".pdf" multiple style="display:none" onchange="handleStampFile(event)">
+              </div>
+
+              <div id="stampPdfPaperSection" style="display:none;margin-top:12px">
+                <div class="stamp-section-title" style="margin-bottom:6px"><i class="fa fa-file-o"></i> Output Paper Size</div>
+                <select id="stampPdfPaperSize" class="stamp-input" onchange="setStampPdfPaperSize(this.value)" style="width:100%">
+                  <option value="original">Original PDF size</option>
+                  <option value="Letter">Letter (8.5 x 11in)</option>
+                  <option value="Legal">Legal (8.5 x 14in)</option>
+                  <option value="Long">Long (8.5 x 13in)</option>
+                  <option value="A4">A4 (210 x 297mm)</option>
+                  <option value="A5">A5 (148 x 210mm)</option>
+                </select>
+                <div id="stampPdfPaperInfo" style="font-size:11px;color:var(--text-secondary);line-height:1.5;margin-top:6px">
+                  The scanned page keeps its original physical size and is centered on the selected paper.
+                </div>
               </div>
             </div>
 
@@ -702,9 +763,30 @@
 
           <!-- RIGHT: Preview -->
           <div class="stamp-preview-panel">
+            <div class="stamp-doc-tabs-wrap" id="stampDocTabsWrap" style="display:none">
+              <button class="stamp-doc-nav-btn" id="stampDocTabsPrev" onclick="scrollStampDocumentTabs(-1)" title="Previous tabs">
+                <i class="fa fa-chevron-left"></i>
+              </button>
+              <div class="stamp-doc-tabs-viewport">
+                <div class="stamp-doc-tabs" id="stampDocTabs"></div>
+              </div>
+              <button class="stamp-doc-nav-btn" id="stampDocTabsNext" onclick="scrollStampDocumentTabs(1)" title="Next tabs">
+                <i class="fa fa-chevron-right"></i>
+              </button>
+            </div>
             <div class="stamp-preview-toolbar">
+              <select id="stampViewModeSelect" class="stamp-view-mode-select" onchange="setStampViewMode(this.value)" title="Preview view mode">
+                <option value="single">Load per page</option>
+                <option value="continuous">Continuous Scrolling</option>
+                <option value="two-page">Two-Page (Book / Magazine) View</option>
+                <option value="presentation">Presentation / Full-Screen Mode</option>
+              </select>
               <button id="stampPrevBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(-1)"><i class="fa fa-chevron-left"></i> Prev</button>
               <span id="stampPageIndicator">Page - / -</span>
+              <input id="stampPageJumpInput" class="stamp-page-jump-input" type="number" min="1" value="1"
+                     onchange="goToStampPreviewPage(this.value)"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();goToStampPreviewPage(this.value)}"
+                     title="Go to page">
               <button id="stampNextBtn" class="stamp-tool-btn" onclick="changeStampPreviewPage(1)">Next <i class="fa fa-chevron-right"></i></button>
               <span style="flex:1"></span>
               <!-- Orientation selector — only visible in stamp-only mode -->
@@ -724,7 +806,7 @@
               <button class="stamp-tool-btn" onclick="changeStampZoom(0.2)"><i class="fa fa-search-plus"></i></button>
             </div>
             <div class="stamp-preview-scroll" id="stampPreviewScroll">
-              <div class="stamp-preview-canvas-wrap" id="stampCanvasWrap">
+              <div class="stamp-preview-canvas-wrap" id="stampCanvasWrap" style="display:none">
                 <canvas id="stampBaseCanvas"></canvas>
                 <canvas id="stampOverlayCanvas"></canvas>
               </div>
@@ -778,31 +860,7 @@
             showToast('Stamp type: ' + (modeLabels[mode] || mode));
         }
 
-        // Show loading animation on canvas, then render
-        const previewScroll = document.getElementById('stampPreviewScroll');
-        let modeOverlay = null;
-        if (previewScroll) {
-            modeOverlay = document.createElement('div');
-            modeOverlay.style.cssText = `
-                position:absolute;inset:0;z-index:50;
-                background:var(--bg-primary);
-                display:flex;flex-direction:column;
-                align-items:center;justify-content:center;
-                gap:12px;opacity:0;
-                transition:opacity 0.15s ease;
-                pointer-events:all;
-            `;
-            modeOverlay.innerHTML = `
-                <div style="width:32px;height:32px;border-radius:50%;
-                    border:3px solid var(--border-color);
-                    border-top-color:var(--accent-color);
-                    animation:modeSpinAnim 0.7s linear infinite;"></div>
-                <div style="font-size:13px;color:var(--text-secondary);font-weight:500">Switching stamp type…</div>
-            `;
-            previewScroll.style.position = 'relative';
-            previewScroll.appendChild(modeOverlay);
-            requestAnimationFrame(() => { modeOverlay.style.opacity = '1'; });
-        }
+        const modeOverlay = showStampPreviewLoading('Switching stamp type…');
 
         setTimeout(function () {
             if (stampOnlyMode) {
@@ -827,6 +885,22 @@
             }
         }, 220);
     };
+
+    function showStampPreviewLoading(message) {
+        const panel = document.querySelector('.stamp-preview-panel');
+        if (!panel) return null;
+
+        panel.querySelectorAll('.stamp-preview-busy-overlay').forEach(el => el.remove());
+        const overlay = document.createElement('div');
+        overlay.className = 'stamp-preview-busy-overlay';
+        overlay.innerHTML = `
+            <div class="stamp-preview-busy-spinner"></div>
+            <div class="stamp-preview-busy-text">${message}</div>
+        `;
+        panel.appendChild(overlay);
+        requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+        return overlay;
+    }
 
     // ─── Presets ──────────────────────────────────────────────────────────────
     function buildPresets() {
@@ -860,14 +934,15 @@
         z.addEventListener('dragleave', () => z.classList.remove('drag-over'));
         z.addEventListener('drop', e => {
             e.preventDefault(); z.classList.remove('drag-over');
-            const f = e.dataTransfer.files[0];
-            if (f && f.type === 'application/pdf') loadStampFile(f);
+            const files = Array.from(e.dataTransfer.files || []).filter(f => f.type === 'application/pdf');
+            if (files.length) loadStampFiles(files);
         });
     }
 
     window.handleStampFile = function (ev) {
-        const f = ev.target.files[0];
-        if (f) loadStampFile(f);
+        const files = Array.from(ev.target.files || []).filter(f => f.type === 'application/pdf');
+        ev.target.value = '';
+        if (files.length) loadStampFiles(files);
     };
 
     function loadStampFile(file) {
@@ -881,6 +956,7 @@
                 stampPreviewPage = 1;
                 pageOverrides    = {};          // reset all per-page overrides
                 pageOverrideActive = false;
+                window.activeTool = 'stamp';
                 window.stampHasPdf = true;
 
                 // If stamp-only mode was active, turn it off since we now have a PDF
@@ -906,6 +982,10 @@
                 // Show Grayscale PDF option now that a PDF is loaded
                 const graySection = document.getElementById('grayscalePdfSection');
                 if (graySection) graySection.style.display = '';
+                const paperSection = document.getElementById('stampPdfPaperSection');
+                if (paperSection) paperSection.style.display = '';
+                const paperSelect = document.getElementById('stampPdfPaperSize');
+                if (paperSelect) paperSelect.value = stampPdfPaperSize;
                 await renderStampPreviewPage();
             } catch (err) {
                 showNotification('Could not read PDF: ' + err.message, 'error');
@@ -914,25 +994,350 @@
         reader.readAsArrayBuffer(file);
     }
 
+    function readStampDocument(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                try {
+                    const bytes = e.target.result.slice(0);
+                    const pdfDoc = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+                    resolve({
+                        id: Date.now() + '_' + Math.random().toString(36).slice(2),
+                        name: file.name,
+                        size: file.size,
+                        pdfBytes: bytes,
+                        pdfDoc,
+                        totalPages: pdfDoc.numPages,
+                        previewPage: 1,
+                        paperSize: 'original',
+                        stampState: cloneStampState(),
+                        pageOverrides: {},
+                        pageOverrideActive: false
+                    });
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            reader.onerror = () => reject(reader.error || new Error('Could not read PDF'));
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    async function loadStampFiles(files) {
+        showProcessing(files.length > 1 ? 'Loading PDFs...' : 'Loading PDF...');
+        try {
+            const loadedDocs = [];
+            for (const file of files) loadedDocs.push(await readStampDocument(file));
+            stampDocuments.push(...loadedDocs);
+            window.activeTool = 'stamp';
+            window.stampHasPdf = stampDocuments.length > 0;
+
+            if (stampOnlyMode) {
+                stampOnlyMode = false;
+                const chk = document.getElementById('stampOnlyChk');
+                if (chk) chk.checked = false;
+                const dropWrap = document.getElementById('stampDropZoneWrap');
+                if (dropWrap) dropWrap.style.display = '';
+                const printOnly = document.getElementById('stampPrintOnlyBtn');
+                if (printOnly) printOnly.disabled = true;
+                const orientSel = document.getElementById('stampOnlyOrient');
+                if (orientSel) orientSel.style.display = 'none';
+            }
+
+            const applyBtn = document.getElementById('stampApplyBtn');
+            if (applyBtn) { applyBtn.disabled = false; applyBtn.style.display = ''; }
+            const printBtn = document.getElementById('stampPrintBtn');
+            if (printBtn) { printBtn.disabled = false; printBtn.style.display = ''; }
+            const empty = document.getElementById('stampPreviewEmpty');
+            if (empty) empty.style.display = 'none';
+            const graySection = document.getElementById('grayscalePdfSection');
+            if (graySection) graySection.style.display = '';
+            const paperSection = document.getElementById('stampPdfPaperSection');
+            if (paperSection) paperSection.style.display = '';
+            const paperSelect = document.getElementById('stampPdfPaperSize');
+            if (paperSelect) paperSelect.value = stampPdfPaperSize;
+
+            hideProcessing();
+            await activateStampDocument(stampDocuments.length - 1);
+            showToast(`Loaded ${loadedDocs.length} PDF${loadedDocs.length > 1 ? 's' : ''}`, 'success');
+        } catch (err) {
+            hideProcessing();
+            showNotification('Could not read PDF: ' + err.message, 'error');
+        }
+    }
+
+    function saveActiveStampDocumentState() {
+        if (activeStampDocIndex < 0 || !stampDocuments[activeStampDocIndex]) return;
+        const doc = stampDocuments[activeStampDocIndex];
+        doc.previewPage = stampPreviewPage;
+        doc.paperSize = stampPdfPaperSize;
+        doc.stampState = cloneStampState();
+        doc.pageOverrides = pageOverrides;
+        doc.pageOverrideActive = pageOverrideActive;
+    }
+
+    async function activateStampDocument(index) {
+        if (index < 0 || index >= stampDocuments.length) return;
+        saveActiveStampDocumentState();
+        activeStampDocIndex = index;
+
+        const doc = stampDocuments[index];
+        stampPdfDoc = doc.pdfDoc;
+        stampPdfBytes = doc.pdfBytes;
+        stampFileName = doc.name;
+        stampTotalPages = doc.totalPages;
+        stampPreviewPage = doc.previewPage || 1;
+        stampPdfPaperSize = doc.paperSize || 'original';
+        if (!doc.stampState) doc.stampState = cloneStampState();
+        applyStampState(doc.stampState);
+        pageOverrides = doc.pageOverrides || {};
+        pageOverrideActive = !!doc.pageOverrideActive;
+        window.stampHasPdf = true;
+
+        const paperSelect = document.getElementById('stampPdfPaperSize');
+        if (paperSelect) paperSelect.value = stampPdfPaperSize;
+
+        updateStampUploadLabel();
+        renderStampDocumentTabs();
+        await renderStampPreviewPage();
+    }
+
+    window.switchStampDocument = function (index) {
+        activateStampDocument(index);
+    };
+
+    window.closeStampDocument = function (index, ev) {
+        if (ev) ev.stopPropagation();
+        if (index < 0 || index >= stampDocuments.length) return;
+        stampRenderToken++;
+        if (index === activeStampDocIndex) saveActiveStampDocumentState();
+        stampDocuments.splice(index, 1);
+
+        if (!stampDocuments.length) {
+            activeStampDocIndex = -1;
+            stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
+            stampTotalPages = 0; stampPreviewPage = 1;
+            pageOverrides = {}; pageOverrideActive = false;
+            window.stampHasPdf = false;
+            renderStampDocumentTabs();
+            updateStampUploadLabel();
+
+            const paperSection = document.getElementById('stampPdfPaperSection');
+            if (paperSection) paperSection.style.display = 'none';
+            const graySection = document.getElementById('grayscalePdfSection');
+            if (graySection) graySection.style.display = 'none';
+            const applyBtn = document.getElementById('stampApplyBtn');
+            const printBtn = document.getElementById('stampPrintBtn');
+            if (applyBtn) applyBtn.disabled = true;
+            if (printBtn) printBtn.disabled = true;
+            const emptyDiv = document.getElementById('stampPreviewEmpty');
+            if (emptyDiv) emptyDiv.style.display = '';
+            const ind = document.getElementById('stampPageIndicator');
+            if (ind) ind.textContent = 'Page - / -';
+            const base = document.getElementById('stampBaseCanvas');
+            const over = document.getElementById('stampOverlayCanvas');
+            if (base) { base.width = 0; base.height = 0; }
+            if (over)  { over.width = 0; over.height = 0; }
+            const wrap = document.getElementById('stampCanvasWrap');
+            if (wrap) wrap.style.display = 'none';
+            return;
+        }
+
+        activeStampDocIndex = -1;
+        activateStampDocument(Math.min(index, stampDocuments.length - 1));
+    };
+
+    function updateStampUploadLabel() {
+        const lbl = document.getElementById('stampUploadLabel');
+        if (!lbl) return;
+
+        if (!stampDocuments.length) {
+            lbl.innerHTML = `
+                <div style="font-size:28px;margin-bottom:6px"class="upload-icon"><i class="fa fa-cloud-upload"></i></div>
+                <div>Click or drag PDFs here</div>`;
+            return;
+        }
+
+        const activeDoc = stampDocuments[activeStampDocIndex] || stampDocuments[0];
+        lbl.innerHTML = `
+            <div style="font-size:15px;font-weight:600;word-break:break-all">${escHtml(activeDoc.name)}</div>
+            <div style="font-size:12px;color:var(--text-secondary);margin-top:3px">
+                ${activeDoc.totalPages} pages · ${formatFileSize(activeDoc.size)} · ${stampDocuments.length} PDF${stampDocuments.length > 1 ? 's' : ''} loaded
+            </div>`;
+    }
+
+    function renderStampDocumentTabs() {
+        const tabs = document.getElementById('stampDocTabs');
+        const wrap = document.getElementById('stampDocTabsWrap');
+        const viewport = document.querySelector('.stamp-doc-tabs-viewport');
+        if (!tabs || !wrap) return;
+
+        wrap.style.display = stampDocuments.length ? 'flex' : 'none';
+        if (viewport && !viewport._stampTabsScrollBound) {
+            viewport.addEventListener('scroll', updateStampTabNavButtons, { passive: true });
+            viewport._stampTabsScrollBound = true;
+        }
+        tabs.innerHTML = stampDocuments.map((doc, idx) => `
+            <button class="stamp-doc-tab ${idx === activeStampDocIndex ? 'active' : ''}" onclick="switchStampDocument(${idx})" title="${escHtml(doc.name)}">
+                <span class="stamp-doc-tab-icon"><i class="fa fa-file-pdf-o"></i></span>
+                <span class="stamp-doc-tab-title">${escHtml(doc.name)}</span>
+                <span class="stamp-doc-tab-meta">${doc.totalPages}p</span>
+                <span class="stamp-doc-tab-close" onclick="closeStampDocument(${idx}, event)" title="Close"><i class="fa fa-times"></i></span>
+            </button>
+        `).join('');
+        requestAnimationFrame(function () {
+            ensureActiveStampTabVisible();
+            updateStampTabNavButtons();
+        });
+    }
+
+    window.scrollStampDocumentTabs = function (direction) {
+        const viewport = document.querySelector('.stamp-doc-tabs-viewport');
+        if (!viewport) return;
+        viewport.scrollBy({
+            left: direction * Math.max(180, Math.round(viewport.clientWidth * 0.75)),
+            behavior: 'smooth'
+        });
+        setTimeout(updateStampTabNavButtons, 220);
+    };
+
+    function ensureActiveStampTabVisible() {
+        const viewport = document.querySelector('.stamp-doc-tabs-viewport');
+        const activeTab = document.querySelector('.stamp-doc-tab.active');
+        if (!viewport || !activeTab) return;
+
+        const left = activeTab.offsetLeft;
+        const right = left + activeTab.offsetWidth;
+        if (left < viewport.scrollLeft) {
+            viewport.scrollLeft = left;
+        } else if (right > viewport.scrollLeft + viewport.clientWidth) {
+            viewport.scrollLeft = right - viewport.clientWidth;
+        }
+    }
+
+    function updateStampTabNavButtons() {
+        const viewport = document.querySelector('.stamp-doc-tabs-viewport');
+        const prev = document.getElementById('stampDocTabsPrev');
+        const next = document.getElementById('stampDocTabsNext');
+        if (!viewport || !prev || !next) return;
+
+        const hasOverflow = viewport.scrollWidth > viewport.clientWidth + 2;
+        prev.style.visibility = hasOverflow ? 'visible' : 'hidden';
+        next.style.visibility = hasOverflow ? 'visible' : 'hidden';
+        prev.disabled = !hasOverflow || viewport.scrollLeft <= 1;
+        next.disabled = !hasOverflow || viewport.scrollLeft + viewport.clientWidth >= viewport.scrollWidth - 1;
+    }
+
     // ─── Preview rendering ────────────────────────────────────────────────────
+    window.setStampPdfPaperSize = function (sizeKey) {
+        stampPdfPaperSize = PAGE_SIZES[sizeKey] ? sizeKey : 'original';
+        if (activeStampDocIndex >= 0 && stampDocuments[activeStampDocIndex]) {
+            stampDocuments[activeStampDocIndex].paperSize = stampPdfPaperSize;
+        }
+        if (stampPdfDoc) renderStampPreviewPage();
+    };
+
+    function formatPageSizeInches(ptW, ptH) {
+        return `${(ptW / 72).toFixed(2)} x ${(ptH / 72).toFixed(2)} in`;
+    }
+
+    function getStampOutputPageSize(sourcePtW, sourcePtH) {
+        if (stampPdfPaperSize === 'original' || !PAGE_SIZES[stampPdfPaperSize]) {
+            return {
+                ptW: sourcePtW,
+                ptH: sourcePtH,
+                label: `Original (${formatPageSizeInches(sourcePtW, sourcePtH)})`
+            };
+        }
+
+        const preset = PAGE_SIZES[stampPdfPaperSize];
+        let ptW = preset.w;
+        let ptH = preset.h;
+
+        if ((sourcePtW > sourcePtH && ptW < ptH) || (sourcePtH > sourcePtW && ptW > ptH)) {
+            [ptW, ptH] = [ptH, ptW];
+        }
+
+        return {
+            ptW,
+            ptH,
+            label: `${preset.label} (${formatPageSizeInches(ptW, ptH)})`
+        };
+    }
+
+    function updateStampPdfPaperInfo(sourcePtW, sourcePtH, outputSize) {
+        const info = document.getElementById('stampPdfPaperInfo');
+        if (!info) return;
+        info.textContent = `Scan: ${formatPageSizeInches(sourcePtW, sourcePtH)}. Output paper: ${outputSize.label}. The scan is not resized.`;
+    }
+
+    window.setStampViewMode = function (mode) {
+        const nextMode = ['single', 'continuous', 'two-page', 'presentation'].includes(mode) ? mode : 'single';
+        if (stampViewMode === 'continuous' && nextMode !== 'continuous') {
+            syncStampPreviewPageFromScroll();
+        }
+        stampViewMode = nextMode;
+        const sel = document.getElementById('stampViewModeSelect');
+        if (sel) sel.value = stampViewMode;
+        if (stampViewMode === 'single' || stampViewMode === 'presentation') {
+            stampRenderToken++;
+            restoreSingleStampCanvas(true);
+        }
+        if (stampViewMode === 'presentation') {
+            const panel = document.querySelector('.stamp-preview-panel');
+            if (panel && panel.requestFullscreen && !document.fullscreenElement) {
+                panel.requestFullscreen().catch(() => {});
+            }
+        }
+        if (stampPdfDoc) renderStampPreviewPage();
+    };
+
     async function renderStampPreviewPage() {
         if (!stampPdfDoc) return;
+        const renderToken = ++stampRenderToken;
+        if (stampViewMode === 'continuous') {
+            await renderStampContinuousPreview(renderToken);
+            return;
+        }
+        if (stampViewMode === 'two-page') {
+            await renderStampTwoPagePreview(renderToken);
+            return;
+        }
+        restoreSingleStampCanvas();
         const page     = await stampPdfDoc.getPage(stampPreviewPage);
+        if (renderToken !== stampRenderToken || stampViewMode === 'continuous' || stampViewMode === 'two-page') return;
         const viewport = page.getViewport({ scale: stampPreviewScale });
+        const sourceSize = page.getViewport({ scale: 1.0 });
+        const outputSize = getStampOutputPageSize(sourceSize.width, sourceSize.height);
+        const previewW = Math.round(outputSize.ptW * stampPreviewScale);
+        const previewH = Math.round(outputSize.ptH * stampPreviewScale);
+        const offsetX = Math.round((previewW - viewport.width) / 2);
+        const offsetY = Math.round((previewH - viewport.height) / 2);
 
         const base = document.getElementById('stampBaseCanvas');
         const over = document.getElementById('stampOverlayCanvas');
         if (!base || !over) return;
 
-        base.width  = over.width  = viewport.width;
-        base.height = over.height = viewport.height;
+        base.width  = over.width  = previewW;
+        base.height = over.height = previewH;
 
-        await page.render({ canvasContext: base.getContext('2d'), viewport }).promise;
+        const baseCtx = base.getContext('2d');
+        baseCtx.fillStyle = '#ffffff';
+        baseCtx.fillRect(0, 0, previewW, previewH);
+        await page.render({
+            canvasContext: baseCtx,
+            viewport,
+            transform: [1, 0, 0, 1, offsetX, offsetY]
+        }).promise;
+        if (renderToken !== stampRenderToken || stampViewMode === 'continuous' || stampViewMode === 'two-page') return;
 
         // Grayscale page — applied to base canvas only; stamp overlay stays in color
         if (bwMode) applyGrayscaleToCanvas(base);
 
-        document.getElementById('stampPageIndicator').textContent = `Page ${stampPreviewPage} / ${stampTotalPages}`;
+        updateStampPdfPaperInfo(sourceSize.width, sourceSize.height, outputSize);
+        updateStampPageControls();
+        document.getElementById('stampPageIndicator').textContent =
+            `${stampViewMode === 'presentation' ? 'Presentation' : 'Page'} ${stampPreviewPage} / ${stampTotalPages} · ${outputSize.label}`;
 
         // Update Apply to Pages visibility based on page count
         const modes = [
@@ -987,10 +1392,254 @@
             loadSettingsIntoUI(null);
         }
 
-        drawStampOverlay(over, viewport.width, viewport.height);
+        drawStampOverlay(over, previewW, previewH, stampPreviewPage);
     }
 
-    function drawStampOverlay(canvas, w, h) {
+    async function renderStampContinuousPreview(renderToken) {
+        const wrap = document.getElementById('stampCanvasWrap');
+        const scroll = document.getElementById('stampPreviewScroll');
+        if (!wrap || !scroll) return;
+        if (renderToken !== stampRenderToken || stampViewMode !== 'continuous') return;
+
+        scroll.onscroll = null;
+        scroll.classList.add('continuous');
+        scroll.style.flexDirection = 'column';
+        wrap.style.setProperty('display', 'flex');
+        wrap.style.setProperty('flex-direction', 'column', 'important');
+        wrap.innerHTML = '';
+        wrap.classList.remove('two-page');
+        wrap.classList.add('continuous');
+
+        let firstLabel = '';
+        for (let pNum = 1; pNum <= stampTotalPages; pNum++) {
+            const pair = await createRenderedStampPage(pNum);
+            if (renderToken !== stampRenderToken || stampViewMode !== 'continuous') return;
+            if (!firstLabel) firstLabel = pair.outputSize.label;
+            const item = document.createElement('div');
+            item.className = 'stamp-preview-page-item';
+            item.dataset.pageNum = String(pNum);
+            item.appendChild(pair.base);
+            item.appendChild(pair.over);
+            wrap.appendChild(item);
+        }
+
+        if (renderToken !== stampRenderToken || stampViewMode !== 'continuous') return;
+        updateStampPdfPaperInfoForCurrent();
+        document.getElementById('stampPageIndicator').textContent = `Continuous · ${stampTotalPages} pages · ${firstLabel}`;
+        await updateStampPdfPaperInfoForCurrent();
+        updateStampPageControls();
+        scroll.onscroll = function () {
+            if (stampViewMode !== 'continuous') return;
+            if (stampScrollUpdateFrame) return;
+            stampScrollUpdateFrame = requestAnimationFrame(function () {
+                stampScrollUpdateFrame = null;
+                syncStampPreviewPageFromScroll();
+            });
+        };
+        requestAnimationFrame(function () {
+            if (stampPreviewPage <= 1) {
+                scroll.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+            } else {
+                scrollStampPreviewToPage(stampPreviewPage, 'auto');
+            }
+        });
+    }
+
+    async function renderStampTwoPagePreview(renderToken) {
+        const wrap = document.getElementById('stampCanvasWrap');
+        const scroll = document.getElementById('stampPreviewScroll');
+        if (!wrap) return;
+        if (renderToken !== stampRenderToken || stampViewMode !== 'two-page') return;
+
+        if (scroll) {
+            scroll.onscroll = null;
+            scroll.classList.remove('continuous');
+            scroll.style.flexDirection = '';
+        }
+        wrap.style.setProperty('display', 'flex');
+        wrap.style.setProperty('flex-direction', 'row', 'important');
+        wrap.innerHTML = '';
+        wrap.classList.remove('continuous');
+        wrap.classList.add('two-page');
+
+        const spreadStart = getTwoPageSpreadStart(stampPreviewPage);
+        const pageNums = [spreadStart];
+        if (spreadStart < stampTotalPages) pageNums.push(spreadStart + 1);
+        let label = '';
+
+        for (const pNum of pageNums) {
+            const pair = await createRenderedStampPage(pNum);
+            if (renderToken !== stampRenderToken || stampViewMode !== 'two-page') return;
+            label = label || pair.outputSize.label;
+            const item = document.createElement('div');
+            item.className = 'stamp-preview-page-item';
+            item.dataset.pageNum = String(pNum);
+            item.appendChild(pair.base);
+            item.appendChild(pair.over);
+            wrap.appendChild(item);
+        }
+
+        if (renderToken !== stampRenderToken || stampViewMode !== 'two-page') return;
+        updateStampPdfPaperInfoForCurrent();
+        document.getElementById('stampPageIndicator').textContent = `Pages ${pageNums.join(' - ')} / ${stampTotalPages} · ${label}`;
+        await updateStampPdfPaperInfoForCurrent();
+        updateStampPageControls();
+    }
+
+    function getTwoPageSpreadStart(pageNum) {
+        let start = Math.max(1, parseInt(pageNum, 10) || 1);
+        if (start > 1 && start % 2 === 0) start -= 1;
+        if (start >= stampTotalPages && stampTotalPages > 1) start = stampTotalPages - 1;
+        return Math.max(1, start);
+    }
+
+    async function createRenderedStampPage(pageNum) {
+        const page = await stampPdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: stampPreviewScale });
+        const sourceSize = page.getViewport({ scale: 1.0 });
+        const outputSize = getStampOutputPageSize(sourceSize.width, sourceSize.height);
+        const previewW = Math.round(outputSize.ptW * stampPreviewScale);
+        const previewH = Math.round(outputSize.ptH * stampPreviewScale);
+        const offsetX = Math.round((previewW - viewport.width) / 2);
+        const offsetY = Math.round((previewH - viewport.height) / 2);
+
+        const base = document.createElement('canvas');
+        const over = document.createElement('canvas');
+        base.width = over.width = previewW;
+        base.height = over.height = previewH;
+
+        const baseCtx = base.getContext('2d');
+        baseCtx.fillStyle = '#ffffff';
+        baseCtx.fillRect(0, 0, previewW, previewH);
+        await page.render({
+            canvasContext: baseCtx,
+            viewport,
+            transform: [1, 0, 0, 1, offsetX, offsetY]
+        }).promise;
+        if (bwMode) applyGrayscaleToCanvas(base);
+        drawStampOverlay(over, previewW, previewH, pageNum);
+        over.dataset.pageNum = String(pageNum);
+        attachStampOverlayDrag(over, pageNum);
+
+        return { base, over, outputSize };
+    }
+
+    async function updateStampPdfPaperInfoForCurrent() {
+        const page = await stampPdfDoc.getPage(stampPreviewPage);
+        const sourceSize = page.getViewport({ scale: 1.0 });
+        updateStampPdfPaperInfo(sourceSize.width, sourceSize.height, getStampOutputPageSize(sourceSize.width, sourceSize.height));
+    }
+
+    function scrollStampPreviewToPage(pageNum, behavior = 'smooth') {
+        const scroll = document.getElementById('stampPreviewScroll');
+        const item = document.querySelector(`.stamp-preview-page-item[data-page-num="${pageNum}"]`);
+        if (!scroll || !item) return;
+        const scrollRect = scroll.getBoundingClientRect();
+        const itemRect = item.getBoundingClientRect();
+        scroll.scrollTo({
+            top: scroll.scrollTop + itemRect.top - scrollRect.top - 12,
+            left: stampViewMode === 'continuous' ? 0 : Math.max(0, scroll.scrollLeft + itemRect.left - scrollRect.left - 12),
+            behavior
+        });
+    }
+
+    function getVisibleContinuousPage() {
+        const scroll = document.getElementById('stampPreviewScroll');
+        if (!scroll || stampViewMode !== 'continuous') return stampPreviewPage;
+        const scrollRect = scroll.getBoundingClientRect();
+        let bestPage = stampPreviewPage;
+        let bestDistance = Number.POSITIVE_INFINITY;
+        document.querySelectorAll('.stamp-preview-page-item[data-page-num]').forEach(function (item) {
+            const rect = item.getBoundingClientRect();
+            if (rect.bottom < scrollRect.top || rect.top > scrollRect.bottom) return;
+            const distance = Math.abs(rect.top - scrollRect.top - 12);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestPage = parseInt(item.dataset.pageNum, 10) || bestPage;
+            }
+        });
+        return bestPage;
+    }
+
+    function syncStampPreviewPageFromScroll() {
+        const visiblePage = getVisibleContinuousPage();
+        if (!visiblePage || visiblePage === stampPreviewPage) {
+            updateStampPageControls();
+            return;
+        }
+        stampPreviewPage = visiblePage;
+        saveActiveStampDocumentState();
+        updateStampPageControls();
+    }
+
+    function updateStampPageControls() {
+        const viewModeSelect = document.getElementById('stampViewModeSelect');
+        if (viewModeSelect) viewModeSelect.style.display = stampOnlyMode ? 'none' : '';
+
+        const overrideLabel = document.getElementById('pageOverrideLabel');
+        if (overrideLabel) overrideLabel.style.display = stampViewMode === 'continuous' ? 'none' : (stampTotalPages > 1 ? 'flex' : 'none');
+
+        const prevBtn = document.getElementById('stampPrevBtn');
+        const nextBtn = document.getElementById('stampNextBtn');
+        if (prevBtn) prevBtn.disabled = !stampPdfDoc || stampPreviewPage <= 1;
+        if (nextBtn) {
+            const nextStep = stampViewMode === 'two-page' ? 2 : 1;
+            nextBtn.disabled = !stampPdfDoc || stampPreviewPage + nextStep > stampTotalPages;
+        }
+
+        const input = document.getElementById('stampPageJumpInput');
+        if (input) {
+            input.style.display = stampPdfDoc && !stampOnlyMode ? '' : 'none';
+            input.max = String(Math.max(1, stampTotalPages || 1));
+            input.value = String(Math.max(1, stampPreviewPage || 1));
+        }
+
+        const indicator = document.getElementById('stampPageIndicator');
+        if (indicator && stampViewMode === 'continuous') {
+            indicator.textContent = `Page ${stampPreviewPage} / ${stampTotalPages} - Continuous`;
+        }
+    }
+
+    function scheduleStampOverlayRedraw() {
+        if (stampOverlayRedrawFrame) return;
+        stampOverlayRedrawFrame = requestAnimationFrame(function () {
+            stampOverlayRedrawFrame = null;
+            redrawStampOverlaysOnly();
+        });
+    }
+
+    function redrawStampOverlaysOnly() {
+        if (stampViewMode === 'continuous' || stampViewMode === 'two-page') {
+            document.querySelectorAll('.stamp-preview-page-item canvas:last-child').forEach(canvas => {
+                const pageNum = parseInt(canvas.dataset.pageNum, 10) || stampPreviewPage;
+                drawStampOverlay(canvas, canvas.width, canvas.height, pageNum);
+            });
+            return;
+        }
+
+        const canvas = document.getElementById('stampOverlayCanvas');
+        if (canvas) drawStampOverlay(canvas, canvas.width, canvas.height, stampPreviewPage);
+    }
+
+    function restoreSingleStampCanvas(forceRebuild = false) {
+        const wrap = document.getElementById('stampCanvasWrap');
+        const scroll = document.getElementById('stampPreviewScroll');
+        if (!wrap) return;
+        wrap.style.display = 'inline-block';
+        wrap.style.removeProperty('flex-direction');
+        if (scroll) {
+            scroll.onscroll = null;
+            scroll.classList.remove('continuous');
+            scroll.style.flexDirection = '';
+        }
+        wrap.classList.remove('continuous', 'two-page');
+        if (forceRebuild || !document.getElementById('stampBaseCanvas')) {
+            wrap.innerHTML = '<canvas id="stampBaseCanvas"></canvas><canvas id="stampOverlayCanvas"></canvas>';
+            setupOverlayDrag();
+        }
+    }
+
+    function drawStampOverlay(canvas, w, h, pageNum = stampPreviewPage) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, w, h);
 
@@ -998,7 +1647,7 @@
         // When override exists, do NOT call readXxxSettings() — that would write
         // the custom page's UI values into the global settings object, contaminating
         // every other page. The override snapshot is fully self-contained.
-        const ovr = pageOverrides[stampPreviewPage];
+        const ovr = pageOverrides[pageNum];
 
         if (stampMode === 'formatted') {
             if (ovr) {
@@ -1039,6 +1688,11 @@
             if (document.getElementById('printStampOnlyModal')) renderPsoPreview();
             return;
         }
+        if (stampPdfDoc && (stampViewMode === 'continuous' || stampViewMode === 'two-page')) {
+            renderStampPreviewPage();
+            saveStampSettings();
+            return;
+        }
         const c = document.getElementById('stampOverlayCanvas');
         if (c && stampPdfDoc) {
             const chk = document.getElementById('pageOverrideChk');
@@ -1054,10 +1708,12 @@
 
     // ─── Stamp-Only Mode toggle ───────────────────────────────────────────────
     window.toggleStampOnlyMode = function (checked) {
+        stampRenderToken++;
         // ── Show a brief loading overlay on the preview panel ─────────────────
         const previewScroll = document.getElementById('stampPreviewScroll');
-        let loadingEl = null;
+        let loadingEl = showStampPreviewLoading(checked ? 'Loading stamp preview…' : 'Restoring…');
         if (previewScroll) {
+            /*
             loadingEl = document.createElement('div');
             loadingEl.style.cssText = `
                 position:absolute;inset:0;z-index:50;
@@ -1083,6 +1739,7 @@
             previewScroll.appendChild(loadingEl);
             // Fade in
             requestAnimationFrame(() => { loadingEl.style.opacity = '1'; });
+            */
         }
 
         // ── Do the actual work after a short delay so the overlay is visible ──
@@ -1096,9 +1753,19 @@
             const emptyDiv    = document.getElementById('stampPreviewEmpty');
             const emptyMsg    = document.getElementById('stampPreviewEmptyMsg');
             const overrideLbl = document.getElementById('pageOverrideLabel');
+            const paperSection = document.getElementById('stampPdfPaperSection');
+            const docTabs = document.getElementById('stampDocTabsWrap');
+            const viewModeSelect = document.getElementById('stampViewModeSelect');
 
             if (checked) {
+                stampViewMode = 'single';
+                if (viewModeSelect) {
+                    viewModeSelect.value = 'single';
+                    viewModeSelect.style.display = 'none';
+                }
                 if (dropWrap)    dropWrap.style.display        = 'none';
+                if (paperSection) paperSection.style.display   = 'none';
+                if (docTabs) docTabs.style.display             = 'none';
                 if (applyBtn)  { applyBtn.disabled = true;  applyBtn.style.display  = 'none'; }
                 if (printBtn)  { printBtn.disabled = true;  printBtn.style.display  = 'none'; }
                 if (printOnly) { printOnly.disabled = false; printOnly.style.display = 'flex'; }
@@ -1108,8 +1775,10 @@
                 // Hide Prev/Next page buttons — no pages in stamp-only mode
                 const prevBtn = document.getElementById('stampPrevBtn');
                 const nextBtn = document.getElementById('stampNextBtn');
+                const pageJump = document.getElementById('stampPageJumpInput');
                 if (prevBtn) prevBtn.style.display = 'none';
                 if (nextBtn) nextBtn.style.display = 'none';
+                if (pageJump) pageJump.style.display = 'none';
 
                 // Hide Grayscale PDF option in stamp-only mode
                 const graySection = document.getElementById('grayscalePdfSection');
@@ -1148,12 +1817,17 @@
                 // Restore Grayscale PDF option only if a PDF is loaded
                 const graySection = document.getElementById('grayscalePdfSection');
                 if (graySection) graySection.style.display = hasPdf ? '' : 'none';
+                if (paperSection) paperSection.style.display = hasPdf ? '' : 'none';
+                renderStampDocumentTabs();
 
                 // Restore Prev/Next page buttons
                 const prevBtn = document.getElementById('stampPrevBtn');
                 const nextBtn = document.getElementById('stampNextBtn');
+                const pageJump = document.getElementById('stampPageJumpInput');
                 if (prevBtn) prevBtn.style.display = '';
                 if (nextBtn) nextBtn.style.display = '';
+                if (pageJump) pageJump.style.display = hasPdf ? '' : 'none';
+                if (viewModeSelect) viewModeSelect.style.display = '';
 
                 // Hide orientation dropdown
                 const orientSel = document.getElementById('stampOnlyOrient');
@@ -1181,6 +1855,8 @@
                     const over = document.getElementById('stampOverlayCanvas');
                     if (base) { base.width = 0; base.height = 0; }
                     if (over)  { over.width  = 0; over.height  = 0; }
+                    const wrap = document.getElementById('stampCanvasWrap');
+                    if (wrap) wrap.style.display = 'none';
                 }
             }
 
@@ -1226,38 +1902,19 @@
         if (slider) slider.value = defaultPosY;
         if (valEl)  valEl.textContent = defaultPosY + '%';
 
-        const scroll = document.getElementById('stampPreviewScroll');
-        if (!scroll) { renderStampOnlyPreview(); return; }
-
-        // Inject a brief fade overlay
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position:absolute;inset:0;z-index:50;
-            background:var(--bg-primary);
-            display:flex;align-items:center;justify-content:center;
-            opacity:0;transition:opacity 0.15s ease;pointer-events:all;
-        `;
-        overlay.innerHTML = `<div style="
-            width:32px;height:32px;border-radius:50%;
-            border:3px solid var(--border-color);
-            border-top-color:var(--accent-color);
-            animation:modeSpinAnim 0.7s linear infinite;">
-        </div>`;
-        scroll.style.position = 'relative';
-        scroll.appendChild(overlay);
-
-        // Fade in
-        requestAnimationFrame(() => { overlay.style.opacity = '1'; });
+        const overlay = showStampPreviewLoading('Updating orientation…');
 
         // Render after overlay is visible, then fade out
         setTimeout(function () {
             renderStampOnlyPreview();
+            if (!overlay) return;
             overlay.style.opacity = '0';
             setTimeout(() => overlay.remove(), 200);
         }, 200);
     };
 
     window.renderStampOnlyPreview = function renderStampOnlyPreview() {
+        restoreSingleStampCanvas();
         // Read paper size from print modal if open, else use A4 default
         const sizeKey  = document.getElementById('psoPageSize')?.value || 'A4';
         const orient   = document.getElementById('stampOnlyOrient')?.value || 'portrait';
@@ -1346,7 +2003,7 @@
     // Snapshot the current UI state into pageOverrides for the current page.
     // Reads DOM values directly into a fresh object — never writes to global
     // stampSettings / fmtSettings / sealSettings to avoid cross-page contamination.
-    function saveCurrentPageOverride() {
+    function saveCurrentPageOverride(pageNum = stampPreviewPage) {
         const g = id => document.getElementById(id);
         let snapshot;
         if (stampMode === 'formatted') {
@@ -1418,7 +2075,7 @@
                 pageRange:   g('stampPageRange')?.value      ?? stampSettings.pageRange,
             };
         }
-        pageOverrides[stampPreviewPage] = snapshot;
+        pageOverrides[pageNum] = snapshot;
     }
 
     // Load a settings object into the UI controls.
@@ -2008,17 +2665,33 @@
     function setupOverlayDrag() {
         const canvas = document.getElementById('stampOverlayCanvas');
         if (!canvas) return;
+        attachStampOverlayDrag(canvas, function () { return stampPreviewPage; });
+    }
 
+    function attachStampOverlayDrag(canvas, pageNumOrGetter) {
+        if (!canvas || canvas._stampDragBound) return;
+        canvas._stampDragBound = true;
         canvas.style.cursor = 'crosshair';
+
+        const getPageNum = () => typeof pageNumOrGetter === 'function' ? pageNumOrGetter() : pageNumOrGetter;
 
         // Mouse
         canvas.addEventListener('mousedown', function (e) {
             if (!stampPdfDoc && !stampOnlyMode) return;
+            const dragPageNum = getPageNum() || stampPreviewPage;
+            if (!stampOnlyMode && dragPageNum !== stampPreviewPage) {
+                stampPreviewPage = dragPageNum;
+                updateStampPageControls();
+            }
+            if (!stampOnlyMode && isCustomToggleChecked() && !pageOverrides[dragPageNum]) {
+                saveCurrentPageOverride(dragPageNum);
+            }
             const pos = getCanvasPos(e, canvas);
             isDragging = true;
             dragStartX = pos.x; dragStartY = pos.y;
             // Use page override if active, else global settings
-            const ovr = pageOverrideActive ? pageOverrides[stampPreviewPage] : null;
+            const hasPageOverride = !!pageOverrides[dragPageNum];
+            const ovr = hasPageOverride ? pageOverrides[dragPageNum] : null;
             const globalS = stampMode === 'formatted' ? fmtSettings
                           : stampMode === 'seal'       ? sealSettings
                           : stampMode === 'received'   ? recvSettings
@@ -2033,7 +2706,12 @@
             const pos  = getCanvasPos(e, canvas);
             const newX = Math.min(95, Math.max(5, dragStartPosX + ((pos.x - dragStartX) / canvas.width)  * 100));
             const newY = Math.min(95, Math.max(5, dragStartPosY + ((pos.y - dragStartY) / canvas.height) * 100));
-            setStampPosition(Math.round(newX), Math.round(newY), stampMode);
+            const dragPageNum = getPageNum() || stampPreviewPage;
+            if (!stampOnlyMode && (pageOverrides[dragPageNum] || isCustomToggleChecked())) {
+                stampPreviewPage = dragPageNum;
+            }
+            setStampPosition(Math.round(newX), Math.round(newY), stampMode, { skipRefresh: true, pageNum: dragPageNum });
+            scheduleStampOverlayRedraw();
         });
 
         canvas.addEventListener('mouseup',    stopDrag);
@@ -2055,6 +2733,10 @@
         canvas.addEventListener('touchend', stopDrag);
 
         function stopDrag() {
+            if (isDragging) {
+                saveStampSettings();
+                saveActiveStampDocumentState();
+            }
             isDragging = false;
             canvas.style.cursor = 'crosshair';
         }
@@ -2415,6 +3097,10 @@
         return !!(chk && chk.checked && pageOverrides[stampPreviewPage]);
     }
 
+    function isCustomToggleChecked() {
+        return !!document.getElementById('pageOverrideChk')?.checked;
+    }
+
     window.onSealSettingChange = function () {
         const op = document.getElementById('sealOpacity'), opV = document.getElementById('sealOpacityVal');
         if (op && opV) opV.textContent = Math.round(op.value * 100) + '%';
@@ -2677,12 +3363,16 @@
         }
     };
 
-    window.setStampPosition = function (x, y, mode) {
+    window.setStampPosition = function (x, y, mode, options = {}) {
         const isFmt  = (mode === 'formatted');
         const isSeal = (mode === 'seal');
         const isRecv = (mode === 'received');
         const pfx    = isFmt ? 'fmt' : (isSeal ? 'seal' : (isRecv ? 'recv' : 'stamp'));
-        if (!isOnCustomPage()) {
+        const targetPage = options.pageNum || stampPreviewPage;
+        if (!stampOnlyMode && pageOverrides[targetPage]) {
+            pageOverrides[targetPage].positionX = x;
+            pageOverrides[targetPage].positionY = y;
+        } else if (!isOnCustomPage()) {
             const s = isFmt ? fmtSettings : (isSeal ? sealSettings : (isRecv ? recvSettings : stampSettings));
             s.positionX = x; s.positionY = y;
         }
@@ -2690,13 +3380,40 @@
         const xv = document.getElementById(pfx + 'PosXVal'), yv = document.getElementById(pfx + 'PosYVal');
         if (px) px.value = x; if (py) py.value = y;
         if (xv) xv.textContent = x + '%'; if (yv) yv.textContent = y + '%';
+        if (options.skipRefresh) return;
+        saveActiveStampDocumentState();
         refreshOverlay();
     };
 
     window.changeStampPreviewPage = async function (d) {
         if (stampOnlyMode) return;   // no PDF pages in stamp-only mode
         if (!stampPdfDoc) return;
-        stampPreviewPage = Math.min(Math.max(1, stampPreviewPage + d), stampTotalPages);
+        if (stampViewMode === 'continuous') syncStampPreviewPageFromScroll();
+        const step = stampViewMode === 'two-page' ? d * 2 : d;
+        if (stampViewMode === 'two-page') {
+            stampPreviewPage = getTwoPageSpreadStart(stampPreviewPage + step);
+        } else {
+            stampPreviewPage = Math.min(Math.max(1, stampPreviewPage + step), stampTotalPages);
+        }
+        saveActiveStampDocumentState();
+        if (stampViewMode === 'continuous') {
+            updateStampPageControls();
+            scrollStampPreviewToPage(stampPreviewPage);
+            return;
+        }
+        await renderStampPreviewPage();
+    };
+
+    window.goToStampPreviewPage = async function (pageValue) {
+        if (stampOnlyMode || !stampPdfDoc) return;
+        const page = Math.min(Math.max(1, parseInt(pageValue, 10) || 1), stampTotalPages);
+        stampPreviewPage = stampViewMode === 'two-page' ? getTwoPageSpreadStart(page) : page;
+        saveActiveStampDocumentState();
+        if (stampViewMode === 'continuous') {
+            updateStampPageControls();
+            scrollStampPreviewToPage(stampPreviewPage);
+            return;
+        }
         await renderStampPreviewPage();
     };
 
@@ -2722,6 +3439,7 @@
         const pages  = resolvePages(active);
         if (!pages.length) { showNotification('No valid pages selected.', 'warning'); return; }
 
+        saveActiveStampDocumentState();
         showProgress('Stamping PDF…', 'Applying stamp to pages');
         try {
             const b64 = await buildStampedPDF(pages);
@@ -2745,6 +3463,7 @@
         const pages  = resolvePages(active);
         if (!pages.length) { showNotification('No valid pages selected.', 'warning'); return; }
 
+        saveActiveStampDocumentState();
         showProgress('Preparing print…', 'Rendering stamped pages');
         try {
             const b64      = await buildStampedPDF(pages);
@@ -2818,15 +3537,24 @@
             const vpReal   = page.getViewport({ scale: 1.0 });
             const ptW      = vpReal.width;
             const ptH      = vpReal.height;
+            const outputSize = getStampOutputPageSize(ptW, ptH);
 
             const vpHigh   = page.getViewport({ scale: RENDER_SCALE });
             const canvas   = document.createElement('canvas');
-            canvas.width   = vpHigh.width;
-            canvas.height  = vpHigh.height;
+            canvas.width   = Math.round(outputSize.ptW * RENDER_SCALE);
+            canvas.height  = Math.round(outputSize.ptH * RENDER_SCALE);
             const ctx      = canvas.getContext('2d');
             ctx.fillStyle  = '#ffffff';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            await page.render({ canvasContext: ctx, viewport: vpHigh }).promise;
+            await page.render({
+                canvasContext: ctx,
+                viewport: vpHigh,
+                transform: [
+                    1, 0, 0, 1,
+                    Math.round((canvas.width - vpHigh.width) / 2),
+                    Math.round((canvas.height - vpHigh.height) / 2)
+                ]
+            }).promise;
 
             // Grayscale page — stamp is drawn after so it stays in color
             if (bwMode) applyGrayscaleToCanvas(canvas);
@@ -2858,8 +3586,8 @@
                 dataUrl: canvas.toDataURL('image/jpeg', 0.92),
                 canvasW: canvas.width,
                 canvasH: canvas.height,
-                ptW,
-                ptH
+                ptW: outputSize.ptW,
+                ptH: outputSize.ptH
             });
         }
 

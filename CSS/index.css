@@ -15,6 +15,12 @@
   --error-color: #f44336;
   --warning-color: #ff9800;
   --info-color: #2196f3;
+  --scrollbar-track: rgba(15, 23, 42, 0.08);
+  --scrollbar-thumb: rgba(100, 116, 139, 0.7);
+  --scrollbar-thumb-hover: rgba(71, 85, 105, 0.95);
+  --canvas-gap-top: 36px;
+  --canvas-gap-side: 24px;
+  --canvas-gap-bottom: 30px;
 
   /* File colors */
   --file-color-1: #4caf50;
@@ -40,12 +46,44 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
   --page-number-bg: #3d2a2a;
+  --scrollbar-track: rgba(255, 255, 255, 0.08);
+  --scrollbar-thumb: rgba(148, 163, 184, 0.55);
+  --scrollbar-thumb-hover: rgba(203, 213, 225, 0.85);
 }
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 body {
@@ -163,12 +201,12 @@ body {
 }
 
 .tool-tabs::-webkit-scrollbar {
-  height: 3px;
+  height: 8px;
 }
 
 .tool-tabs::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
+  background: var(--scrollbar-thumb);
+  border-radius: 999px;
 }
 
 .tab-btn {
@@ -209,6 +247,23 @@ body {
 }
 
 #mergeControls.active {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 16px 20px !important;
+}
+
+#compressControls {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#compressControls.active {
   display: block !important;
   visibility: visible !important;
   height: auto !important;
@@ -423,7 +478,7 @@ body {
 .left-panel.collapsed .collapse-btn {
   width: 40px;
   height: 40px;
-  padding: 6px 6px;
+  padding: 6px 5px;
 
   display: flex;
   align-items: center;
@@ -519,7 +574,7 @@ body {
 }
 
 .file-remove {
-  padding: 6px 8px;
+  padding: 5px 5px;
   background: var(--error-color);
   color: white;
   border: none;
@@ -1468,7 +1523,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding: 20px;
+  padding: var(--canvas-gap-top) var(--canvas-gap-side) var(--canvas-gap-bottom);
   background: #2a2a2a;
 }
 
@@ -1478,16 +1533,20 @@ body {
 }
 
 .preview-canvas-wrapper::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: var(--scrollbar-track);
 }
 
 .preview-canvas-wrapper::-webkit-scrollbar-thumb {
-  background: #555;
-  border-radius: 5px;
+  background: var(--scrollbar-thumb);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
 }
 
 .preview-canvas-wrapper::-webkit-scrollbar-thumb:hover {
-  background: #777;
+  background: var(--scrollbar-thumb-hover);
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 
 .preview-canvas-wrapper canvas {
@@ -2547,6 +2606,13 @@ body {
   pointer-events: all;
 }
 
+/* Checkbox wrap always punches through the overlay — never let the overlay capture its area */
+.page-item-wrapper:hover .delete-checkbox-wrap,
+.page-item-wrapper .delete-checkbox-wrap {
+  pointer-events: auto !important;
+  z-index: 50 !important;
+}
+
 /* Do NOT trigger overlay on add-page-item */
 .page-item-wrapper:has(.add-page-item) .page-hover-overlay,
 .add-page-item .page-hover-overlay {
@@ -2578,6 +2644,14 @@ body {
     transform 0.1s;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   flex-shrink: 0;
+}
+
+/* Icons inside action buttons must always show pointer */
+.page-action-btn i,
+.page-action-btn svg,
+.page-action-btn * {
+  cursor: pointer;
+  pointer-events: none;
 }
 
 .page-action-btn:hover {
@@ -2690,7 +2764,7 @@ body {
   display: flex;
   justify-content: center; /* center canvas horizontally */
   align-items: flex-start; /* align to top so tall pages scroll naturally */
-  padding: 24px;
+  padding: var(--canvas-gap-top) var(--canvas-gap-side) var(--canvas-gap-bottom);
   background: #2a2a2a;
 }
 
@@ -2778,6 +2852,11 @@ body {
   box-sizing: border-box;
 }
 
+#protectContainer {
+  padding: var(--stamp-gap) var(--stamp-gap) 0;
+  box-sizing: border-box;
+}
+
 /* ── Two-column layout — fills remaining viewport height ────────── */
 .stamp-layout {
   display: flex;
@@ -2811,6 +2890,7 @@ body {
   flex: 1 1 0;
   min-width: 0;
   min-height: 0; /* allows flex child to shrink below content size */
+  position: relative;
   display: flex;
   flex-direction: column;
   background: var(--bg-secondary);
@@ -2961,6 +3041,109 @@ body {
 }
 
 /* ── Preview toolbar ────────────────────────────────────────────── */
+.stamp-doc-tabs-wrap {
+  align-items: flex-end;
+  min-height: 38px;
+  padding: 6px 8px 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  gap: 6px;
+}
+
+.stamp-doc-tabs-viewport {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.stamp-doc-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  min-width: max-content;
+}
+
+.stamp-doc-nav-btn {
+  width: 28px;
+  height: 32px;
+  border: 1px solid var(--border-color);
+  border-radius: 7px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stamp-doc-nav-btn:hover:not(:disabled) {
+  background: var(--accent-light);
+  color: var(--accent-color);
+  border-color: var(--accent-color);
+}
+
+.stamp-doc-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.stamp-doc-tab {
+  height: 32px;
+  max-width: 260px;
+  min-width: 150px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  margin-right: -1px;
+  border: 1px solid var(--border-color);
+  border-bottom-color: var(--border-color);
+  border-radius: 8px 8px 0 0;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  position: relative;
+}
+
+.stamp-doc-tab.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-bottom-color: var(--bg-primary);
+  z-index: 2;
+}
+
+.stamp-doc-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+  text-align: left;
+}
+
+.stamp-doc-tab-meta {
+  font-size: 10px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.stamp-doc-tab-close {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.stamp-doc-tab-close:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
 .stamp-preview-toolbar {
   display: flex;
   align-items: center;
@@ -2990,16 +3173,50 @@ body {
   color: var(--accent-color);
 }
 
+.stamp-view-mode-select {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  color: var(--text-primary);
+  cursor: pointer;
+  max-width: 240px;
+}
+
+.stamp-page-jump-input {
+  width: 64px;
+  height: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  text-align: center;
+}
+
+.stamp-page-jump-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent);
+}
+
 /* ── Preview canvas scroll area ─────────────────────────────────── */
 .stamp-preview-scroll {
   flex: 1 1 0; /* fills all space below the toolbar */
   overflow: auto;
   background: #6b7280;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
-  padding: 20px;
+  padding: var(--canvas-gap-top) var(--canvas-gap-side) var(--canvas-gap-bottom);
   position: relative;
+}
+
+.stamp-preview-scroll.continuous {
+  align-items: center;
+  justify-content: flex-start;
 }
 
 .stamp-preview-canvas-wrap {
@@ -3008,6 +3225,44 @@ body {
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
   line-height: 0;
   cursor: crosshair; /* show crosshair on the whole wrap, not just overlay */
+}
+
+.stamp-preview-canvas-wrap.continuous,
+.stamp-preview-canvas-wrap.two-page {
+  box-shadow: none;
+  cursor: default;
+}
+
+.stamp-preview-canvas-wrap.continuous {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center;
+  gap: 18px;
+  width: max-content;
+}
+
+.stamp-preview-canvas-wrap.two-page {
+  display: flex !important;
+  flex-direction: row !important;
+  gap: 18px;
+  align-items: flex-start;
+  width: max-content;
+}
+
+.stamp-preview-page-item {
+  position: relative;
+  display: inline-block;
+  line-height: 0;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+}
+
+.stamp-preview-page-item canvas:first-child {
+  display: block;
+}
+
+.stamp-preview-page-item canvas:last-child {
+  position: absolute;
+  inset: 0;
 }
 
 #stampBaseCanvas {
@@ -3032,6 +3287,36 @@ body {
   font-size: 15px;
   text-align: center;
   pointer-events: none;
+}
+
+.stamp-preview-busy-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: color-mix(in srgb, var(--bg-secondary) 94%, transparent);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: all;
+}
+
+.stamp-preview-busy-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--border-color);
+  border-top-color: var(--accent-color);
+  animation: modeSpinAnim 0.7s linear infinite;
+}
+
+.stamp-preview-busy-text {
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
@@ -3106,6 +3391,7 @@ body {
 }
 
 /* ── Toast Notification ─────────────────────────────────────────────────────── */
+/* ── Toast Stack ─────────────────────────────────────────────────────────── */
 /* ── Toast Stack ─────────────────────────────────────────────────────────── */
 #toast-container {
   position: fixed;
@@ -3194,4 +3480,468 @@ body {
   transition:
     opacity 0.4s ease,
     transform 0.4s ease;
+}
+
+/* ── Protect Mode Layout ─────────────────────────────────────────── */
+.protect-layout {
+  display: flex;
+  gap: 18px;
+  align-items: stretch; /* both columns same height */
+  height: calc(100vh - var(--stamp-vh-used));
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden; /* no outer page scroll */
+}
+
+/* Controls (left) — scrollable internally */
+.protect-controls-panel {
+  flex: 0 0 320px;
+  max-width: 320px;
+  min-height: 0; /* allows flex child to shrink below content size */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  overflow-y: auto; /* scrolls its own content */
+  overflow-x: hidden;
+}
+
+.protect-info-panel {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+}
+
+@media (max-width: 640px) {
+  .protect-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .protect-controls-panel {
+    width: 100%;
+    max-width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   DELETE MODE — Missing styles (fixes for all 4 reported issues)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Fix 1: Hide deleteControls by default, show only when active ── */
+#deleteControls {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#deleteControls.active {
+  display: block !important;
+  visibility: visible !important;
+  height: auto !important;
+  overflow: visible !important;
+  padding: 16px 20px !important;
+}
+
+/* ── Fix 2 & 3: Checkbox wrap — positioned, visible, and clickable ── */
+.delete-checkbox-wrap {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 50; /* well above the hover overlay (z-index: 10) */
+  cursor: pointer;
+  pointer-events: auto !important; /* always capture clicks even when overlay is active */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 5px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: background 0.15s;
+}
+
+.delete-checkbox-wrap:hover {
+  background: rgba(255, 255, 255, 1);
+}
+
+.delete-page-checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  pointer-events: none; /* chkWrap handles the click — prevents double-fire */
+  accent-color: #ef4444;
+  pointer-events: auto;
+}
+
+/* ── Fix 2: Visual state when a page is marked for deletion ── */
+.page-item.delete-selected {
+  border: 2px solid #ef4444 !important;
+  border-top: 3px solid #ef4444 !important;
+}
+
+.page-item.delete-selected .page-thumbnail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(239, 68, 68, 0.18);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.page-item.delete-selected .delete-checkbox-wrap {
+  background: rgba(239, 68, 68, 0.15);
+}
+
+/* ── Delete-mode between-page insert button (red accent) ── */
+.delete-add-between .merge-add-btn {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+.delete-add-between .merge-add-btn:hover {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+/* ── Delete mode: pointer cursor on card body (thumbnail + footer), default on overlay buttons ── */
+#pageGrid .page-item {
+  cursor: pointer;
+}
+#pageGrid .page-item canvas,
+#pageGrid .page-item .page-footer,
+#pageGrid .page-item .page-number {
+  cursor: pointer;
+}
+#pageGrid .page-item .page-hover-overlay {
+  cursor: default;
+}
+/* Every element inside the overlay inherits default, then buttons override back to pointer */
+#pageGrid .page-item .page-hover-overlay * {
+  cursor: default;
+}
+#pageGrid .page-item .page-hover-overlay .page-action-btn,
+#pageGrid .page-item .page-hover-overlay .page-action-btn * {
+  cursor: pointer;
+}
+/* Checkbox wrap is above the overlay — always pointer, always interactive */
+#pageGrid .page-item .delete-checkbox-wrap {
+  cursor: pointer;
+  pointer-events: auto !important;
+}
+#pageGrid .page-item .delete-checkbox-wrap * {
+  cursor: pointer;
+}
+#pageGrid .page-item .delete-page-checkbox {
+  cursor: pointer;
+}
+
+/* ── Fix 4: Pointer cursor on page footer (bottom of thumbnail) ── */
+.page-footer {
+  cursor: pointer;
+}
+
+/* ── Compress mode — per-card selection checkbox ───────────────────────────── */
+.compress-select-chk-wrap {
+  display: none; /* hidden by default; shown via JS after compression */
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.compress-select-chk-wrap:hover {
+  background: var(--hover-bg);
+}
+.compress-select-chk {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--accent-color);
+  flex-shrink: 0;
+}
+/* Highlight selected card after compression */
+.compress-file-card.compress-card-selected {
+  border-color: var(--accent-color) !important;
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 59, 130, 246), 0.15);
+}
+
+/* ============================================================
+   SKELETON LOADING — shimmer upgrade
+   Add this block to index.css, replacing the existing
+   .skeleton-item / .skeleton-thumbnail / .skeleton-footer
+   rules (lines ~802-880).
+   ============================================================ */
+
+/* ── Shimmer keyframe ──────────────────────────────────────── */
+@keyframes skeletonShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* ── Shared shimmer mixin (applied via class) ─────────────── */
+.skeleton-shine {
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--hover-bg) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Outer card ───────────────────────────────────────────── */
+.skeleton-item {
+  width: 100%;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  border: 2px solid var(--border-color);
+
+  /* Subtle pulse so the whole card feels "alive" */
+  animation: skeletonPulse 2s ease-in-out infinite;
+}
+
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    border-color: var(--border-color);
+  }
+  50% {
+    border-color: var(--accent-color);
+    opacity: 0.85;
+  }
+}
+
+/* ── Thumbnail area (replaces old solid bg) ───────────────── */
+.skeleton-thumbnail {
+  width: 100%;
+  aspect-ratio: 0.7; /* matches .page-thumbnail */
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+
+  /* shimmer on the whole thumbnail bg */
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--hover-bg) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Fake "page content" lines inside the thumbnail ──────── */
+.skeleton-thumbnail::before,
+.skeleton-thumbnail::after {
+  content: "";
+  display: block;
+  border-radius: 4px;
+  background: var(--border-color);
+  opacity: 0.55;
+}
+
+.skeleton-thumbnail::before {
+  width: 65%;
+  height: 6px;
+  margin-top: auto; /* push toward vertical center */
+}
+
+.skeleton-thumbnail::after {
+  width: 45%;
+  height: 6px;
+  margin-bottom: auto;
+}
+
+/* ── Progress loader sits on top of the shimmer ──────────── */
+.page-progress-loader {
+  position: relative;
+  z-index: 2;
+  width: 88%;
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 10px;
+  padding: 14px 12px;
+  text-align: center;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="dark"] .page-progress-loader {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+/* ── Progress bar track ───────────────────────────────────── */
+.progress-bar-container {
+  width: 100%;
+  height: 36px;
+  background: var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 10px;
+}
+
+/* ── Progress bar fill — animated stripe ─────────────────── */
+.progress-bar-container .progress-bar-fill {
+  height: 100%;
+  border-radius: 8px;
+  width: 0%;
+  transition: width 0.3s ease;
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  background: linear-gradient(
+    90deg,
+    var(--accent-color) 0%,
+    #1e90ff 40%,
+    var(--accent-color) 80%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.2s linear infinite;
+}
+
+/* ── Percentage label ─────────────────────────────────────── */
+.progress-bar-container .progress-percentage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: 700;
+  font-size: 14px;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+  mix-blend-mode: difference;
+}
+
+/* ── Status label ─────────────────────────────────────────── */
+.progress-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-top: 6px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Footer bar (page number placeholder) ────────────────── */
+.skeleton-footer {
+  height: 32px;
+  background: linear-gradient(
+    90deg,
+    var(--border-color) 25%,
+    var(--hover-bg) 50%,
+    var(--border-color) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  gap: 8px;
+}
+
+/* Fake page-number pill inside footer */
+.skeleton-footer::before {
+  content: "";
+  width: 28px;
+  height: 12px;
+  border-radius: 6px;
+  background: var(--bg-tertiary);
+  opacity: 0.6;
+}
+
+/* Fake badge pill inside footer */
+.skeleton-footer::after {
+  content: "";
+  width: 44px;
+  height: 14px;
+  border-radius: 20px;
+  background: var(--bg-tertiary);
+  opacity: 0.6;
+}
+
+/* ── Left-panel file-card skeleton (optional) ─────────────── */
+/* Used when the file list itself is loading */
+.skeleton-file-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.skeleton-file-icon {
+  width: 32px;
+  height: 38px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--hover-bg) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-file-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.skeleton-file-name,
+.skeleton-file-meta {
+  height: 10px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-tertiary) 25%,
+    var(--hover-bg) 50%,
+    var(--bg-tertiary) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.6s ease-in-out infinite;
+}
+
+.skeleton-file-name {
+  width: 75%;
+}
+.skeleton-file-meta {
+  width: 45%;
+  animation-delay: 0.15s;
 }

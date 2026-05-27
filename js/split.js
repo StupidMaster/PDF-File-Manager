@@ -1,4 +1,4 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/3.11.174-pdf.worker.min.js`;
 
         // State
         let pdfDocuments = [];
@@ -721,7 +721,12 @@ async function rebuildPageGrid() {
 function createSkeletonItem(pageIndex, totalPages) {
     const div = document.createElement('div');
     div.className = 'skeleton-item';
-    
+ 
+    // Page label shown while waiting
+    const pageLabel = pageIndex != null
+        ? `Page ${pageIndex + 1}${totalPages ? ' of ' + totalPages : ''}`
+        : 'Loading…';
+ 
     div.innerHTML = `
         <div class="skeleton-thumbnail">
             <div class="page-progress-loader">
@@ -729,12 +734,12 @@ function createSkeletonItem(pageIndex, totalPages) {
                     <div class="progress-bar-fill"></div>
                     <div class="progress-percentage">0%</div>
                 </div>
-                <div class="progress-label">Waiting...</div>
+                <div class="progress-label">${pageLabel}</div>
             </div>
         </div>
         <div class="skeleton-footer"></div>
     `;
-    
+ 
     return div;
 }
 
@@ -746,10 +751,10 @@ function createSkeletonItem(pageIndex, totalPages) {
             
             div.innerHTML = `
                 <div class="page-thumbnail">
-                    <div style="text-align: center; color: var(--text-secondary); font-size: 12px; line-height: 1.5;">
-                        <div style="font-size: 32px; margin-bottom: 8px;">+</div>
-                        Add PDF
-                    </div>
+                <div style="text-align:center;color:var(--text-secondary);font-size:12px;line-height:1.5;">
+                <div style="font-size:28px;margin-bottom:6px;color:var(--accent-color);"><i class="fa fa-plus-circle"></i></div>
+                    <div style="font-weight:600;color:var(--text-primary);margin-bottom:4px;">Add PDF</div>
+                </div>
                 </div>
             `;
             
@@ -1500,7 +1505,7 @@ async function performClientSideSplit() {
         updateProgress(5, 'Loading pdf-lib…');
         await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+            script.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
             script.onload = resolve;
             script.onerror = () => reject(new Error('Failed to load pdf-lib'));
             document.head.appendChild(script);
@@ -1756,6 +1761,10 @@ function hideProgress() {
 Object.defineProperty(window, 'hasSplitFiles', {
     get: () => pdfDocuments.length > 0
 });
+
+window._splitHasFiles = function() {
+    return pdfDocuments.length > 0;
+};
 
 // Data-only reset — clears split state without touching the UI.
 // Called by index_enhanced.php when switching AWAY from split mode.
