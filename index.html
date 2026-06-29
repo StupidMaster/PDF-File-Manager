@@ -21,7 +21,7 @@
     <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
     <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
 
-    <link rel="stylesheet" href="./CSS/index.css?v=20260527-4">
+    <link rel="stylesheet" href="./CSS/index.css?v=20260604-27">
 
     <style>
         /* ── Page Loader ─────────────────────────────────────────── */
@@ -526,6 +526,11 @@
                 <div class="merge-info-section">
                     <span><i class="fa fa-arrows"></i> Drag files or pages to reorder</span>
                     <span id="mergeTotalPages" style="margin-left: 15px; color: var(--text-secondary);"></span>
+                    <label class="merge-name-prefix-toggle" title="Add custom text before the merged output filename">
+                        <input type="checkbox" id="mergeNamePrefixToggle" onchange="toggleMergeNamePrefixInput(this.checked)">
+                        <span>Name Prefix</span>
+                    </label>
+                    <input type="text" id="mergeNamePrefixInput" class="merge-name-prefix-input" placeholder="e.g. CFC" disabled>
                 </div>
                 <div class="split-actions">
                     <button class="btn btn-secondary" onclick="addMoreMergeFiles()">
@@ -759,12 +764,12 @@
     <script>
         window.PDF_MANAGER_BASE = '.';
     </script>
-    <script src="./js/common.js?v=20260527-4"></script>
-    <script src="./js/split.js?v=20260527-4"></script>
-    <script src="./js/merge.js?v=20260527-4"></script>
-    <script src="./js/stamp.js?v=20260527-4"></script>
-    <script src="./js/delete.js?v=20260527-4"></script>
-    <script src="./js/compress.js?v=20260527-4"></script>
+    <script src="./js/common.js?v=20260604-27"></script>
+    <script src="./js/split.js?v=20260604-27"></script>
+    <script src="./js/merge.js?v=20260604-27"></script>
+    <script src="./js/stamp.js?v=20260604-27"></script>
+    <script src="./js/delete.js?v=20260604-27"></script>
+    <script src="./js/compress.js?v=20260604-27"></script>
     <!-- Tool switching -->
     <script>
         let activeTool = 'split';
@@ -1474,3 +1479,4 @@
 </body>
 
 </html>
+

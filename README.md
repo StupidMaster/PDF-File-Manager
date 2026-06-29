@@ -10,7 +10,7 @@ PDF Manager Pro is a powerful, client-side PDF manipulation tool that runs entir
 |---------|-------------|
 | **Split PDF** | Split PDFs at custom points or after every N pages |
 | **Merge PDFs** | Combine multiple PDFs with drag-and-drop reordering |
-| **Stamp PDF** | Add text stamps, official seals, or custom watermarks |
+| **Stamp PDF** | Add text stamps, official seals, received/released stamps, and stamp-only print layouts |
 | **Page Operations** | Rotate, duplicate, delete individual pages |
 | **Preview** | Zoom, navigate, and preview pages before processing |
 | **Dark Mode** | Toggle between light and dark themes |
@@ -69,14 +69,16 @@ npx http-server
 ### Stamp PDF
 
 1. Click **Stamp** tab
-2. Choose stamp type:
+2. Upload one or more PDFs. Each PDF opens in its own tab.
+3. Choose stamp type:
    - **Simple Text**: Custom text with styling
    - **Official Stamp**: Formatted certification box
    - **Round Seal**: Circular certification seal
-3. Drag the stamp to position it
-4. Customize color, opacity, size
-5. Choose pages to apply (all, current, or range)
-6. Click **Download** or **Print**
+   - **Received / Released**: Office-style received/released box
+4. Pick the output paper size per PDF tab when needed. The scanned PDF content keeps its original size and is centered on the chosen paper.
+5. Choose the preview mode: load per page, continuous scrolling, two-page view, or presentation/full-screen.
+6. Drag the stamp to position it, then customize color, opacity, size, and page range.
+7. Click **Download** or **Print**
 
 ## 🎯 Keyboard Shortcuts
 
@@ -113,8 +115,10 @@ pdf-manager/
 │   ├── merge.js        # Merge functionality
 │   └── stamp.js        # Stamp functionality
 └── ScriptsJS/
+    ├── 1.17.1-pdf-lib.min.js
     ├── 3.10.1-jszip.min.js
-    └── 3.11.174-pdf.min.js
+    ├── 3.11.174-pdf.min.js
+    └── 3.11.174-pdf.worker.min.js
 ```
 
 ## 💡 Advanced Features
@@ -133,6 +137,12 @@ pdf-manager/
 - Institution name
 - Date and time display
 - Scale adjustment
+
+**Multi-PDF Tabs and Preview Modes:**
+- Open multiple PDFs in Stamp mode and switch between browser-style tabs
+- Keep output paper size and stamp state separate for each PDF
+- Navigate by page, continuous scrolling, two-page spreads, or full-screen presentation mode
+- Use side tab buttons when many PDFs are open
 
 **Round Seal:**
 - Curved text on top and bottom arcs
