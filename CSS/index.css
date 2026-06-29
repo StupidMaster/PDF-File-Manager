@@ -254,6 +254,37 @@ body {
   padding: 16px 20px !important;
 }
 
+.merge-name-prefix-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 15px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.merge-name-prefix-toggle input {
+  margin: 0;
+}
+
+.merge-name-prefix-input {
+  width: 150px;
+  height: 30px;
+  margin-left: 8px;
+  padding: 0 9px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.merge-name-prefix-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 #compressControls {
   display: none !important;
   visibility: hidden !important;
@@ -613,7 +644,7 @@ body {
   position: relative;
 }
 
-/* Mode-switch loading overlay — scoped to main-content only */
+/* Mode-switch loading overlay â€” scoped to main-content only */
 .mode-loading-overlay {
   position: absolute;
   inset: 0;
@@ -679,9 +710,40 @@ body {
   transition: all 0.3s;
 }
 
-.upload-box:hover {
+.upload-box:hover,
+.upload-box.pdf-drop-active {
   border-color: var(--accent-color);
   background: var(--accent-light);
+  box-shadow: 0 0 0 4px rgba(30, 126, 214, 0.16), 0 18px 45px rgba(30, 126, 214, 0.16);
+  transform: translateY(-1px);
+}
+
+.add-page-item.pdf-drop-active {
+  border-color: var(--accent-color);
+  background: var(--accent-light);
+  box-shadow: 0 0 0 4px rgba(30, 126, 214, 0.18), 0 18px 45px rgba(30, 126, 214, 0.18);
+  transform: translateY(-2px);
+}
+
+.btn.is-processing {
+  pointer-events: none;
+  opacity: 0.78;
+}
+
+.btn .btn-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 7px;
+  vertical-align: -2px;
+  animation: actionBtnSpin 0.75s linear infinite;
+}
+
+@keyframes actionBtnSpin {
+  to { transform: rotate(360deg); }
 }
 
 .upload-icon {
@@ -737,15 +799,16 @@ body {
   border-radius: 8px;
   overflow: hidden;
   box-shadow: var(--shadow-sm);
-  /* transition: all 0.3s; */
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
   cursor: default; /* Remove pointer cursor */
   position: relative;
   border: 2px solid transparent;
+  will-change: transform;
 }
 
 .page-item:hover {
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+  transform: translateY(-4px) scale(1.015);
 }
 
 .page-item.file-1 {
@@ -788,6 +851,7 @@ body {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
+  transition: transform 0.2s ease, filter 0.2s ease;
 }
 
 .page-footer {
@@ -922,9 +986,9 @@ body {
   position: relative;
 }
 
-/* Scissor Button — centered in the 50px gap between page-items.
-   gap = 50px → midpoint at 25px past the wrapper's right edge.
-   left: calc(100% + 5px) puts the 40px container from 5px→45px → centred at 25px. */
+/* Scissor Button â€” centered in the 50px gap between page-items.
+   gap = 50px â†’ midpoint at 25px past the wrapper's right edge.
+   left: calc(100% + 5px) puts the 40px container from 5pxâ†’45px â†’ centred at 25px. */
 .split-point {
   position: absolute;
   left: calc(100% + 5px);
@@ -938,7 +1002,7 @@ body {
   cursor: pointer;
 }
 
-/* Dashed vertical line — border-left draws at the element's LEFT edge.
+/* Dashed vertical line â€” border-left draws at the element's LEFT edge.
    Position the element so its left edge = container center (20px on a 40px container).
    Use left: calc(50% - 1px) so the 2px border straddles the centre pixel.
    A wider invisible ::after expands the click target. */
@@ -1029,7 +1093,7 @@ body {
   transition: filter 0.3s;
 }
 
-/* ── Merge: between-page + insert button ────────────────────────────────────── */
+/* â”€â”€ Merge: between-page + insert button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .merge-add-between {
   position: absolute;
   left: calc(100% + 5px);
@@ -1044,7 +1108,7 @@ body {
   pointer-events: auto;
 }
 
-/* No line — button only */
+/* No line â€” button only */
 .merge-add-line {
   display: none;
 }
@@ -1127,7 +1191,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
+  z-index: 11002;
   backdrop-filter: blur(8px);
 }
 
@@ -1258,7 +1322,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 10001;
+  z-index: 11000;
   animation: fadeIn 0.3s ease;
   padding: 20px;
 }
@@ -1381,7 +1445,7 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 10002;
+  z-index: 11001;
   animation: fadeIn 0.3s ease;
   padding: 20px;
 }
@@ -1481,7 +1545,7 @@ body {
 
 .preview-modal-content {
   position: relative;
-  /* Static size — never grows/shrinks with canvas zoom */
+  /* Static size â€” never grows/shrinks with canvas zoom */
   width: min(900px, 96vw);
   height: min(90vh, 900px);
   background: var(--bg-secondary);
@@ -1518,7 +1582,7 @@ body {
 
 .preview-canvas-wrapper {
   flex: 1;
-  min-height: 0; /* critical — allows flex child to shrink and scroll */
+  min-height: 0; /* critical â€” allows flex child to shrink and scroll */
   overflow: auto;
   display: flex;
   justify-content: center;
@@ -1551,12 +1615,12 @@ body {
 
 .preview-canvas-wrapper canvas {
   display: block;
-  /* No max-width/height constraints — canvas should render at exact zoom size */
+  /* No max-width/height constraints â€” canvas should render at exact zoom size */
   flex-shrink: 0;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
 }
 
-/* Preview Zoom Controls — DISABLED (moved into bottom bar) */
+/* Preview Zoom Controls â€” DISABLED (moved into bottom bar) */
 .preview-controls {
   display: none !important;
 }
@@ -1685,13 +1749,13 @@ body {
     border: 2px solid var(--accent-color);
   }
 
-  /* 2 columns, normal vertical gap — scissors stay to the right */
+  /* 2 columns, normal vertical gap â€” scissors stay to the right */
   .page-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: 40px 30px;
   }
 
-  /* scissors stay vertical, to the right — gap=30px → center at 15px */
+  /* scissors stay vertical, to the right â€” gap=30px â†’ center at 15px */
   .split-point {
     position: absolute;
     left: calc(100% - 5px);
@@ -1747,7 +1811,7 @@ body {
     gap: 40px; /* Slightly larger gap for scissor space */
   }
   .split-point {
-    left: calc(100% + 0px); /* gap=40px → center at 20px → 20-20=0px */
+    left: calc(100% + 0px); /* gap=40px â†’ center at 20px â†’ 20-20=0px */
   }
 }
 
@@ -1757,7 +1821,7 @@ body {
     gap: 35px;
   }
   .split-point {
-    left: calc(100% - 2px); /* gap=35px → center at 17.5px → 17.5-20≈-2px */
+    left: calc(100% - 2px); /* gap=35px â†’ center at 17.5px â†’ 17.5-20â‰ˆ-2px */
   }
 }
 
@@ -1767,7 +1831,7 @@ body {
     gap: 35px;
   }
   .split-point {
-    left: calc(100% - 2px); /* gap=35px → center at 17.5px → 17.5-20≈-2px */
+    left: calc(100% - 2px); /* gap=35px â†’ center at 17.5px â†’ 17.5-20â‰ˆ-2px */
   }
 
   /* Keep scissors same size */
@@ -1994,7 +2058,7 @@ body {
     border-left: none;
   }
 
-  /* Click area — horizontal span */
+  /* Click area â€” horizontal span */
   .split-line-horizontal::after {
     content: "";
     position: absolute;
@@ -2235,7 +2299,7 @@ body {
   border: 2px solid var(--accent-color);
 }
 
-/* ── Merge page drag: dragging state ───────────────────────────────────────── */
+/* â”€â”€ Merge page drag: dragging state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-item.dragging {
   opacity: 0.35;
   transform: scale(0.92);
@@ -2245,7 +2309,7 @@ body {
   pointer-events: none;
 }
 
-/* ── Swap target: glow + lift ──────────────────────────────────────────────── */
+/* â”€â”€ Swap target: glow + lift â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-item-wrapper.drop-swap .page-item {
   outline: 2.5px solid var(--accent-color);
   outline-offset: 3px;
@@ -2260,7 +2324,7 @@ body {
   z-index: 10;
 }
 
-/* ── Insert-before: glowing left border line + card shifts right ───────────── */
+/* â”€â”€ Insert-before: glowing left border line + card shifts right â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-item-wrapper.drop-insert-before {
   position: relative;
 }
@@ -2282,7 +2346,7 @@ body {
   transition: transform 0.18s ease;
 }
 
-/* ── Insert-after: glowing right border line + next card shifts right ──────── */
+/* â”€â”€ Insert-after: glowing right border line + next card shifts right â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-item-wrapper.drop-insert-after {
   position: relative;
 }
@@ -2300,7 +2364,7 @@ body {
   animation: merge-insert-pulse 0.7s ease-in-out infinite alternate;
 }
 
-/* ── Neighbour push-right animation ────────────────────────────────────────── */
+/* â”€â”€ Neighbour push-right animation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-item-wrapper.push-right .page-item {
   transform: translateX(10px);
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -2310,7 +2374,7 @@ body {
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* ── Pulse keyframes for insert line ───────────────────────────────────────── */
+/* â”€â”€ Pulse keyframes for insert line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes merge-insert-pulse {
   from {
     opacity: 0.75;
@@ -2559,20 +2623,16 @@ body {
    PAGE HOVER ACTION OVERLAY
    ============================================= */
 
-/* Highlight card on hover — violet 10px — only when NOT hovering the split-point,
+/* Highlight card on hover â€” violet 10px â€” only when NOT hovering the split-point,
    and only for real PDF pages (not add-page-item). */
 .page-item-wrapper:not(:has(.add-page-item)):hover:not(:has(.split-point:hover))
   .page-item {
-  outline: 20px solid rgba(138, 43, 226, 0.5);
-  outline-offset: 0px;
-  border-radius: 0px !important;
-  opacity: 0.8;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-  /* transform: translateY(-2px); */
-  /* transition:
-    outline 0.12s ease,
-    box-shadow 0.12s ease,
-    transform 0.12s ease; */
+  outline: 1px solid rgba(91, 178, 255, 0.72);
+  outline-offset: 4px;
+  border-radius: 8px !important;
+  opacity: 1;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28), 0 0 0 4px rgba(91, 178, 255, 0.12);
+  transform: translateY(-4px) scale(1.015);
 }
 
 /* Do NOT trigger outline on add-page-item */
@@ -2587,7 +2647,7 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.38);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2595,18 +2655,19 @@ body {
   gap: 8px;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.18s ease;
+  transition: opacity 0.18s ease, backdrop-filter 0.18s ease;
+  backdrop-filter: blur(1px);
   border-radius: inherit;
   z-index: 10;
 }
 
-/* Trigger overlay on wrapper hover — but NOT when hovering the split-point */
+/* Trigger overlay on wrapper hover â€” but NOT when hovering the split-point */
 .page-item-wrapper:hover:not(:has(.split-point:hover)) .page-hover-overlay {
   opacity: 1;
   pointer-events: all;
 }
 
-/* Checkbox wrap always punches through the overlay — never let the overlay capture its area */
+/* Checkbox wrap always punches through the overlay â€” never let the overlay capture its area */
 .page-item-wrapper:hover .delete-checkbox-wrap,
 .page-item-wrapper .delete-checkbox-wrap {
   pointer-events: auto !important;
@@ -2683,7 +2744,7 @@ body {
 }
 
 /* =============================================
-   ENHANCED PREVIEW MODAL — BOTTOM NAV BAR
+   ENHANCED PREVIEW MODAL â€” BOTTOM NAV BAR
    ============================================= */
 .preview-bottom-bar {
   display: flex;
@@ -2768,11 +2829,11 @@ body {
   background: #2a2a2a;
 }
 
-/* ══════════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    RESPONSIVE FIXES v2
-   ══════════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* 1. Icon-only secondary buttons at ≤992px */
+/* 1. Icon-only secondary buttons at â‰¤992px */
 @media (max-width: 992px) {
   .btn-secondary .btn-text {
     display: none;
@@ -2785,7 +2846,7 @@ body {
   }
 }
 
-/* 2. Left panel at ≤992px — slides over content as a drawer.
+/* 2. Left panel at â‰¤992px â€” slides over content as a drawer.
       top/height are set by JS (toggleLeftPanel measures header).
       z-index must be below sticky header (1002) but above content. */
 @media (max-width: 992px) {
@@ -2811,7 +2872,7 @@ body {
     transform: translateX(-100%) !important;
   }
 
-  /* Main content always full width — panel is a drawer overlay */
+  /* Main content always full width â€” panel is a drawer overlay */
   .main-content {
     margin-left: 0 !important;
     width: 100% !important;
@@ -2823,7 +2884,7 @@ body {
   }
 }
 
-/* 3. Fix tool-tabs slide panel at ≤768px
+/* 3. Fix tool-tabs slide panel at â‰¤768px
       Starts below the top-bar (~56px). Left panel also adjusted. */
 @media (max-width: 768px) {
   .tool-tabs {
@@ -2833,11 +2894,11 @@ body {
   }
 }
 
-/* ══════════════════════════════════════════════════════════════════
-   STAMP TOOL STYLES  —  append to index.css
-   ══════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   STAMP TOOL STYLES  â€”  append to index.css
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Layout height token — adjust if your sticky header is taller/shorter */
+/* â”€â”€ Layout height token â€” adjust if your sticky header is taller/shorter */
 :root {
   --stamp-header-h: 100px; /* top-bar (~50px) + tool-tabs (~48px) */
   --stamp-gap: 16px; /* padding above the stamp layout */
@@ -2857,7 +2918,7 @@ body {
   box-sizing: border-box;
 }
 
-/* ── Two-column layout — fills remaining viewport height ────────── */
+/* â”€â”€ Two-column layout â€” fills remaining viewport height â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-layout {
   display: flex;
   gap: 18px;
@@ -2868,7 +2929,7 @@ body {
   overflow: hidden; /* no outer page scroll */
 }
 
-/* Controls (left) — scrollable internally */
+/* Controls (left) â€” scrollable internally */
 .stamp-controls-panel {
   flex: 0 0 320px;
   max-width: 320px;
@@ -2885,7 +2946,7 @@ body {
   overflow-x: hidden;
 }
 
-/* Preview (right) — toolbar pinned, canvas area scrollable */
+/* Preview (right) â€” toolbar pinned, canvas area scrollable */
 .stamp-preview-panel {
   flex: 1 1 0;
   min-width: 0;
@@ -2900,7 +2961,7 @@ body {
   box-shadow: var(--shadow-sm);
 }
 
-/* ── Section groups ─────────────────────────────────────────────── */
+/* â”€â”€ Section groups â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-section {
   display: flex;
   flex-direction: column;
@@ -2918,7 +2979,7 @@ body {
   margin-bottom: 2px;
 }
 
-/* ── Controls helpers ───────────────────────────────────────────── */
+/* â”€â”€ Controls helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-row {
   display: flex;
   align-items: center;
@@ -2955,7 +3016,7 @@ body {
   user-select: none;
 }
 
-/* ── Upload area ────────────────────────────────────────────────── */
+/* â”€â”€ Upload area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-upload-area {
   border: 2px dashed var(--border-color);
   border-radius: 8px;
@@ -2975,7 +3036,7 @@ body {
   color: var(--accent-color);
 }
 
-/* ── Preset pills ───────────────────────────────────────────────── */
+/* â”€â”€ Preset pills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-presets {
   display: flex;
   flex-wrap: wrap;
@@ -3001,7 +3062,7 @@ body {
   filter: brightness(1.05);
 }
 
-/* ── Position grid ──────────────────────────────────────────────── */
+/* â”€â”€ Position grid â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-pos-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3026,7 +3087,7 @@ body {
   border-color: var(--accent-color);
 }
 
-/* ── Apply button ───────────────────────────────────────────────── */
+/* â”€â”€ Apply button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-apply-btn {
   width: 100%;
   padding: 12px;
@@ -3040,7 +3101,7 @@ body {
   cursor: not-allowed;
 }
 
-/* ── Preview toolbar ────────────────────────────────────────────── */
+/* â”€â”€ Preview toolbar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-doc-tabs-wrap {
   align-items: flex-end;
   min-height: 38px;
@@ -3202,7 +3263,7 @@ body {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 18%, transparent);
 }
 
-/* ── Preview canvas scroll area ─────────────────────────────────── */
+/* â”€â”€ Preview canvas scroll area â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-preview-scroll {
   flex: 1 1 0; /* fills all space below the toolbar */
   overflow: auto;
@@ -3212,6 +3273,29 @@ body {
   justify-content: center;
   padding: var(--canvas-gap-top) var(--canvas-gap-side) var(--canvas-gap-bottom);
   position: relative;
+  transition: background 0.18s ease, box-shadow 0.18s ease;
+}
+
+.stamp-preview-scroll.drag-over {
+  background: color-mix(in srgb, var(--accent-color) 18%, #6b7280);
+  box-shadow: inset 0 0 0 3px var(--accent-color);
+}
+
+.stamp-preview-panel.drag-over::after {
+  content: "Drop PDF to open";
+  position: absolute;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 70;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--accent-color);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
 }
 
 .stamp-preview-scroll.continuous {
@@ -3319,7 +3403,7 @@ body {
   font-weight: 600;
 }
 
-/* ── Responsive ─────────────────────────────────────────────────── */
+/* â”€â”€ Responsive â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @media (max-width: 768px) {
   .stamp-layout {
     flex-direction: column;
@@ -3338,7 +3422,7 @@ body {
   }
 }
 
-/* ── Mode toggle (Simple / Official) ───────────────────────────── */
+/* â”€â”€ Mode toggle (Simple / Official) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-mode-toggle {
   display: flex;
   gap: 6px;
@@ -3367,7 +3451,7 @@ body {
   color: #fff;
 }
 
-/* ── Print button ───────────────────────────────────────────────── */
+/* â”€â”€ Print button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .stamp-print-btn {
   background: var(--bg-secondary);
   border: 1.5px solid var(--accent-color);
@@ -3390,9 +3474,9 @@ body {
   color: var(--text-secondary);
 }
 
-/* ── Toast Notification ─────────────────────────────────────────────────────── */
-/* ── Toast Stack ─────────────────────────────────────────────────────────── */
-/* ── Toast Stack ─────────────────────────────────────────────────────────── */
+/* â”€â”€ Toast Notification â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Toast Stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* â”€â”€ Toast Stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #toast-container {
   position: fixed;
   bottom: 24px;
@@ -3482,7 +3566,7 @@ body {
     transform 0.4s ease;
 }
 
-/* ── Protect Mode Layout ─────────────────────────────────────────── */
+/* â”€â”€ Protect Mode Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .protect-layout {
   display: flex;
   gap: 18px;
@@ -3493,7 +3577,7 @@ body {
   overflow: hidden; /* no outer page scroll */
 }
 
-/* Controls (left) — scrollable internally */
+/* Controls (left) â€” scrollable internally */
 .protect-controls-panel {
   flex: 0 0 320px;
   max-width: 320px;
@@ -3532,11 +3616,11 @@ body {
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   DELETE MODE — Missing styles (fixes for all 4 reported issues)
-   ═══════════════════════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   DELETE MODE â€” Missing styles (fixes for all 4 reported issues)
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-/* ── Fix 1: Hide deleteControls by default, show only when active ── */
+/* â”€â”€ Fix 1: Hide deleteControls by default, show only when active â”€â”€ */
 #deleteControls {
   display: none !important;
   visibility: hidden !important;
@@ -3554,7 +3638,7 @@ body {
   padding: 16px 20px !important;
 }
 
-/* ── Fix 2 & 3: Checkbox wrap — positioned, visible, and clickable ── */
+/* â”€â”€ Fix 2 & 3: Checkbox wrap â€” positioned, visible, and clickable â”€â”€ */
 .delete-checkbox-wrap {
   position: absolute;
   top: 8px;
@@ -3581,12 +3665,12 @@ body {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  pointer-events: none; /* chkWrap handles the click — prevents double-fire */
+  pointer-events: none; /* chkWrap handles the click â€” prevents double-fire */
   accent-color: #ef4444;
   pointer-events: auto;
 }
 
-/* ── Fix 2: Visual state when a page is marked for deletion ── */
+/* â”€â”€ Fix 2: Visual state when a page is marked for deletion â”€â”€ */
 .page-item.delete-selected {
   border: 2px solid #ef4444 !important;
   border-top: 3px solid #ef4444 !important;
@@ -3605,7 +3689,7 @@ body {
   background: rgba(239, 68, 68, 0.15);
 }
 
-/* ── Delete-mode between-page insert button (red accent) ── */
+/* â”€â”€ Delete-mode between-page insert button (red accent) â”€â”€ */
 .delete-add-between .merge-add-btn {
   color: #ef4444;
   border-color: rgba(239, 68, 68, 0.4);
@@ -3617,7 +3701,7 @@ body {
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
 }
 
-/* ── Delete mode: pointer cursor on card body (thumbnail + footer), default on overlay buttons ── */
+/* â”€â”€ Delete mode: pointer cursor on card body (thumbnail + footer), default on overlay buttons â”€â”€ */
 #pageGrid .page-item {
   cursor: pointer;
 }
@@ -3637,7 +3721,7 @@ body {
 #pageGrid .page-item .page-hover-overlay .page-action-btn * {
   cursor: pointer;
 }
-/* Checkbox wrap is above the overlay — always pointer, always interactive */
+/* Checkbox wrap is above the overlay â€” always pointer, always interactive */
 #pageGrid .page-item .delete-checkbox-wrap {
   cursor: pointer;
   pointer-events: auto !important;
@@ -3649,12 +3733,12 @@ body {
   cursor: pointer;
 }
 
-/* ── Fix 4: Pointer cursor on page footer (bottom of thumbnail) ── */
+/* â”€â”€ Fix 4: Pointer cursor on page footer (bottom of thumbnail) â”€â”€ */
 .page-footer {
   cursor: pointer;
 }
 
-/* ── Compress mode — per-card selection checkbox ───────────────────────────── */
+/* â”€â”€ Compress mode â€” per-card selection checkbox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .compress-select-chk-wrap {
   display: none; /* hidden by default; shown via JS after compression */
   align-items: center;
@@ -3680,13 +3764,13 @@ body {
 }
 
 /* ============================================================
-   SKELETON LOADING — shimmer upgrade
+   SKELETON LOADING â€” shimmer upgrade
    Add this block to index.css, replacing the existing
    .skeleton-item / .skeleton-thumbnail / .skeleton-footer
    rules (lines ~802-880).
    ============================================================ */
 
-/* ── Shimmer keyframe ──────────────────────────────────────── */
+/* â”€â”€ Shimmer keyframe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 @keyframes skeletonShimmer {
   0% {
     background-position: -200% center;
@@ -3696,7 +3780,7 @@ body {
   }
 }
 
-/* ── Shared shimmer mixin (applied via class) ─────────────── */
+/* â”€â”€ Shared shimmer mixin (applied via class) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeleton-shine {
   background: linear-gradient(
     90deg,
@@ -3708,7 +3792,7 @@ body {
   animation: skeletonShimmer 1.6s ease-in-out infinite;
 }
 
-/* ── Outer card ───────────────────────────────────────────── */
+/* â”€â”€ Outer card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeleton-item {
   width: 100%;
   background: var(--bg-secondary);
@@ -3733,7 +3817,7 @@ body {
   }
 }
 
-/* ── Thumbnail area (replaces old solid bg) ───────────────── */
+/* â”€â”€ Thumbnail area (replaces old solid bg) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeleton-thumbnail {
   width: 100%;
   aspect-ratio: 0.7; /* matches .page-thumbnail */
@@ -3757,7 +3841,7 @@ body {
   animation: skeletonShimmer 1.6s ease-in-out infinite;
 }
 
-/* ── Fake "page content" lines inside the thumbnail ──────── */
+/* â”€â”€ Fake "page content" lines inside the thumbnail â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeleton-thumbnail::before,
 .skeleton-thumbnail::after {
   content: "";
@@ -3779,7 +3863,7 @@ body {
   margin-bottom: auto;
 }
 
-/* ── Progress loader sits on top of the shimmer ──────────── */
+/* â”€â”€ Progress loader sits on top of the shimmer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-progress-loader {
   position: relative;
   z-index: 2;
@@ -3797,7 +3881,7 @@ body {
   background: rgba(255, 255, 255, 0.06);
 }
 
-/* ── Progress bar track ───────────────────────────────────── */
+/* â”€â”€ Progress bar track â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .progress-bar-container {
   width: 100%;
   height: 36px;
@@ -3808,7 +3892,7 @@ body {
   margin-bottom: 10px;
 }
 
-/* ── Progress bar fill — animated stripe ─────────────────── */
+/* â”€â”€ Progress bar fill â€” animated stripe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .progress-bar-container .progress-bar-fill {
   height: 100%;
   border-radius: 8px;
@@ -3828,7 +3912,7 @@ body {
   animation: skeletonShimmer 1.2s linear infinite;
 }
 
-/* ── Percentage label ─────────────────────────────────────── */
+/* â”€â”€ Percentage label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .progress-bar-container .progress-percentage {
   position: absolute;
   top: 50%;
@@ -3842,7 +3926,7 @@ body {
   mix-blend-mode: difference;
 }
 
-/* ── Status label ─────────────────────────────────────────── */
+/* â”€â”€ Status label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .progress-label {
   font-size: 11px;
   color: var(--text-secondary);
@@ -3851,7 +3935,7 @@ body {
   letter-spacing: 0.02em;
 }
 
-/* ── Footer bar (page number placeholder) ────────────────── */
+/* â”€â”€ Footer bar (page number placeholder) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeleton-footer {
   height: 32px;
   background: linear-gradient(
@@ -3889,7 +3973,7 @@ body {
   opacity: 0.6;
 }
 
-/* ── Left-panel file-card skeleton (optional) ─────────────── */
+/* â”€â”€ Left-panel file-card skeleton (optional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 /* Used when the file list itself is loading */
 .skeleton-file-card {
   display: flex;
@@ -3945,3 +4029,4 @@ body {
   width: 45%;
   animation-delay: 0.15s;
 }
+
