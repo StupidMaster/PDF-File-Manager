@@ -16,10 +16,12 @@
     let stampPreviewPage  = 1;
     let stampPreviewScale = 1.0;
     let stampPdfPaperSize = 'original';
+    let stampUseCurrentPaperSizeForNewPdfs = false;
     let stampViewMode = 'single';
     let stampDocuments = [];
     let activeStampDocIndex = -1;
     let stampRenderToken = 0;
+    let stampKeyboardShortcutsReady = false;
 
     // 'simple' | 'formatted'
     let stampMode = 'simple';
@@ -35,7 +37,7 @@
     // Formatted (official box) stamp settings
     let fmtSettings = {
         title:       'PHOTOCOPY OF THE ORIGINAL\nCERTIFIED BY:\n',
-        name:        'JOAN R. ESPINOZA, MBM, LPT, CHRA',
+        name:        'JOAN R. ESPINOZA, DBM, LPT, CHRA',
         subName:     'Registrar Director',
         institution: 'CRONASIA FOUNDATION COLLEGE, INC.',
         showDate: true, showTime: true,
@@ -93,6 +95,8 @@
     // ─── Stamp-only mode (no PDF) ─────────────────────────────────────────────
     let stampOnlyMode = false;   // true when "Print Stamp Only" checkbox is checked
     let bwMode        = false;   // true when "Grayscale page" is checked
+    let grayscaleOutputMode = 'normal';
+    let stampOutputRenderProfile = 'fast';
     let stampOnlyLastSize = 'A4'; // remembers last paper size used this session
 
     // ─── Presets ──────────────────────────────────────────────────────────────
@@ -146,6 +150,13 @@
     const LS_KEY_MODE   = 'stampMode_v1';
     const LS_KEY_SEAL   = 'sealSettings_v1';
     const LS_KEY_RECV   = 'recvSettings_v1';
+    const LS_KEY_META   = 'stampMetaSettings_v1';
+    const PAPER_SIZE_KEYS = [
+        'A4', 'Photo4x6', 'Photo5x7', 'A6', 'A5', 'B5', 'B6',
+        'Photo3_5x5', 'Photo5x8', 'Photo8x10', 'Wide16x9',
+        'Postcard100x148', 'Envelope10', 'EnvelopeDL', 'EnvelopeC6',
+        'Letter', 'Long', 'IndianLegal', 'Legal', 'SixteenK', 'Short'
+    ];
 
     function saveStampSettings() {
         try {
@@ -154,6 +165,15 @@
             localStorage.setItem(LS_KEY_SEAL,   JSON.stringify(sealSettings));
             localStorage.setItem(LS_KEY_RECV,   JSON.stringify(recvSettings));
             localStorage.setItem(LS_KEY_MODE,   stampMode);
+            localStorage.setItem(LS_KEY_META, JSON.stringify({
+                stampPdfPaperSize,
+                stampUseCurrentPaperSizeForNewPdfs,
+                stampViewMode,
+                stampPreviewScale,
+                bwMode,
+                grayscaleOutputMode,
+                stampOutputRenderProfile
+            }));
         } catch(e) {}
     }
 
@@ -164,11 +184,23 @@
             const e = localStorage.getItem(LS_KEY_SEAL);
             const rv = localStorage.getItem(LS_KEY_RECV);
             const m = localStorage.getItem(LS_KEY_MODE);
+            const metaRaw = localStorage.getItem(LS_KEY_META);
             if (s)  stampSettings = Object.assign(stampSettings, JSON.parse(s));
             if (f)  fmtSettings   = Object.assign(fmtSettings,   JSON.parse(f));
             if (e)  sealSettings  = Object.assign(sealSettings,  JSON.parse(e));
             if (rv) recvSettings  = Object.assign(recvSettings,  JSON.parse(rv));
             if (m)  stampMode     = m;
+            if (metaRaw) {
+                const meta = JSON.parse(metaRaw);
+                const savedPaperSizes = ['original', ...PAPER_SIZE_KEYS];
+                if (savedPaperSizes.includes(meta.stampPdfPaperSize)) stampPdfPaperSize = meta.stampPdfPaperSize;
+                stampUseCurrentPaperSizeForNewPdfs = !!meta.stampUseCurrentPaperSizeForNewPdfs;
+                if (['single', 'continuous', 'two-page', 'presentation'].includes(meta.stampViewMode)) stampViewMode = meta.stampViewMode;
+                if (Number.isFinite(meta.stampPreviewScale)) stampPreviewScale = Math.min(Math.max(0.4, meta.stampPreviewScale), 3.0);
+                bwMode = !!meta.bwMode;
+                if (['normal', 'dark-xerox', 'high-contrast'].includes(meta.grayscaleOutputMode)) grayscaleOutputMode = meta.grayscaleOutputMode;
+                if (['fast', 'balanced', 'high'].includes(meta.stampOutputRenderProfile)) stampOutputRenderProfile = meta.stampOutputRenderProfile;
+            }
         } catch(e) {}
     }
 
@@ -180,6 +212,7 @@
         localStorage.removeItem(LS_KEY_SEAL);
         localStorage.removeItem(LS_KEY_RECV);
         localStorage.removeItem(LS_KEY_MODE);
+        localStorage.removeItem(LS_KEY_META);
     };
 
     // ─── Init ─────────────────────────────────────────────────────────────────
@@ -197,9 +230,12 @@
         stampPdfDoc = null; stampPdfBytes = null; stampFileName = '';
         stampTotalPages = 0; stampPreviewPage = 1; stampPreviewScale = 1.0; stampMode = 'simple';
         stampPdfPaperSize = 'original';
+        stampUseCurrentPaperSizeForNewPdfs = false;
         stampDocuments = [];
         activeStampDocIndex = -1;
         bwMode = false;
+        grayscaleOutputMode = 'normal';
+        stampOutputRenderProfile = 'fast';
         window.stampHasPdf = false;
 
         // Start with hardcoded defaults ...
@@ -211,7 +247,7 @@
         };
         fmtSettings = {
             title: 'PHOTOCOPY OF THE ORIGINAL\nCERTIFIED BY:\n',
-            name: 'JOAN R. ESPINOZA, MBM, LPT, CHRA',
+            name: 'JOAN R. ESPINOZA, DBM, LPT, CHRA',
             subName: 'Registrar Director',
             institution: 'CRONASIA FOUNDATION COLLEGE, INC.',
             showDate: true, showTime: true,
@@ -320,6 +356,11 @@
 
               <div id="stampPdfPaperSection" style="display:none;margin-top:12px">
                 <div class="stamp-section-title" style="margin-bottom:6px"><i class="fa fa-file-o"></i> Output Paper Size</div>
+                <label class="stamp-check" style="margin-bottom:7px;font-size:12px;gap:6px;line-height:1.35;align-items:flex-start"
+                       title="When checked, PDFs opened after this will start with the selected output paper size">
+                  <input type="checkbox" id="stampUsePaperForNewPdfsChk" onchange="setStampUsePaperForNewPdfs(this.checked)">
+                  <span>Use this paper size for newly opened PDFs</span>
+                </label>
                 <select id="stampPdfPaperSize" class="stamp-input" onchange="setStampPdfPaperSize(this.value)" style="width:100%">
                   <option value="original">Original PDF size</option>
                   <option value="Letter">Letter (8.5 x 11in)</option>
@@ -742,6 +783,26 @@
                      title="Convert the PDF pages to grayscale — stamp color is preserved">
                 <input type="checkbox" id="bwModeChk" onchange="toggleBwMode(this.checked); showToast(this.checked ? 'Grayscale on' : 'Grayscale off')"> <i class="fa fa-adjust"></i> Grayscale PDF
               </label>
+              <div id="grayscaleOutputControls" style="display:none;margin-top:8px">
+                <label class="stamp-label" for="grayscaleOutputMode">Grayscale Output</label>
+                <select id="grayscaleOutputMode" class="stamp-input" onchange="setGrayscaleOutputMode(this.value)" style="width:100%;margin-top:4px">
+                  <option value="normal">Normal grayscale</option>
+                  <option value="dark-xerox">Dark Xerox</option>
+                  <option value="high-contrast">High contrast copy</option>
+                </select>
+              </div>
+            </div>
+
+            <div id="stampOutputQualitySection" class="stamp-section" style="padding-top:4px;display:none">
+              <div class="stamp-section-title" style="margin-bottom:6px"><i class="fa fa-tachometer"></i> Output Render Quality</div>
+              <select id="stampOutputRenderProfile" class="stamp-input" onchange="setStampOutputRenderProfile(this.value)" style="width:100%">
+                <option value="fast">Fast print/download</option>
+                <option value="balanced">Balanced</option>
+                <option value="high">High quality</option>
+              </select>
+              <div style="font-size:11px;color:var(--text-secondary);line-height:1.45;margin-top:5px">
+                Fast is quicker for many-page PDFs. High quality takes longer.
+              </div>
             </div>
 
             <!-- Download / Print / Print Stamp Only -->
@@ -821,6 +882,8 @@
 
         buildPresets();
         setupStampDropZone();
+        setupStampCanvasDropZone();
+        setupStampKeyboardShortcuts();
         setupOverlayDrag();   // attach drag listeners once after DOM is built
 
         // Restore the saved mode tab (simple / formatted / seal / received)
@@ -864,17 +927,7 @@
 
         setTimeout(function () {
             if (stampOnlyMode) {
-                // Apply default vertical position based on current orientation when switching stamp type
-                const orient = document.getElementById('stampOnlyOrient')?.value || 'portrait';
-                const defaultPosY = orient === 'landscape' ? 85 : 90;
-                const s = getActiveSettings();
-                s.positionY = defaultPosY;
-                const sliderMap = { simple: 'stampPosY', formatted: 'fmtPosY', seal: 'sealPosY', received: 'recvPosY' };
-                const valMap    = { simple: 'stampPosYVal', formatted: 'fmtPosYVal', seal: 'sealPosYVal', received: 'recvPosYVal' };
-                const sl = document.getElementById(sliderMap[mode]);
-                const vl = document.getElementById(valMap[mode]);
-                if (sl) sl.value = defaultPosY;
-                if (vl) vl.textContent = defaultPosY + '%';
+                loadSettingsIntoUI(null);
                 renderStampOnlyPreview();
             } else {
                 refreshOverlay();
@@ -939,8 +992,61 @@
         });
     }
 
+    function getPdfFilesFromDragEvent(e) {
+        return Array.from(e.dataTransfer?.files || []).filter(file =>
+            file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '')
+        );
+    }
+
+    function isPdfFileDrag(e) {
+        const types = Array.from(e.dataTransfer?.types || []);
+        return types.includes('Files');
+    }
+
+    function setupStampCanvasDropZone() {
+        const scroll = document.getElementById('stampPreviewScroll');
+        const panel = document.querySelector('.stamp-preview-panel');
+        if (!scroll) return;
+        let dragDepth = 0;
+
+        const setDragOver = (active) => {
+            scroll.classList.toggle('drag-over', active);
+            if (panel) panel.classList.toggle('drag-over', active);
+        };
+
+        scroll.addEventListener('dragenter', e => {
+            if (!isPdfFileDrag(e)) return;
+            e.preventDefault();
+            dragDepth++;
+            setDragOver(true);
+        });
+
+        scroll.addEventListener('dragover', e => {
+            if (!isPdfFileDrag(e)) return;
+            e.preventDefault();
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            setDragOver(true);
+        });
+
+        scroll.addEventListener('dragleave', e => {
+            if (!isPdfFileDrag(e)) return;
+            dragDepth = Math.max(0, dragDepth - 1);
+            if (dragDepth === 0) setDragOver(false);
+        });
+
+        scroll.addEventListener('drop', e => {
+            if (!isPdfFileDrag(e)) return;
+            e.preventDefault();
+            dragDepth = 0;
+            setDragOver(false);
+            const files = getPdfFilesFromDragEvent(e);
+            if (files.length) loadStampFiles(files);
+            else showToast('Drop PDF files only', 'warning');
+        });
+    }
+
     window.handleStampFile = function (ev) {
-        const files = Array.from(ev.target.files || []).filter(f => f.type === 'application/pdf');
+        const files = Array.from(ev.target.files || []).filter(f => f.type === 'application/pdf' || /\.pdf$/i.test(f.name || ''));
         ev.target.value = '';
         if (files.length) loadStampFiles(files);
     };
@@ -1009,7 +1115,7 @@
                         pdfDoc,
                         totalPages: pdfDoc.numPages,
                         previewPage: 1,
-                        paperSize: 'original',
+                        paperSize: stampUseCurrentPaperSizeForNewPdfs ? stampPdfPaperSize : 'original',
                         stampState: cloneStampState(),
                         pageOverrides: {},
                         pageOverrideActive: false
@@ -1056,6 +1162,8 @@
             if (paperSection) paperSection.style.display = '';
             const paperSelect = document.getElementById('stampPdfPaperSize');
             if (paperSelect) paperSelect.value = stampPdfPaperSize;
+            const paperDefaultChk = document.getElementById('stampUsePaperForNewPdfsChk');
+            if (paperDefaultChk) paperDefaultChk.checked = stampUseCurrentPaperSizeForNewPdfs;
 
             hideProcessing();
             await activateStampDocument(stampDocuments.length - 1);
@@ -1065,6 +1173,8 @@
             showNotification('Could not read PDF: ' + err.message, 'error');
         }
     }
+
+    window.loadSomsStampFiles = loadStampFiles;
 
     function saveActiveStampDocumentState() {
         if (activeStampDocIndex < 0 || !stampDocuments[activeStampDocIndex]) return;
@@ -1134,18 +1244,31 @@
             if (emptyDiv) emptyDiv.style.display = '';
             const ind = document.getElementById('stampPageIndicator');
             if (ind) ind.textContent = 'Page - / -';
-            const base = document.getElementById('stampBaseCanvas');
-            const over = document.getElementById('stampOverlayCanvas');
-            if (base) { base.width = 0; base.height = 0; }
-            if (over)  { over.width = 0; over.height = 0; }
-            const wrap = document.getElementById('stampCanvasWrap');
-            if (wrap) wrap.style.display = 'none';
+            clearStampPreviewCanvas();
+            updateStampPageControls();
             return;
         }
 
         activeStampDocIndex = -1;
         activateStampDocument(Math.min(index, stampDocuments.length - 1));
     };
+
+    function setupStampKeyboardShortcuts() {
+        if (stampKeyboardShortcutsReady) return;
+        stampKeyboardShortcutsReady = true;
+
+        document.addEventListener('keydown', e => {
+            if (!e.ctrlKey || !e.shiftKey || e.altKey || e.metaKey) return;
+            if ((e.key || '').toLowerCase() !== 'q') return;
+            if (window.activeTool && window.activeTool !== 'stamp') return;
+            if (stampOnlyMode || activeStampDocIndex < 0 || !stampDocuments.length) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+            window.closeStampDocument(activeStampDocIndex);
+            showToast('Closed current PDF tab', 'info');
+        }, true);
+    }
 
     function updateStampUploadLabel() {
         const lbl = document.getElementById('stampUploadLabel');
@@ -1234,7 +1357,18 @@
         if (activeStampDocIndex >= 0 && stampDocuments[activeStampDocIndex]) {
             stampDocuments[activeStampDocIndex].paperSize = stampPdfPaperSize;
         }
+        saveStampSettings();
         if (stampPdfDoc) renderStampPreviewPage();
+    };
+
+    window.setStampUsePaperForNewPdfs = function (checked) {
+        stampUseCurrentPaperSizeForNewPdfs = !!checked;
+        const chk = document.getElementById('stampUsePaperForNewPdfsChk');
+        if (chk) chk.checked = stampUseCurrentPaperSizeForNewPdfs;
+        saveStampSettings();
+        showToast(stampUseCurrentPaperSizeForNewPdfs
+            ? 'New PDFs will use the selected output paper size'
+            : 'New PDFs will use their original paper size', 'info');
     };
 
     function formatPageSizeInches(ptW, ptH) {
@@ -1279,6 +1413,7 @@
         stampViewMode = nextMode;
         const sel = document.getElementById('stampViewModeSelect');
         if (sel) sel.value = stampViewMode;
+        saveStampSettings();
         if (stampViewMode === 'single' || stampViewMode === 'presentation') {
             stampRenderToken++;
             restoreSingleStampCanvas(true);
@@ -1573,8 +1708,19 @@
     }
 
     function updateStampPageControls() {
+        updateGrayscaleOutputControls();
+        updateStampOutputQualityControls();
         const viewModeSelect = document.getElementById('stampViewModeSelect');
-        if (viewModeSelect) viewModeSelect.style.display = stampOnlyMode ? 'none' : '';
+        if (viewModeSelect) {
+            viewModeSelect.value = stampViewMode;
+            viewModeSelect.style.display = stampOnlyMode ? 'none' : '';
+        }
+
+        const bwChk = document.getElementById('bwModeChk');
+        if (bwChk) bwChk.checked = bwMode;
+
+        const paperDefaultChk = document.getElementById('stampUsePaperForNewPdfsChk');
+        if (paperDefaultChk) paperDefaultChk.checked = stampUseCurrentPaperSizeForNewPdfs;
 
         const overrideLabel = document.getElementById('pageOverrideLabel');
         if (overrideLabel) overrideLabel.style.display = stampViewMode === 'continuous' ? 'none' : (stampTotalPages > 1 ? 'flex' : 'none');
@@ -1637,6 +1783,28 @@
             wrap.innerHTML = '<canvas id="stampBaseCanvas"></canvas><canvas id="stampOverlayCanvas"></canvas>';
             setupOverlayDrag();
         }
+    }
+
+    function clearStampPreviewCanvas() {
+        const scroll = document.getElementById('stampPreviewScroll');
+        if (scroll) {
+            scroll.onscroll = null;
+            scroll.scrollTop = 0;
+            scroll.scrollLeft = 0;
+            scroll.classList.remove('continuous', 'drag-over');
+            scroll.style.flexDirection = '';
+        }
+
+        const panel = document.querySelector('.stamp-preview-panel');
+        if (panel) panel.classList.remove('drag-over');
+
+        const wrap = document.getElementById('stampCanvasWrap');
+        if (!wrap) return;
+        wrap.classList.remove('continuous', 'two-page');
+        wrap.style.display = 'none';
+        wrap.style.removeProperty('flex-direction');
+        wrap.innerHTML = '<canvas id="stampBaseCanvas"></canvas><canvas id="stampOverlayCanvas"></canvas>';
+        setupOverlayDrag();
     }
 
     function drawStampOverlay(canvas, w, h, pageNum = stampPreviewPage) {
@@ -1881,27 +2049,32 @@
         'Short':  { w: 612,     h: 936,     label: 'Short (8.5×13in / Folio)' },
     };
 
+    Object.assign(PAGE_SIZES, {
+        'A4':             { w: 595.28, h: 841.89, label: 'A4 210 x 297 mm' },
+        'Photo4x6':       { w: 288,    h: 432,    label: '10 x 15 cm (4 x 6 in)' },
+        'Photo5x7':       { w: 360,    h: 504,    label: '13 x 18 cm (5 x 7 in)' },
+        'A6':             { w: 297.64, h: 419.53, label: 'A6 105 x 148 mm' },
+        'A5':             { w: 419.53, h: 595.28, label: 'A5 148 x 210 mm' },
+        'B5':             { w: 515.91, h: 728.5,  label: 'B5 182 x 257 mm' },
+        'B6':             { w: 362.83, h: 515.91, label: 'B6 128 x 182 mm' },
+        'Photo3_5x5':     { w: 252,    h: 360,    label: '9 x 13 cm (3.5 x 5 in)' },
+        'Photo5x8':       { w: 360,    h: 576,    label: '5 x 8 in (127 x 203 mm)' },
+        'Photo8x10':      { w: 576,    h: 720,    label: '20 x 25 cm (8 x 10 in)' },
+        'Wide16x9':       { w: 288,    h: 511.92, label: '16:9 wide (4 x 7.11 in)' },
+        'Postcard100x148':{ w: 283.46, h: 419.53, label: '100 x 148 mm' },
+        'Envelope10':     { w: 297.64, h: 683.15, label: 'Envelope #10 105 x 241 mm' },
+        'EnvelopeDL':     { w: 311.81, h: 623.62, label: 'Envelope DL 110 x 220 mm' },
+        'EnvelopeC6':     { w: 323.15, h: 459.21, label: 'Envelope C6 114 x 162 mm' },
+        'Letter':         { w: 612,    h: 792,    label: 'Letter 8.5 x 11 in (216 x 279 mm)' },
+        'Long':           { w: 612,    h: 936,    label: '8.5 x 13 in' },
+        'IndianLegal':    { w: 609.45, h: 977.95, label: 'Indian-Legal 215 x 345 mm' },
+        'Legal':          { w: 612,    h: 1008,   label: 'Legal 8.5 x 14 in (216 x 356 mm)' },
+        'SixteenK':       { w: 552.76, h: 765.35, label: '16K 195 x 270 mm' },
+        'Short':          { w: 612,    h: 936,    label: 'Short / Folio (8.5 x 13 in)' },
+    });
+
     // Loading effect wrapper for orientation change
     window.stampOnlyOrientChange = function () {
-        const orient = document.getElementById('stampOnlyOrient')?.value || 'portrait';
-
-        // Set default vertical position based on orientation
-        const defaultPosY = orient === 'landscape' ? 85 : 90;
-
-        // Apply to the active stamp settings object and sync the UI slider
-        const s = getActiveSettings();
-        s.positionY = defaultPosY;
-
-        // Sync whichever posY slider is currently visible
-        const sliderIds = { simple: 'stampPosY', formatted: 'fmtPosY', seal: 'sealPosY', received: 'recvPosY' };
-        const valIds    = { simple: 'stampPosYVal', formatted: 'fmtPosYVal', seal: 'sealPosYVal', received: 'recvPosYVal' };
-        const sliderId  = sliderIds[stampMode];
-        const valId     = valIds[stampMode];
-        const slider = document.getElementById(sliderId);
-        const valEl  = document.getElementById(valId);
-        if (slider) slider.value = defaultPosY;
-        if (valEl)  valEl.textContent = defaultPosY + '%';
-
         const overlay = showStampPreviewLoading('Updating orientation…');
 
         // Render after overlay is visible, then fade out
@@ -1964,8 +2137,45 @@
     // ─── Grayscale page mode ──────────────────────────────────────────────────
     window.toggleBwMode = function (checked) {
         bwMode = checked;
+        updateGrayscaleOutputControls();
+        saveStampSettings();
         renderStampPreviewPage();
     };
+
+    window.setGrayscaleOutputMode = function (mode) {
+        grayscaleOutputMode = ['normal', 'dark-xerox', 'high-contrast'].includes(mode) ? mode : 'normal';
+        const select = document.getElementById('grayscaleOutputMode');
+        if (select) select.value = grayscaleOutputMode;
+        saveStampSettings();
+        if (bwMode) renderStampPreviewPage();
+    };
+
+    function updateGrayscaleOutputControls() {
+        const controls = document.getElementById('grayscaleOutputControls');
+        const select = document.getElementById('grayscaleOutputMode');
+        if (controls) controls.style.display = bwMode && !stampOnlyMode ? '' : 'none';
+        if (select) select.value = grayscaleOutputMode;
+    }
+
+    window.setStampOutputRenderProfile = function (profile) {
+        stampOutputRenderProfile = ['fast', 'balanced', 'high'].includes(profile) ? profile : 'fast';
+        updateStampOutputQualityControls();
+        saveStampSettings();
+    };
+
+    function updateStampOutputQualityControls() {
+        const section = document.getElementById('stampOutputQualitySection');
+        const select = document.getElementById('stampOutputRenderProfile');
+        const visible = !!stampPdfDoc && !stampOnlyMode;
+        if (section) section.style.display = visible ? '' : 'none';
+        if (select) select.value = stampOutputRenderProfile;
+    }
+
+    function getStampOutputRenderSettings() {
+        if (stampOutputRenderProfile === 'high') return { scale: 2.0, jpegQuality: 0.92 };
+        if (stampOutputRenderProfile === 'balanced') return { scale: 1.5, jpegQuality: 0.88 };
+        return { scale: 1.15, jpegQuality: 0.82 };
+    }
 
     // Converts all pixels of a canvas to grayscale in-place.
     // Stamp is drawn AFTER this so it stays in full color.
@@ -1974,7 +2184,18 @@
         const imgd = ctx.getImageData(0, 0, canvas.width, canvas.height);
         const d    = imgd.data;
         for (let i = 0; i < d.length; i += 4) {
-            const g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+            const g0 = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+            let g = g0;
+            if (grayscaleOutputMode === 'dark-xerox') {
+                g = (g0 - 128) * 1.55 + 100;
+                if (g0 > 238) g = 255;
+                else if (g0 < 222) g *= 0.72;
+            } else if (grayscaleOutputMode === 'high-contrast') {
+                g = (g0 - 128) * 1.9 + 128;
+                if (g0 > 230) g = 255;
+                else if (g0 < 180) g *= 0.55;
+            }
+            g = Math.max(0, Math.min(255, g));
             d[i] = d[i+1] = d[i+2] = g;
         }
         ctx.putImageData(imgd, 0, 0);
@@ -2197,6 +2418,9 @@
                   <select id="psoPageSize" class="stamp-input" style="width:100%">
                     ${sizeOptions}
                   </select>
+                  <div style="font-size:11px;color:var(--text-secondary);line-height:1.45">
+                    The printed PDF is created at this exact size. If Chrome still shows a different printer paper size, select the matching paper in the print dialog.
+                  </div>
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:8px">
@@ -2225,9 +2449,9 @@
                 </div>
 
                 <div style="display:flex;flex-direction:column;gap:8px">
-                  <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Copies (stamps per page)</label>
-                  <input type="number" id="psoCopies" class="stamp-input" value="1" min="1" max="20" style="width:80px">
-                  <div style="font-size:11px;color:var(--text-secondary)">Multiple copies tile the stamp evenly across the page.</div>
+                  <label style="font-size:12px;font-weight:600;color:var(--text-secondary)">Copies to print</label>
+                  <input type="number" id="psoCopies" class="stamp-input" value="1" min="1" max="99" style="width:80px">
+                  <div style="font-size:11px;color:var(--text-secondary)">Prints this same stamp page multiple times.</div>
                 </div>
               </div>
 
@@ -2553,10 +2777,991 @@
         }
     }
 
-    window.executePrintStampOnly = function () {
+    function getPrintHelperPaperSize(sizeKey) {
+        const paperSizes = {
+            A4: 'A4 210 x 297 mm',
+            Photo4x6: '10 x 15 cm (4 x 6 in)',
+            Photo5x7: '13 x 18 cm (5 x 7 in)',
+            A6: 'A6 105 x 148 mm',
+            A5: 'A5 148 x 210 mm',
+            B5: 'B5 182 x 257 mm',
+            B6: 'B6 128 x 182 mm',
+            Photo3_5x5: '9 x 13 cm (3.5 x 5 in)',
+            Photo5x8: '5 x 8 in (127 x 203 mm)',
+            Photo8x10: '20 x 25 cm (8 x 10 in)',
+            Wide16x9: '16:9 wide (4 x 7.11 in)',
+            Postcard100x148: '100 x 148 mm',
+            Envelope10: 'Envelope #10 105 x 241 mm',
+            EnvelopeDL: 'Envelope DL 110 x 220 mm',
+            EnvelopeC6: 'Envelope C6 114 x 162 mm',
+            Letter: 'Letter 8.5 x 11 in (216 x 279 mm)',
+            Long: '8.5 x 13 in',
+            IndianLegal: 'Indian-Legal 215 x 345 mm',
+            Legal: 'Legal 8.5 x 14 in (216 x 356 mm)',
+            SixteenK: '16K 195 x 270 mm',
+            Short: '8.5 x 13 in'
+        };
+        return paperSizes[sizeKey] || sizeKey || 'A4';
+    }
+
+    async function printPdfWithLocalHelper(pdfBase64, options) {
+        const response = await fetch('http://127.0.0.1:9100/print', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pdfBase64, options })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || result.ok === false) {
+            const message = result.error || `Print helper returned HTTP ${response.status}`;
+            const error = new Error(message);
+            error.status = response.status;
+            throw error;
+        }
+        return result;
+    }
+
+    function printPdfInBrowser(pdfBlob) {
+        const blobUrl = URL.createObjectURL(pdfBlob);
+
+        const old = document.getElementById('stampPrintFrame');
+        if (old) old.remove();
+
+        const iframe = document.createElement('iframe');
+        iframe.id = 'stampPrintFrame';
+        iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;opacity:0;';
+        iframe.src = blobUrl;
+        document.body.appendChild(iframe);
+
+        iframe.onload = function () {
+            setTimeout(function () {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+                setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 60000);
+            }, 500);
+        };
+    }
+
+    const STAMPED_HELPER_PAGE_LIMIT = 150;
+
+    function downloadAndBrowserPrintStampedPdf(job, reason) {
+        const filename = typeof getStampedFilename === 'function' ? getStampedFilename() : 'stamped.pdf';
+        const rawBase64 = String(job.b64 || '').replace(/^data:application\/pdf;base64,/, '');
+        if (rawBase64) downloadFile(rawBase64, filename);
+        printPdfInBrowser(job.blob);
+        showNotification(`${reason} Downloaded the stamped PDF and opened browser print instead.`, 'warning');
+    }
+
+    async function fetchLocalPrintPrinters() {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        try {
+            const response = await fetch('http://127.0.0.1:9100/printers', { signal: controller.signal });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.ok === false) {
+                throw new Error(result.error || `Print helper returned HTTP ${response.status}`);
+            }
+            return result;
+        } finally {
+            clearTimeout(timeoutId);
+        }
+    }
+
+    function getPrintHelperErrorMessage(error) {
+        if (error.status === 413 || /too large|maximum request size/i.test(error.message || '')) {
+            return `${error.message} Try printing a smaller page range, or restart the helper after raising PDF_PRINT_HELPER_MAX_BODY_MB.`;
+        }
+        return error.name === 'AbortError' || error.message === 'Failed to fetch'
+            ? 'Local print helper is not running. Start it with npm run print-helper.'
+            : (error.message || 'Local print helper could not print');
+    }
+
+    function getStampedPrintPaperOptions() {
+        return Object.entries(PAGE_SIZES)
+            .map(([key, size]) => `<option value="${key}">${size.label}</option>`)
+            .join('');
+    }
+
+    function inferStampedPrintPaperKey() {
+        if (stampPdfPaperSize && stampPdfPaperSize !== 'original' && PAGE_SIZES[stampPdfPaperSize]) {
+            return stampPdfPaperSize;
+        }
+
+        const doc = stampDocuments[activeStampDocIndex];
+        const pageInfo = doc?.pageSizes?.[stampPreviewPage] || doc?.pageSizes?.[1];
+        if (!pageInfo) return 'Letter';
+
+        const width = pageInfo.width || pageInfo.w || 0;
+        const height = pageInfo.height || pageInfo.h || 0;
+        const shortSide = Math.min(width, height);
+        const longSide = Math.max(width, height);
+        let bestKey = 'Letter';
+        let bestDelta = Number.POSITIVE_INFINITY;
+
+        Object.entries(PAGE_SIZES).forEach(([key, size]) => {
+            const delta = Math.abs(Math.min(size.w, size.h) - shortSide) + Math.abs(Math.max(size.w, size.h) - longSide);
+            if (delta < bestDelta) {
+                bestDelta = delta;
+                bestKey = key;
+            }
+        });
+
+        return bestDelta <= 36 ? bestKey : 'Letter';
+    }
+
+    function closeStampedPdfPrintModal() {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        if (!modal) return;
+        modal.remove();
+    }
+
+    function getStampedPdfModalPageRange(modal) {
+        const mode = modal.querySelector('input[name="stampedPrintRange"]:checked')?.value || 'all';
+        if (mode === 'all') return '';
+        if (mode === 'current') return String(stampPreviewPage);
+        return (modal.querySelector('#stampedPrintPages')?.value || '').trim();
+    }
+
+    function getStampedPdfModalPreviewPages(modal) {
+        const total = stampTotalPages || 1;
+        const range = getStampedPdfModalPageRange(modal);
+        let pages = range ? parsePageRange(range, total) : Array.from({ length: total }, (_, i) => i + 1);
+        const subset = modal.querySelector('#stampedPrintSubset')?.value;
+        if (subset === 'odd') pages = pages.filter(page => page % 2 === 1);
+        if (subset === 'even') pages = pages.filter(page => page % 2 === 0);
+        return pages.length ? pages : [Math.min(Math.max(1, stampPreviewPage || 1), total)];
+    }
+
+    function updateStampedPdfModalChoiceStyles(modal) {
+        modal.querySelectorAll('[data-print-choice]').forEach(label => {
+            const input = label.querySelector('input');
+            const checked = input?.checked;
+            label.style.color = checked ? '#ffffff' : '#a9adb5';
+            label.style.fontWeight = checked ? '700' : '400';
+            label.style.background = 'transparent';
+            label.style.borderColor = 'transparent';
+        });
+    }
+
+    function scheduleStampedPdfModalPreview(modal, resetIndex = false) {
+        if (!modal) return;
+        if (resetIndex) modal._previewIndex = 0;
+        const stage = modal.querySelector('#stampedPrintPreviewStage');
+        if (stage) {
+            stage.innerHTML = `
+                <div style="display:grid;gap:10px;justify-items:center;color:#d9dde5;">
+                    <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:stampPrintSpin .8s linear infinite;"></div>
+                    <div>Applying settings...</div>
+                </div>`;
+        }
+        clearTimeout(modal._previewTimer);
+        modal._previewTimer = setTimeout(() => renderStampedPdfModalPreview(modal), 80);
+    }
+
+    async function getStampedPdfModalDoc(modal) {
+        if (modal._previewDoc) return modal._previewDoc;
+        const job = modal._printJob;
+        const bytes = job?.bytes || Uint8Array.from(atob(job.b64), c => c.charCodeAt(0));
+        modal._previewDoc = await pdfjsLib.getDocument({ data: bytes.slice ? bytes.slice() : bytes }).promise;
+        return modal._previewDoc;
+    }
+
+    function getStampedPdfModalPaper(modal) {
+        const paperKey = modal.querySelector('#stampedPrintPaperSize')?.value || inferStampedPrintPaperKey();
+        const paper = PAGE_SIZES[paperKey] || PAGE_SIZES.Letter;
+        let paperW = paper.w;
+        let paperH = paper.h;
+        const orientation = modal.querySelector('input[name="stampedPrintOrientation"]:checked')?.value || 'portrait';
+        if ((orientation === 'landscape' && paperW < paperH) || (orientation === 'portrait' && paperW > paperH)) {
+            [paperW, paperH] = [paperH, paperW];
+        }
+        return { paperKey, paperW, paperH, orientation };
+    }
+
+    async function buildStampedPdfModalPrintPdf(modal) {
+        const pdfDoc = await getStampedPdfModalDoc(modal);
+        const pages = getStampedPdfModalPreviewPages(modal);
+        const { paperW, paperH } = getStampedPdfModalPaper(modal);
+        const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit';
+        const zoom = Math.max(10, Math.min(400, parseInt(modal.querySelector('#stampedPrintZoom')?.value, 10) || 100));
+        const shouldGrayscale = modal.querySelector('#stampedPrintGrayscale')?.checked === true;
+        const renderScale = pages.length > 150 ? 1.05 : (pages.length > 60 ? 1.25 : 1.75);
+        const printJpegQuality = pages.length > 150 ? 0.78 : (pages.length > 60 ? 0.84 : 0.92);
+        const pdfPages = [];
+
+        for (let i = 0; i < pages.length; i++) {
+            const pageNum = pages[i];
+            updateProgress((i / Math.max(1, pages.length)) * 82, `Preparing page ${i + 1}/${pages.length}`);
+
+            const page = await pdfDoc.getPage(pageNum);
+            const source = page.getViewport({ scale: 1 });
+            let pagePointScale = Math.min((paperW * 0.96) / source.width, (paperH * 0.96) / source.height);
+            if (scaleMode === 'noscale') pagePointScale = 1;
+            if (scaleMode === 'shrink') pagePointScale = zoom / 100;
+
+            const viewport = page.getViewport({ scale: pagePointScale * renderScale });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(paperW * renderScale);
+            canvas.height = Math.ceil(paperH * renderScale);
+
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const offsetX = Math.round((canvas.width - viewport.width) / 2);
+            const offsetY = Math.round((canvas.height - viewport.height) / 2);
+            await page.render({
+                canvasContext: ctx,
+                viewport,
+                transform: [1, 0, 0, 1, offsetX, offsetY]
+            }).promise;
+
+            if (shouldGrayscale) applyGrayscaleToCanvas(canvas);
+
+            pdfPages.push({
+                dataUrl: canvas.toDataURL('image/jpeg', printJpegQuality),
+                canvasW: canvas.width,
+                canvasH: canvas.height,
+                ptW: paperW,
+                ptH: paperH
+            });
+        }
+
+        updateProgress(90, 'Building print PDF...');
+        await new Promise(resolve => setTimeout(resolve, 20));
+        return uint8ToBase64(buildPDFFromImages(pdfPages));
+    }
+
+    async function renderStampedPdfModalPreview(modal) {
+        const stage = modal.querySelector('#stampedPrintPreviewStage');
+        const countEl = modal.querySelector('#stampedPrintPreviewCount');
+        const prevBtn = modal.querySelector('#stampedPrintPreviewPrev');
+        const nextBtn = modal.querySelector('#stampedPrintPreviewNext');
+        if (!stage) return;
+
+        updateStampedPdfModalChoiceStyles(modal);
+        const pages = getStampedPdfModalPreviewPages(modal);
+        modal._previewPages = pages;
+        modal._previewIndex = Math.min(Math.max(0, modal._previewIndex || 0), pages.length - 1);
+        const pageNum = pages[modal._previewIndex];
+        if (countEl) countEl.textContent = `${modal._previewIndex + 1}/${pages.length}`;
+        if (prevBtn) prevBtn.disabled = modal._previewIndex <= 0;
+        if (nextBtn) nextBtn.disabled = modal._previewIndex >= pages.length - 1;
+
+        stage.innerHTML = `
+            <div style="display:grid;gap:10px;justify-items:center;color:#d9dde5;">
+                <div style="width:28px;height:28px;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:stampPrintSpin .8s linear infinite;"></div>
+                <div>Rendering preview...</div>
+            </div>`;
+
+        try {
+            const pdfDoc = await getStampedPdfModalDoc(modal);
+            const page = await pdfDoc.getPage(pageNum);
+            const source = page.getViewport({ scale: 1 });
+            const { paperW, paperH } = getStampedPdfModalPaper(modal);
+
+            const rect = stage.getBoundingClientRect();
+            const displayScale = Math.min((rect.width - 52) / paperW, (rect.height - 82) / paperH, 1.08);
+            const safeDisplayScale = Math.max(0.25, displayScale);
+            const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit';
+            const zoom = Math.max(10, Math.min(400, parseInt(modal.querySelector('#stampedPrintZoom')?.value, 10) || 100));
+            let pagePointScale = Math.min((paperW * 0.96) / source.width, (paperH * 0.96) / source.height);
+            if (scaleMode === 'noscale') pagePointScale = 1;
+            if (scaleMode === 'shrink') pagePointScale = zoom / 100;
+
+            const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            const renderViewport = page.getViewport({ scale: pagePointScale * safeDisplayScale * dpr });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(renderViewport.width);
+            canvas.height = Math.ceil(renderViewport.height);
+            canvas.style.width = `${source.width * pagePointScale * safeDisplayScale}px`;
+            canvas.style.height = `${source.height * pagePointScale * safeDisplayScale}px`;
+            canvas.style.filter = modal.querySelector('#stampedPrintGrayscale')?.checked ? 'grayscale(1) contrast(1.08)' : 'none';
+            canvas.style.boxShadow = '0 1px 2px rgba(0,0,0,.22)';
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderViewport }).promise;
+
+            const sheet = document.createElement('div');
+            sheet.style.cssText = `width:${paperW * safeDisplayScale}px;height:${paperH * safeDisplayScale}px;background:#fff;box-shadow:0 10px 28px rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
+            sheet.appendChild(canvas);
+            stage.innerHTML = '';
+            stage.appendChild(sheet);
+        } catch (error) {
+            console.error('Could not render print preview', error);
+            stage.innerHTML = '<div style="color:#ffb4ab;">Preview failed to render.</div>';
+        }
+    }
+
+    async function loadStampedPdfModalPrinters(modal) {
+        const printerSelect = modal.querySelector('#stampedPrintPrinter');
+        if (!printerSelect) return;
+        printerSelect.innerHTML = '<option value="">Loading printers...</option>';
+
+        try {
+            const result = await fetchLocalPrintPrinters();
+            const printers = Array.isArray(result.printers) ? result.printers : [];
+            if (!printers.length) {
+                printerSelect.innerHTML = '<option value="">Default printer</option>';
+                return;
+            }
+
+            printerSelect.innerHTML = printers.map(printer => {
+                const name = printer.name || printer.deviceId || '';
+                const selected = result.defaultPrinter && name === result.defaultPrinter.name ? ' selected' : '';
+                return `<option value="${String(name).replace(/"/g, '&quot;')}"${selected}>${name}</option>`;
+            }).join('');
+        } catch (error) {
+            printerSelect.innerHTML = '<option value="">Local helper unavailable</option>';
+            console.warn('Could not load local printers', error);
+        }
+    }
+
+    async function openSystemPrintPreferences() {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        const batchModal = document.getElementById('stampedPdfBatchModal');
+        const printer = modal?.querySelector('#stampedPrintPrinter')?.value || '';
+        const prefsBtn = batchModal?.querySelector('#stampedBatchPrefs') || modal?.querySelector('#stampedPrintPrefs');
+        const prefsStatusTargets = [
+            modal?.querySelector('#stampedPrintPrefsStatus'),
+            batchModal?.querySelector('#stampedBatchPrefsStatus')
+        ].filter(Boolean);
+        const originalText = prefsBtn ? prefsBtn.innerHTML : '';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        if (prefsBtn) {
+            prefsBtn.disabled = true;
+            prefsBtn.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Opening...';
+        }
+        prefsStatusTargets.forEach(status => {
+            status.textContent = 'Opening printer preferences...';
+        });
+        try {
+            const response = await fetch('http://127.0.0.1:9100/preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ printer }),
+                signal: controller.signal
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || result.ok === false) {
+                throw new Error(result.error || `Print helper returned HTTP ${response.status}`);
+            }
+            modal._driverPreferencesActive = true;
+            modal._driverPreferencesPending = true;
+            if (batchModal) batchModal._driverPreferencesPending = true;
+            const label = result.method === 'printui-properties' ? 'printer properties' : 'printing preferences';
+            prefsStatusTargets.forEach(status => {
+                status.innerHTML = `Using Windows ${label}. Close it, then click <button type="button" onclick="finishSystemPrintPreferences()" style="height:22px;margin-left:6px;background:#2b2b2b;color:#fff;border:1px solid #666;border-radius:3px;cursor:pointer;">Done</button>`;
+            });
+        } catch (error) {
+            console.warn('Could not open printer preferences', error);
+            prefsStatusTargets.forEach(status => {
+                status.textContent = 'Could not open preferences.';
+            });
+            showNotification(getPrintHelperErrorMessage(error), 'warning');
+        } finally {
+            clearTimeout(timeoutId);
+            if (prefsBtn) {
+                prefsBtn.disabled = false;
+                prefsBtn.innerHTML = originalText || 'Preference...';
+            }
+        }
+    }
+
+    window.finishSystemPrintPreferences = function () {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        const batchModal = document.getElementById('stampedPdfBatchModal');
+        if (modal) modal._driverPreferencesPending = false;
+        if (batchModal) batchModal._driverPreferencesPending = false;
+        [
+            modal?.querySelector('#stampedPrintPrefsStatus'),
+            batchModal?.querySelector('#stampedBatchPrefsStatus')
+        ].filter(Boolean).forEach(status => {
+            status.textContent = 'Closed. This print will use the web app settings shown here.';
+        });
+    };
+
+    function closeStampedPrintPreferences() {
+        document.getElementById('stampedPrintPrefsModal')?.remove();
+    }
+
+    function openStampedPrintPreferences() {
+        const printModal = document.getElementById('stampedPdfPrintModal');
+        if (!printModal) return;
+        closeStampedPrintPreferences();
+
+        const printerName = printModal.querySelector('#stampedPrintPrinter')?.value || 'Default Printer';
+        const paperKey = printModal.querySelector('#stampedPrintPaperSize')?.value || inferStampedPrintPaperKey();
+        const orient = printModal.querySelector('input[name="stampedPrintOrientation"]:checked')?.value || 'portrait';
+        const copies = printModal.querySelector('#stampedPrintCopies')?.value || '1';
+        const collate = printModal.querySelector('#stampedPrintCollate')?.checked;
+        const grayscale = printModal.querySelector('#stampedPrintGrayscale')?.checked;
+        const duplex = printModal.querySelector('#stampedPrintDuplex')?.checked;
+
+        const prefs = document.createElement('div');
+        prefs.id = 'stampedPrintPrefsModal';
+        prefs.style.cssText = 'position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;padding:18px;';
+        prefs.innerHTML = `
+            <style>
+                #stampedPrintPrefsModal button { cursor:pointer; }
+                #stampedPrintPrefsModal button:hover { filter:brightness(1.08); }
+                #stampedPrintPrefsModal select,
+                #stampedPrintPrefsModal input[type="number"] {
+                    box-sizing:border-box;
+                    background:#ffffff;
+                    color:#111;
+                    border:1px solid #aaa;
+                    height:24px;
+                    padding:1px 6px;
+                }
+            </style>
+            <div style="width:570px;background:#f0f0f0;color:#111;border:1px solid #777;box-shadow:0 16px 44px rgba(0,0,0,.45);font-family:Segoe UI,Arial,sans-serif;font-size:12px;">
+                <div style="height:30px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;background:#fff;border-bottom:1px solid #c8c8c8;">
+                    <div><i class="fa fa-print"></i> ${printerName || 'Printer'} Properties</div>
+                    <button type="button" onclick="closeStampedPrintPreferences()" style="border:0;background:transparent;font-size:18px;line-height:1;">&times;</button>
+                </div>
+                <div style="display:flex;gap:2px;padding:8px 8px 0;background:#f0f0f0;">
+                    <div style="padding:5px 14px;background:#fff;border:1px solid #bbb;border-bottom:0;">Main</div>
+                    <div style="padding:5px 14px;border:1px solid #ccc;background:#eee;">More Options</div>
+                    <div style="padding:5px 14px;border:1px solid #ccc;background:#eee;">Maintenance</div>
+                </div>
+                <div style="margin:0 8px 8px;padding:12px;background:#fff;border:1px solid #bbb;display:grid;grid-template-columns:210px 1fr;gap:14px;">
+                    <div>
+                        <div style="font-weight:700;margin-bottom:8px;">Printing Presets</div>
+                        <button type="button" style="width:100%;height:24px;background:#f6f6f6;border:1px solid #bbb;border-radius:2px;margin-bottom:8px;">Add/Remove Presets...</button>
+                        <div style="height:238px;border:1px solid #aaa;background:#fff;overflow:hidden;">
+                            ${['Document - Fast','Document - Standard Quality','Document - High Quality','Document - 2-Up','Document - Fast Grayscale','Document - Grayscale','Form-9','forParallelDraft','A4ParallelDraft','InstrumentA-B','InstrumentC'].map((name, index) => `
+                                <div style="height:20px;display:flex;align-items:center;gap:5px;padding:0 7px;${index === 1 ? 'background:#e8f0fe;' : ''}">
+                                    <i class="fa fa-file-text-o" style="color:${index >= 7 ? '#d32f2f' : '#6a6a6a'};"></i>${name}
+                                </div>`).join('')}
+                        </div>
+                        <div style="height:98px;border:1px solid #aaa;border-top:0;display:grid;grid-template-columns:1fr 1fr;align-items:center;justify-items:center;background:#fafafa;">
+                            <div style="width:70px;height:80px;border:2px solid #333;background:#fff;display:flex;align-items:center;justify-content:center;">
+                                <div style="width:42px;height:46px;border-top:4px solid #1683ff;border-bottom:8px solid #f5cc2f;background:linear-gradient(90deg,#1683ff 0 33%,#f44336 33% 66%,#2db84d 66%);"></div>
+                            </div>
+                            <div style="font-size:28px;color:#333;"><i class="fa fa-print"></i></div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:88px 1fr;gap:9px 8px;align-content:start;">
+                        <label>Document Size</label>
+                        <select id="prefsPaperSize">${getStampedPrintPaperOptions()}</select>
+                        <label>Orientation</label>
+                        <div style="display:flex;gap:26px;align-items:center;">
+                            <label><input type="radio" name="prefsOrient" value="portrait"${orient === 'portrait' ? ' checked' : ''}> Portrait</label>
+                            <label><input type="radio" name="prefsOrient" value="landscape"${orient === 'landscape' ? ' checked' : ''}> Landscape</label>
+                        </div>
+                        <label>Paper Type</label>
+                        <select><option>Plain paper</option><option>Photo Paper</option><option>Envelope</option></select>
+                        <label>Quality</label>
+                        <select><option>Standard</option><option>High</option><option>Draft</option></select>
+                        <label>Color</label>
+                        <div style="display:flex;gap:24px;align-items:center;">
+                            <label><input type="radio" name="prefsColor" value="color"${!grayscale ? ' checked' : ''}> Color</label>
+                            <label><input type="radio" name="prefsColor" value="grayscale"${grayscale ? ' checked' : ''}> Grayscale</label>
+                        </div>
+                        <label>2-Sided Printing</label>
+                        <select id="prefsDuplex"><option value="off">Off</option><option value="duplex">On</option></select>
+                        <div></div>
+                        <button type="button" style="width:106px;height:24px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Settings...</button>
+                        <label>Multi-Page</label>
+                        <div style="display:flex;gap:8px;">
+                            <select style="width:86px;"><option>Off</option><option>2-Up</option><option>4-Up</option></select>
+                            <button type="button" disabled style="height:24px;width:118px;border:1px solid #ccc;background:#eee;color:#999;border-radius:3px;">Layout Order...</button>
+                        </div>
+                        <label>Copies</label>
+                        <div style="display:flex;gap:16px;align-items:center;">
+                            <input id="prefsCopies" type="number" min="1" max="99" value="${copies}" style="width:58px;">
+                            <label><input id="prefsCollate" type="checkbox"${collate ? ' checked' : ''}> Collate</label>
+                        </div>
+                        <label>Quiet Mode</label>
+                        <select><option>On</option><option>Off</option></select>
+                        <div></div>
+                        <label><input type="checkbox"> Print Preview</label>
+                        <div></div>
+                        <label><input type="checkbox"> Job Arranger Lite</label>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;padding:0 10px 10px;">
+                    <button type="button" style="height:28px;width:104px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Show Settings</button>
+                    <button type="button" style="height:28px;width:104px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Restore Defaults</button>
+                    <button type="button" style="height:28px;width:96px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Ink Levels</button>
+                    <span style="flex:1"></span>
+                    <button type="button" id="prefsOk" style="height:28px;width:74px;background:#eaf3ff;border:1px solid #2277cc;border-radius:3px;">OK</button>
+                    <button type="button" onclick="closeStampedPrintPreferences()" style="height:28px;width:74px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Cancel</button>
+                    <button type="button" style="height:28px;width:74px;background:#f6f6f6;border:1px solid #bbb;border-radius:3px;">Help</button>
+                </div>
+            </div>`;
+
+        document.body.appendChild(prefs);
+        prefs.querySelector('#prefsPaperSize').value = paperKey;
+        prefs.querySelector('#prefsDuplex').value = duplex ? 'duplex' : 'off';
+        prefs.querySelector('#prefsOk').addEventListener('click', () => {
+            const nextPaper = prefs.querySelector('#prefsPaperSize')?.value;
+            const nextOrient = prefs.querySelector('input[name="prefsOrient"]:checked')?.value;
+            const nextCopies = prefs.querySelector('#prefsCopies')?.value;
+            const nextColor = prefs.querySelector('input[name="prefsColor"]:checked')?.value;
+            const nextDuplex = prefs.querySelector('#prefsDuplex')?.value === 'duplex';
+            const paperSelect = printModal.querySelector('#stampedPrintPaperSize');
+            if (paperSelect && nextPaper) paperSelect.value = nextPaper;
+            const orientRadio = printModal.querySelector(`input[name="stampedPrintOrientation"][value="${nextOrient}"]`);
+            if (orientRadio) orientRadio.checked = true;
+            const copiesInput = printModal.querySelector('#stampedPrintCopies');
+            if (copiesInput) copiesInput.value = nextCopies || '1';
+            const collateInput = printModal.querySelector('#stampedPrintCollate');
+            if (collateInput) collateInput.checked = prefs.querySelector('#prefsCollate')?.checked === true;
+            const grayscaleInput = printModal.querySelector('#stampedPrintGrayscale');
+            if (grayscaleInput) grayscaleInput.checked = nextColor === 'grayscale';
+            const duplexInput = printModal.querySelector('#stampedPrintDuplex');
+            if (duplexInput) duplexInput.checked = nextDuplex;
+            closeStampedPrintPreferences();
+            scheduleStampedPdfModalPreview(printModal, false);
+        });
+    }
+
+    window.closeStampedPrintPreferences = closeStampedPrintPreferences;
+
+    function openStampedPdfPrintModal(printJob) {
+        closeStampedPdfPrintModal();
+
+        const currentPaperKey = inferStampedPrintPaperKey();
+        const currentPaper = PAGE_SIZES[currentPaperKey] || PAGE_SIZES.Letter;
+        const defaultOrientation = currentPaper.w > currentPaper.h ? 'landscape' : 'portrait';
+        const total = stampTotalPages || 1;
+        const current = Math.min(Math.max(1, stampPreviewPage || 1), total);
+
+        const modal = document.createElement('div');
+        modal.id = 'stampedPdfPrintModal';
+        modal._printJob = printJob;
+        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal.innerHTML = `
+            <style>
+                #stampedPdfPrintModal button { cursor:pointer; transition:filter .12s ease, background-color .12s ease, border-color .12s ease; }
+                #stampedPdfPrintModal button:hover:not(:disabled) { filter:brightness(1.16); border-color:#777 !important; }
+                #stampedPdfPrintModal button:disabled { opacity:.45; cursor:not-allowed; }
+                #stampedPdfPrintModal select,
+                #stampedPdfPrintModal input[type="text"],
+                #stampedPdfPrintModal input[type="number"] { box-sizing:border-box; min-width:0; }
+                #stampedPdfPrintModal .print-soft-button:hover { background:#3a3a3a !important; }
+                #stampedPdfPrintModal .print-danger-button:hover { background:#ff5d5d !important; }
+                #stampedPdfPrintModal .print-choice { white-space:nowrap; }
+                @keyframes stampPrintSpin { to { transform:rotate(360deg); } }
+            </style>
+            <div style="width:min(1140px,calc(100vw - 28px));height:min(760px,calc(100vh - 28px));background:#202124;color:#f5f5f5;border:1px solid #3a3a3a;border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:grid;grid-template-rows:34px 1fr;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #343434;">
+                    <strong><i class="fa fa-print"></i> Print Stamped PDF</strong>
+                    <button type="button" onclick="closeStampedPdfPrintModal()" style="background:transparent;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+                </div>
+                <div style="display:grid;grid-template-columns:440px minmax(0,1fr);min-height:0;">
+                    <div style="padding:20px;border-right:1px solid #343434;overflow-y:auto;overflow-x:hidden;">
+                        <div style="display:grid;grid-template-columns:82px minmax(0,1fr) 110px;gap:8px;align-items:center;margin-bottom:10px;">
+                            <label>Printer</label>
+                            <select id="stampedPrintPrinter" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"></select>
+                            <button type="button" id="stampedPrintPrefs" class="print-soft-button" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Preference...</button>
+                        </div>
+                        <div id="stampedPrintPrefsStatus" style="min-height:16px;margin:-4px 0 8px 90px;color:#aeb4bd;font-size:12px;"></div>
+                        <div style="display:grid;grid-template-columns:82px 90px 1fr;gap:8px;align-items:center;margin-bottom:12px;">
+                            <label>Copies</label>
+                            <input id="stampedPrintCopies" type="number" min="1" max="99" value="1" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;padding:0 6px;">
+                            <label style="display:flex;align-items:center;gap:8px;"><input id="stampedPrintCollate" type="checkbox"> Collate</label>
+                        </div>
+                        <label style="display:flex;align-items:center;gap:8px;margin:8px 0 14px;"><input id="stampedPrintGrayscale" type="checkbox"> Grayscale</label>
+                        <hr style="border:0;border-top:1px solid #343434;margin:0 0 16px;">
+                        <div style="display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;margin-bottom:12px;">
+                            <div>Range</div>
+                            <div style="display:grid;gap:8px;">
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="all" checked> All pages</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="current"> Current page (${current} / ${total})</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="selected"> Selected pages</label>
+                                <div style="display:flex;align-items:center;gap:8px;">
+                                    <input id="stampedPrintPages" type="text" value="1-${total}" disabled style="flex:1;height:28px;background:#2b2b2b;color:#fff;border:1px solid #444;border-radius:3px;padding:0 8px;">
+                                    <span>/ ${total}</span>
+                                </div>
+                                <small style="color:#bbb;">e.g. 1,8,9-12</small>
+                                <select id="stampedPrintSubset" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">
+                                    <option value="">All pages in range</option>
+                                    <option value="odd">Odd pages only</option>
+                                    <option value="even">Even pages only</option>
+                                </select>
+                            </div>
+                        </div>
+                        <hr style="border:0;border-top:1px solid #343434;margin:0 0 16px;">
+                        <label style="display:flex;align-items:center;gap:8px;margin-bottom:14px;"><input id="stampedPrintDuplex" type="checkbox"> Print on both sides</label>
+                        <div style="display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;align-items:center;margin-bottom:14px;">
+                            <label>PaperSize</label>
+                            <select id="stampedPrintPaperSize" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">${getStampedPrintPaperOptions()}</select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;margin-bottom:14px;">
+                            <div>Orientation</div>
+                            <div style="display:flex;gap:28px;">
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintOrientation" value="portrait"${defaultOrientation === 'portrait' ? ' checked' : ''}> Portrait</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintOrientation" value="landscape"${defaultOrientation === 'landscape' ? ' checked' : ''}> Landscape</label>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;">
+                            <div>Page Sizing</div>
+                            <div style="display:grid;gap:8px;">
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="fit" checked> Fit Page</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="noscale"> Actual Size</label>
+                                <label class="print-choice" data-print-choice style="display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="shrink"> Zoom <input id="stampedPrintZoom" type="number" min="10" max="400" value="100" style="width:64px;height:26px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;" disabled> %</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-rows:30px 1fr 54px;min-width:0;background:#596371;">
+                        <label style="height:30px;display:flex;align-items:center;gap:8px;padding:0 16px;background:#343840;color:#dfe5ee;font-size:13px;"><input id="stampedPrintComments" type="checkbox" checked> Print Comments</label>
+                        <div id="stampedPrintPreviewStage" style="display:flex;align-items:center;justify-content:center;overflow:hidden;padding:18px;background:#747e8c;">
+                            <div style="color:#d9dde5;">Rendering preview...</div>
+                        </div>
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 14px;background:#202124;border-top:1px solid #343434;">
+                            <button type="button" id="stampedPrintPreviewPrev" class="print-soft-button" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-chevron-left"></i></button>
+                            <span id="stampedPrintPreviewCount" style="min-width:74px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#2b2b2b;border-radius:4px;font-weight:700;">1/1</span>
+                            <button type="button" id="stampedPrintPreviewNext" class="print-soft-button" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;margin-right:auto;"><i class="fa fa-chevron-right"></i></button>
+                            <button type="button" class="print-soft-button" onclick="closeStampedPdfPrintModal()" style="min-width:90px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Cancel</button>
+                            <button type="button" onclick="printStampedPdfClassic()" style="min-width:110px;height:32px;background:transparent;color:#ff6f61;border:0;">Classic Mode</button>
+                            <button type="button" class="print-soft-button" onclick="openStampedPdfBatchPrint()" style="min-width:92px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Batch Print</button>
+                            <button type="button" id="stampedPrintSubmitBtn" class="print-danger-button" onclick="executeStampedPdfModalPrint()" style="min-width:90px;height:32px;background:#ef5350;color:#fff;border:0;border-radius:3px;"><i class="fa fa-print"></i> Print</button>
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        document.body.appendChild(modal);
+        modal.querySelector('#stampedPrintPaperSize').value = currentPaperKey;
+        modal.querySelectorAll('input[name="stampedPrintRange"]').forEach(input => {
+            input.addEventListener('change', () => {
+                const selected = modal.querySelector('input[name="stampedPrintRange"]:checked')?.value === 'selected';
+                modal.querySelector('#stampedPrintPages').disabled = !selected;
+                scheduleStampedPdfModalPreview(modal, true);
+            });
+        });
+        modal.querySelectorAll('input[name="stampedPrintScale"]').forEach(input => {
+            input.addEventListener('change', () => {
+                modal.querySelector('#stampedPrintZoom').disabled = input.value !== 'shrink' || !input.checked;
+                scheduleStampedPdfModalPreview(modal, false);
+            });
+        });
+        modal.querySelectorAll('input[name="stampedPrintOrientation"]').forEach(input => {
+            input.addEventListener('change', () => {
+                modal._driverPreferencesActive = false;
+                const prefsStatus = modal.querySelector('#stampedPrintPrefsStatus');
+                if (prefsStatus) prefsStatus.textContent = '';
+                scheduleStampedPdfModalPreview(modal, false);
+            });
+        });
+        ['stampedPrintPages', 'stampedPrintSubset', 'stampedPrintPaperSize', 'stampedPrintGrayscale', 'stampedPrintDuplex', 'stampedPrintZoom'].forEach(id => {
+            const el = modal.querySelector(`#${id}`);
+            if (!el) return;
+            const resetDriverPrefs = () => {
+                if (['stampedPrintPaperSize', 'stampedPrintGrayscale', 'stampedPrintDuplex'].includes(id)) {
+                    modal._driverPreferencesActive = false;
+                    const prefsStatus = modal.querySelector('#stampedPrintPrefsStatus');
+                    if (prefsStatus) prefsStatus.textContent = '';
+                }
+            };
+            el.addEventListener('input', () => {
+                resetDriverPrefs();
+                scheduleStampedPdfModalPreview(modal, id === 'stampedPrintPages' || id === 'stampedPrintSubset');
+            });
+            el.addEventListener('change', () => {
+                resetDriverPrefs();
+                scheduleStampedPdfModalPreview(modal, id === 'stampedPrintPages' || id === 'stampedPrintSubset');
+            });
+        });
+        modal.querySelector('#stampedPrintPreviewPrev').addEventListener('click', () => {
+            modal._previewIndex = Math.max(0, (modal._previewIndex || 0) - 1);
+            scheduleStampedPdfModalPreview(modal, false);
+        });
+        modal.querySelector('#stampedPrintPreviewNext').addEventListener('click', () => {
+            const max = Math.max(0, (modal._previewPages?.length || 1) - 1);
+            modal._previewIndex = Math.min(max, (modal._previewIndex || 0) + 1);
+            scheduleStampedPdfModalPreview(modal, false);
+        });
+        modal.querySelector('#stampedPrintPrefs').addEventListener('click', () => {
+            openSystemPrintPreferences();
+        });
+        loadStampedPdfModalPrinters(modal);
+        scheduleStampedPdfModalPreview(modal, true);
+    }
+
+    window.closeStampedPdfPrintModal = closeStampedPdfPrintModal;
+
+    window.printStampedPdfClassic = function () {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        const job = modal?._printJob;
+        if (!job) return;
+        if (modal._driverPreferencesPending) {
+            showNotification('Close Printing Preferences, then click Done before printing.', 'warning');
+            return;
+        }
+        printPdfInBrowser(job.blob);
+    };
+
+    function setStampedPrintButtonLoading(modal, loading, label = 'Printing...') {
+        const button = modal?.querySelector('#stampedPrintSubmitBtn');
+        if (!button) return;
+        if (loading) {
+            if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${label}`;
+        } else {
+            button.disabled = false;
+            button.innerHTML = button.dataset.originalHtml || '<i class="fa fa-print"></i> Print';
+            delete button.dataset.originalHtml;
+        }
+    }
+
+    function getStampedPdfModalPrintOptions(modal, includePages = true, includeOrientation = true) {
+        const paperKey = modal.querySelector('#stampedPrintPaperSize')?.value || 'Letter';
+        const pages = includePages ? getStampedPdfModalPageRange(modal) : '';
+        const options = {
+            printer: modal.querySelector('#stampedPrintPrinter')?.value || undefined,
+            copies: Math.max(1, Math.min(99, parseInt(modal.querySelector('#stampedPrintCopies')?.value, 10) || 1)),
+            scale: includePages ? (modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit') : 'fit'
+        };
+        options.paperSize = getPrintHelperPaperSize(paperKey);
+        if (includeOrientation) options.orientation = modal.querySelector('input[name="stampedPrintOrientation"]:checked')?.value || 'portrait';
+        options.monochrome = modal.querySelector('#stampedPrintGrayscale')?.checked === true;
+        if (pages) options.pages = pages;
+        const subset = includePages ? modal.querySelector('#stampedPrintSubset')?.value : '';
+        if (subset) options.subset = subset;
+        if (modal.querySelector('#stampedPrintDuplex')?.checked) options.side = 'duplex';
+        return options;
+    }
+
+    function ensurePrintPreferencesReady(modal) {
+        if (modal?._driverPreferencesPending) {
+            showNotification('Close Printing Preferences, then click Done before printing.', 'warning');
+            return false;
+        }
+        return true;
+    }
+
+    function closeStampedPdfBatchModal() {
+        document.getElementById('stampedPdfBatchModal')?.remove();
+    }
+
+    function renderStampedPdfBatchList(batchModal) {
+        const list = batchModal.querySelector('#stampedBatchFileList');
+        const count = batchModal.querySelector('#stampedBatchCount');
+        const files = batchModal._batchFiles || [];
+        if (count) count.textContent = String(files.length);
+        list.innerHTML = files.map((file, index) => `
+            <button type="button" data-batch-index="${index}" style="width:100%;min-height:44px;display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:center;text-align:left;background:${index === (batchModal._batchIndex || 0) ? '#000' : '#1f1f1f'};color:#fff;border:0;border-bottom:1px solid #2e2e2e;padding:7px 9px;cursor:pointer;">
+                <span style="width:22px;height:22px;border-radius:3px;background:#ef5350;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">PDF</span>
+                <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${file.name}</span>
+                <span style="color:#ff6b6b;white-space:nowrap;">${file.pages} pages</span>
+            </button>`).join('');
+        list.querySelectorAll('[data-batch-index]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                batchModal._batchIndex = parseInt(btn.dataset.batchIndex, 10) || 0;
+                batchModal._batchPage = 1;
+                renderStampedPdfBatchList(batchModal);
+                renderStampedPdfBatchPreview(batchModal);
+            });
+        });
+    }
+
+    async function renderStampedPdfBatchPreview(batchModal) {
+        const stage = batchModal.querySelector('#stampedBatchPreviewStage');
+        const count = batchModal.querySelector('#stampedBatchPreviewCount');
+        const file = batchModal._batchFiles?.[batchModal._batchIndex || 0];
+        if (!stage || !file) return;
+        const pageNum = Math.min(Math.max(1, batchModal._batchPage || 1), file.pages || 1);
+        batchModal._batchPage = pageNum;
+        if (count) count.textContent = `${pageNum}/${file.pages || 1}`;
+        stage.innerHTML = '<div style="color:#d9dde5;">Rendering preview...</div>';
+        try {
+            if (!file.pdfDoc) {
+                file.pdfDoc = await pdfjsLib.getDocument({ data: file.bytes.slice() }).promise;
+            }
+            const page = await file.pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1 });
+            const rect = stage.getBoundingClientRect();
+            const scale = Math.max(0.2, Math.min((rect.width - 54) / viewport.width, (rect.height - 54) / viewport.height, 1.25));
+            const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+            const renderViewport = page.getViewport({ scale: scale * dpr });
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.ceil(renderViewport.width);
+            canvas.height = Math.ceil(renderViewport.height);
+            canvas.style.width = `${viewport.width * scale}px`;
+            canvas.style.height = `${viewport.height * scale}px`;
+            canvas.style.background = '#fff';
+            canvas.style.boxShadow = '0 10px 28px rgba(0,0,0,.42)';
+            await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderViewport }).promise;
+            stage.innerHTML = '';
+            stage.appendChild(canvas);
+        } catch (error) {
+            console.error('Could not render batch preview', error);
+            stage.innerHTML = '<div style="color:#ffb4ab;">Preview failed to render.</div>';
+        }
+    }
+
+    async function addStampedBatchFiles(batchModal, files) {
+        for (const file of Array.from(files || [])) {
+            if (file.type && file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) continue;
+            const bytes = new Uint8Array(await file.arrayBuffer());
+            const pdfDoc = await pdfjsLib.getDocument({ data: bytes.slice() }).promise;
+            batchModal._batchFiles.push({
+                name: file.name,
+                pages: pdfDoc.numPages || 1,
+                bytes,
+                b64: uint8ToBase64(bytes),
+                pdfDoc
+            });
+        }
+        renderStampedPdfBatchList(batchModal);
+        renderStampedPdfBatchPreview(batchModal);
+    }
+
+    function openStampedPdfBatchPrint() {
+        const printModal = document.getElementById('stampedPdfPrintModal');
+        const currentJob = printModal?._printJob;
+        if (!printModal || !currentJob) return;
+        closeStampedPdfBatchModal();
+
+        const batchModal = document.createElement('div');
+        batchModal.id = 'stampedPdfBatchModal';
+        batchModal._batchIndex = 0;
+        batchModal._batchPage = 1;
+        batchModal._batchFiles = [{
+            name: `${typeof getStampedFilename === 'function' ? getStampedFilename() : 'Stamped PDF'}`,
+            pages: stampTotalPages || 1,
+            bytes: currentJob.bytes || Uint8Array.from(atob(currentJob.b64), c => c.charCodeAt(0)),
+            b64: currentJob.b64,
+            stampedCurrent: true
+        }];
+        batchModal.style.cssText = 'position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.52);display:flex;align-items:center;justify-content:center;padding:18px;';
+        batchModal.innerHTML = `
+            <style>
+                #stampedPdfBatchModal button { cursor:pointer; transition:filter .12s ease, background-color .12s ease; }
+                #stampedPdfBatchModal button:hover:not(:disabled) { filter:brightness(1.16); }
+            </style>
+            <div style="width:min(1040px,calc(100vw - 24px));height:min(720px,calc(100vh - 24px));background:#1d1d1d;color:#fff;border:1px solid #333;border-radius:7px;box-shadow:0 18px 50px rgba(0,0,0,.5);display:grid;grid-template-columns:180px 1fr 390px;grid-template-rows:32px 1fr 64px;overflow:hidden;">
+                <div style="grid-column:1 / 4;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:#202124;border-bottom:1px solid #333;">
+                    <strong><i class="fa fa-print"></i> Batch Print</strong>
+                    <button type="button" onclick="closeStampedPdfBatchModal()" style="background:transparent;border:0;color:#fff;font-size:22px;">&times;</button>
+                </div>
+                <div style="background:#181818;border-right:1px solid #2b2b2b;overflow:hidden;display:grid;grid-template-rows:58px 1fr;">
+                    <div style="padding:12px;">
+                        <button type="button" id="stampedBatchAddBtn" style="width:100%;height:34px;background:#303030;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-plus"></i> Add PDF Files</button>
+                        <input id="stampedBatchFileInput" type="file" accept="application/pdf,.pdf" multiple hidden>
+                    </div>
+                    <div id="stampedBatchFileList" style="overflow:auto;"></div>
+                </div>
+                <div style="padding:20px;border-right:1px solid #333;overflow:auto;">
+                    <div style="display:grid;grid-template-columns:80px minmax(0,1fr) 110px;gap:8px;align-items:center;margin-bottom:12px;">
+                        <label>Printer</label>
+                        <select disabled style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><option>${printModal.querySelector('#stampedPrintPrinter')?.value || 'Default printer'}</option></select>
+                        <button type="button" id="stampedBatchPrefs" onclick="openSystemPrintPreferences()" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Preference...</button>
+                    </div>
+                    <div id="stampedBatchPrefsStatus" style="min-height:16px;margin:-4px 0 10px 88px;color:#aeb4bd;font-size:12px;"></div>
+                    <p style="color:#bbb;line-height:1.5;margin:0 0 14px;">Batch Print uses the printer, paper, orientation, copies, grayscale, duplex, and sizing settings from the main print window. Added PDFs print as full documents.</p>
+                    <hr style="border:0;border-top:1px solid #333;margin:0 0 14px;">
+                    <div style="color:#ddd;">Files in queue: <strong id="stampedBatchCount">1</strong></div>
+                </div>
+                <div style="display:grid;grid-template-rows:30px 1fr 54px;background:#596371;">
+                    <label style="height:30px;display:flex;align-items:center;gap:8px;padding:0 16px;background:#343840;color:#dfe5ee;font-size:13px;"><input type="checkbox" checked> Print Comments</label>
+                    <div id="stampedBatchPreviewStage" style="display:flex;align-items:center;justify-content:center;overflow:hidden;padding:18px;background:#747e8c;"></div>
+                    <div style="display:flex;align-items:center;justify-content:center;gap:10px;background:#202124;border-top:1px solid #333;">
+                        <button type="button" id="stampedBatchPrev" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-chevron-left"></i></button>
+                        <span id="stampedBatchPreviewCount" style="min-width:74px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#2b2b2b;border-radius:4px;font-weight:700;">1/1</span>
+                        <button type="button" id="stampedBatchNext" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                <div style="grid-column:1 / 4;display:flex;align-items:center;justify-content:space-between;padding:12px;background:#181818;border-top:1px solid #333;">
+                    <button type="button" onclick="closeStampedPdfBatchModal()" style="min-width:120px;height:34px;background:#303030;color:#fff;border:1px solid #555;border-radius:3px;">Cancel</button>
+                    <button type="button" onclick="executeStampedPdfBatchPrint()" style="min-width:120px;height:34px;background:#ef5350;color:#fff;border:0;border-radius:3px;">Print</button>
+                </div>
+            </div>`;
+        document.body.appendChild(batchModal);
+        window.closeStampedPdfBatchModal = closeStampedPdfBatchModal;
+        renderStampedPdfBatchList(batchModal);
+        renderStampedPdfBatchPreview(batchModal);
+        batchModal.querySelector('#stampedBatchAddBtn').addEventListener('click', () => batchModal.querySelector('#stampedBatchFileInput').click());
+        batchModal.querySelector('#stampedBatchFileInput').addEventListener('change', e => addStampedBatchFiles(batchModal, e.target.files));
+        batchModal.querySelector('#stampedBatchPrev').addEventListener('click', () => {
+            batchModal._batchPage = Math.max(1, (batchModal._batchPage || 1) - 1);
+            renderStampedPdfBatchPreview(batchModal);
+        });
+        batchModal.querySelector('#stampedBatchNext').addEventListener('click', () => {
+            const file = batchModal._batchFiles[batchModal._batchIndex || 0];
+            batchModal._batchPage = Math.min(file?.pages || 1, (batchModal._batchPage || 1) + 1);
+            renderStampedPdfBatchPreview(batchModal);
+        });
+    }
+
+    window.closeStampedPdfBatchModal = closeStampedPdfBatchModal;
+    window.openStampedPdfBatchPrint = openStampedPdfBatchPrint;
+
+    window.executeStampedPdfBatchPrint = async function () {
+        const batchModal = document.getElementById('stampedPdfBatchModal');
+        const printModal = document.getElementById('stampedPdfPrintModal');
+        if (!batchModal || !printModal) return;
+        if (!ensurePrintPreferencesReady(printModal)) return;
+        const files = batchModal._batchFiles || [];
+        try {
+            showProgress('Preparing batch print...', 'Stamping queued PDF files');
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                updateProgress((i / Math.max(1, files.length)) * 90, `Preparing ${file.name}`);
+                const b64 = file.stampedCurrent
+                    ? file.b64
+                    : await buildStampedPDFForDocument(
+                        file.pdfDoc,
+                        file.pages,
+                        Array.from({ length: file.pages }, (_, pageIndex) => pageIndex + 1),
+                        false
+                    );
+                await printPdfWithLocalHelper(b64, getStampedPdfModalPrintOptions(printModal, file.stampedCurrent === true));
+            }
+            updateProgress(100, 'Batch print sent');
+            showNotification(`Sent ${files.length} PDF file(s) to printer.`, 'success');
+            closeStampedPdfBatchModal();
+            closeStampedPdfPrintModal();
+        } catch (error) {
+            console.warn('Batch print failed.', error);
+            showNotification(getPrintHelperErrorMessage(error), 'warning');
+        } finally {
+            hideProgress();
+        }
+    };
+
+    window.executeStampedPdfModalPrint = async function () {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        const job = modal?._printJob;
+        if (!modal || !job) return;
+        if (!ensurePrintPreferencesReady(modal)) return;
+
+        try {
+            const printPages = getStampedPdfModalPreviewPages(modal);
+            if (printPages.length > STAMPED_HELPER_PAGE_LIMIT) {
+                downloadAndBrowserPrintStampedPdf(
+                    job,
+                    `This print job has ${printPages.length} pages, which is too heavy for direct local printing.`
+                );
+                closeStampedPdfPrintModal();
+                return;
+            }
+
+            setStampedPrintButtonLoading(modal, true, 'Preparing...');
+            showProgress('Preparing print...', 'Applying print settings');
+            const printB64 = await buildStampedPdfModalPrintPdf(modal);
+            setStampedPrintButtonLoading(modal, true, 'Printing...');
+            updateProgress(96, 'Sending to printer...');
+            await printPdfWithLocalHelper(printB64, getStampedPdfModalPrintOptions(modal, false, false));
+            updateProgress(100, 'Sent to printer');
+            showNotification('Sent directly to printer.', 'success');
+            closeStampedPdfPrintModal();
+        } catch (error) {
+            console.warn('Local print helper failed.', error);
+            showNotification(getPrintHelperErrorMessage(error), 'warning');
+        } finally {
+            hideProgress();
+            setStampedPrintButtonLoading(modal, false);
+        }
+    };
+
+    window.executePrintStampOnly = async function () {
         const sizeKey    = document.getElementById('psoPageSize')?.value || 'A4';
         const orient     = document.querySelector('input[name="psoOrient"]:checked')?.value || 'portrait';
-        const copies  = Math.max(1, Math.min(20, parseInt(document.getElementById('psoCopies')?.value) || 1));
+        const copies  = Math.max(1, Math.min(99, parseInt(document.getElementById('psoCopies')?.value) || 1));
 
         let { w: ptW, h: ptH } = PAGE_SIZES[sizeKey];
         if (orient === 'landscape') { [ptW, ptH] = [ptH, ptW]; }
@@ -2580,21 +3785,7 @@
 
         // Draw stamp exactly as shown in preview — no rotation.
         // What you see in the canvas is what prints.
-        if (copies === 1) {
-            drawStampOnCanvas(ctx, cW, cH, now);
-        } else {
-            const cols = Math.ceil(Math.sqrt(copies));
-            const rows = Math.ceil(copies / cols);
-            let drawn  = 0;
-            for (let r = 0; r < rows && drawn < copies; r++) {
-                for (let c = 0; c < cols && drawn < copies; c++) {
-                    const posX = ((c + 0.5) / cols) * 100;
-                    const posY = ((r + 0.5) / rows) * 100;
-                    drawStampOnCanvasAt(ctx, cW, cH, now, posX, posY);
-                    drawn++;
-                }
-            }
-        }
+        drawStampOnCanvas(ctx, cW, cH, now);
 
         document.getElementById('printStampOnlyModal')?.remove();
 
@@ -2609,24 +3800,25 @@
             [Uint8Array.from(atob(b64), ch => ch.charCodeAt(0))],
             { type: 'application/pdf' }
         );
-        const blobUrl = URL.createObjectURL(pdfBlob);
 
-        const old = document.getElementById('stampPrintFrame');
-        if (old) old.remove();
+        try {
+            await printPdfWithLocalHelper(b64, {
+                paperSize: getPrintHelperPaperSize(sizeKey),
+                monochrome: false,
+                scale: 'noscale',
+                copies
+            });
+            showNotification('Sent directly to printer.', 'success');
+            return;
+        } catch (error) {
+            console.warn('Local print helper failed; falling back to browser print.', error);
+            const helperMessage = error.name === 'AbortError' || error.message === 'Failed to fetch'
+                ? 'Local print helper is not running. Start it with npm run print-helper.'
+                : (error.message || 'Local print helper could not print');
+            showNotification(helperMessage + ' Opening browser print instead.', 'warning');
+        }
 
-        const iframe = document.createElement('iframe');
-        iframe.id = 'stampPrintFrame';
-        iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;opacity:0;';
-        iframe.src = blobUrl;
-        document.body.appendChild(iframe);
-
-        iframe.onload = function () {
-            setTimeout(function () {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-                setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 60000);
-            }, 500);
-        };
+        printPdfInBrowser(pdfBlob);
     };
 
     // Draw the stamp at its configured positionX/Y
@@ -2765,7 +3957,9 @@
 
         if (s.border) {
             const m = ctx.measureText(s.text);
-            roundRect(ctx, -(m.width + 22) / 2, -(s.fontSize + 18) / 2, m.width + 22, s.fontSize + 18, 6);
+            const boxW = Math.max(m.width + 22, s.fontSize * 2.6);
+            const boxH = s.fontSize + 18;
+            roundRect(ctx, -boxW / 2, -boxH / 2, boxW, boxH, 6);
             ctx.strokeStyle = s.color; ctx.lineWidth = s.borderWidth; ctx.stroke();
         }
         ctx.fillText(s.text, 0, 0);
@@ -3421,6 +4615,7 @@
         stampPreviewScale = Math.min(Math.max(0.4, stampPreviewScale + d), 3.0);
         const lbl = document.getElementById('stampZoomLabel');
         if (lbl) lbl.textContent = Math.round(stampPreviewScale * 100) + '%';
+        saveStampSettings();
         if (stampOnlyMode) {
             renderStampOnlyPreview();
         } else {
@@ -3469,24 +4664,7 @@
             const b64      = await buildStampedPDF(pages);
             const pdfBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
             const blob     = new Blob([pdfBytes], { type: 'application/pdf' });
-            const blobUrl  = URL.createObjectURL(blob);
-
-            const old = document.getElementById('stampPrintFrame');
-            if (old) old.remove();
-
-            const iframe = document.createElement('iframe');
-            iframe.id    = 'stampPrintFrame';
-            iframe.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;border:none;z-index:-1;opacity:0;';
-            iframe.src   = blobUrl;
-            document.body.appendChild(iframe);
-
-            iframe.onload = function () {
-                setTimeout(function () {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                    setTimeout(function () { URL.revokeObjectURL(blobUrl); }, 60000);
-                }, 500);
-            };
+            openStampedPdfPrintModal({ b64, blob, bytes: pdfBytes });
 
         } catch (err) {
             showNotification('Error: ' + err.message, 'error'); console.error(err);
@@ -3525,14 +4703,20 @@
 
     // ─── Build stamped PDF ────────────────────────────────────────────────────
     async function buildStampedPDF(stampedPageNums) {
+        return buildStampedPDFForDocument(stampPdfDoc, stampTotalPages, stampedPageNums, true);
+    }
+
+    async function buildStampedPDFForDocument(pdfDoc, totalPages, stampedPageNums, usePageOverrides = false) {
         const stampSet  = new Set(stampedPageNums), now = new Date();
-        const RENDER_SCALE = 2.0;
+        const renderSettings = getStampOutputRenderSettings();
+        const RENDER_SCALE = renderSettings.scale;
+        const JPEG_QUALITY = renderSettings.jpegQuality;
         updateProgress(0, 'Preparing pages…');
         const pages = [];
 
-        for (let pNum = 1; pNum <= stampTotalPages; pNum++) {
-            updateProgress((pNum / stampTotalPages) * 70, `Rendering page ${pNum}/${stampTotalPages}…`);
-            const page = await stampPdfDoc.getPage(pNum);
+        for (let pNum = 1; pNum <= totalPages; pNum++) {
+            updateProgress((pNum / totalPages) * 70, `Rendering page ${pNum}/${totalPages}…`);
+            const page = await pdfDoc.getPage(pNum);
 
             const vpReal   = page.getViewport({ scale: 1.0 });
             const ptW      = vpReal.width;
@@ -3561,7 +4745,7 @@
 
             if (stampSet.has(pNum)) {
                 // Use per-page override settings if they exist, otherwise global
-                const ovr = pageOverrides[pNum];
+                const ovr = usePageOverrides ? pageOverrides[pNum] : null;
                 if (stampMode === 'formatted') {
                     const s = ovr ? Object.assign({}, fmtSettings, ovr) : fmtSettings;
                     drawFormattedStamp(ctx, canvas.width, canvas.height, s, now);
@@ -3583,7 +4767,7 @@
             }
 
             pages.push({
-                dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+                dataUrl: canvas.toDataURL('image/jpeg', JPEG_QUALITY),
                 canvasW: canvas.width,
                 canvasH: canvas.height,
                 ptW: outputSize.ptW,
@@ -3651,7 +4835,8 @@
             const cs  = `q ${d.ptW.toFixed(2)} 0 0 ${d.ptH.toFixed(2)} 0 0 cm /Im${d.imgId} Do Q`;
             const cid = nid++;
             objs.push({ id: cid, str: `${cid} 0 obj\n<< /Length ${cs.length} >>\nstream\n${cs}\nendstream\nendobj\n` });
-            objs.push({ id: d.pageId, str: `${d.pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${d.ptW.toFixed(2)} ${d.ptH.toFixed(2)}] /Resources << /XObject << /Im${d.imgId} ${d.imgId} 0 R >> >> /Contents ${cid} 0 R >>\nendobj\n` });
+            const pageBox = `[0 0 ${d.ptW.toFixed(2)} ${d.ptH.toFixed(2)}]`;
+            objs.push({ id: d.pageId, str: `${d.pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox ${pageBox} /CropBox ${pageBox} /TrimBox ${pageBox} /BleedBox ${pageBox} /Resources << /XObject << /Im${d.imgId} ${d.imgId} 0 R >> >> /Contents ${cid} 0 R >>\nendobj\n` });
         }
 
         objs.sort((a, b) => a.id - b.id);

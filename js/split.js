@@ -1,4 +1,4 @@
-pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/3.11.174-pdf.worker.min.js`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || 'PDF-file-manager-new'}/ScriptsJS/3.11.174-pdf.worker.min.js`;
 
         // State
         let pdfDocuments = [];
@@ -270,6 +270,108 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || '.'}/Scri
     }
 
     event.target.value = '';
+}
+
+function setSplitActionLoading(isLoading) {
+    const btn = document.getElementById('splitBtn');
+    if (!btn) return;
+    if (isLoading) {
+        if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+        btn.classList.add('is-processing');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span>Splitting...';
+    } else {
+        btn.classList.remove('is-processing');
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        delete btn.dataset.originalHtml;
+        updateSplitCount();
+    }
+}
+
+function splitDragHasFiles(event) {
+    return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
+
+function getDroppedPdfFiles(event) {
+    return Array.from(event.dataTransfer?.files || []).filter(file => {
+        const name = file.name || '';
+        return file.type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+    });
+}
+
+function setSplitDropActive(active) {
+    document.querySelector('#uploadSection .upload-box')?.classList.toggle('pdf-drop-active', active);
+    document.querySelectorAll('#pageGrid .add-page-item').forEach(item => {
+        item.classList.toggle('pdf-drop-active', active);
+    });
+}
+
+function shouldProcessPdfDrop(files) {
+    const signature = Array.from(files || [])
+        .map(file => `${file.name}:${file.size}:${file.lastModified}`)
+        .join('|');
+    const now = Date.now();
+    const last = window._pdfManagerLastFileDrop || {};
+    if (signature && last.signature === signature && now - last.time < 1500) {
+        return false;
+    }
+    window._pdfManagerLastFileDrop = { signature, time: now };
+    return true;
+}
+
+function handleSplitDroppedFiles(files) {
+    if (!files.length) {
+        showNotification('Please drop PDF files only.', 'warning');
+        return;
+    }
+    if (!shouldProcessPdfDrop(files)) return;
+    handleFileSelect({ target: { files, value: '' } });
+}
+
+function installSplitPdfDropSupport() {
+    if (window._splitPdfDropInstalled) return;
+    window._splitPdfDropInstalled = true;
+    let dragDepth = 0;
+
+    const isSplitDropActive = () => window.activeTool === 'split';
+    const handleDragEnter = event => {
+        if (!isSplitDropActive() || !splitDragHasFiles(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth++;
+        setSplitDropActive(true);
+    };
+    const handleDragOver = event => {
+        if (!isSplitDropActive() || !splitDragHasFiles(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'copy';
+        setSplitDropActive(true);
+    };
+    const handleDragLeave = event => {
+        if (!isSplitDropActive() || !splitDragHasFiles(event)) return;
+        event.stopPropagation();
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) setSplitDropActive(false);
+    };
+    const handleDrop = event => {
+        if (event._pdfManagerFileDropHandled || !isSplitDropActive() || !splitDragHasFiles(event)) return;
+        event._pdfManagerFileDropHandled = true;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth = 0;
+        setSplitDropActive(false);
+        handleSplitDroppedFiles(getDroppedPdfFiles(event));
+    };
+
+    ['uploadSection', 'pageContainer', 'pageGrid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('dragenter', handleDragEnter);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
+    });
 }
 
         // Append only new files without re-rendering existing pages
@@ -1488,6 +1590,7 @@ async function executeSplit() {
         showNotification('No PDF loaded.', 'error');
         return;
     }
+    setSplitActionLoading(true);
     showProgress('Splitting PDF...', 'Building output files…');
     try {
         await performClientSideSplit();
@@ -1495,6 +1598,8 @@ async function executeSplit() {
         hideProgress();
         showNotification('Split failed: ' + err.message, 'error');
         console.error(err);
+    } finally {
+        setSplitActionLoading(false);
     }
 }
 
@@ -1505,7 +1610,7 @@ async function performClientSideSplit() {
         updateProgress(5, 'Loading pdf-lib…');
         await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
+            script.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || 'PDF-file-manager-new'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
             script.onload = resolve;
             script.onerror = () => reject(new Error('Failed to load pdf-lib'));
             document.head.appendChild(script);
@@ -1653,35 +1758,7 @@ async function performClientSideSplit() {
             }
         });
 
-        // Handle drag and drop
-        const uploadSection = document.getElementById('uploadSection');
-        
-        uploadSection.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadSection.style.borderColor = 'var(--accent-color)';
-            uploadSection.style.background = 'var(--accent-light)';
-        });
-
-        uploadSection.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadSection.style.borderColor = '';
-            uploadSection.style.background = '';
-        });
-
-        uploadSection.addEventListener('drop', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            uploadSection.style.borderColor = '';
-            uploadSection.style.background = '';
-            
-            const files = Array.from(e.dataTransfer.files).filter(f => f.type === 'application/pdf');
-            if (files.length > 0) {
-                const event = { target: { files: files } };
-                handleFileSelect(event);
-            }
-        });
+        // Drag/drop upload is installed by installSplitPdfDropSupport().
 
         // Close with Escape key
         document.addEventListener('keydown', function(e) {
@@ -1783,6 +1860,7 @@ window.clearSplitState = function() {
 
 // Initialize / reset split mode without page reload
 window.initSplit = function() {
+    installSplitPdfDropSupport();
     // Reset all split state
     pdfDocuments = [];
     splitPoints = new Set();

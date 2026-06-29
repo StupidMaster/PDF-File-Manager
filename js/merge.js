@@ -28,6 +28,117 @@ const mergeFileColors = [
 
 Object.defineProperty(window, 'hasMergeFiles', { get: () => mergeFiles.length > 0 });
 
+function setMergeActionLoading(isLoading) {
+    const btn = document.getElementById('mergeBtn');
+    if (!btn) return;
+    if (isLoading) {
+        if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+        btn.classList.add('is-processing');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span>Merging...';
+    } else {
+        btn.classList.remove('is-processing');
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        delete btn.dataset.originalHtml;
+        updateMergeButton();
+    }
+}
+
+function mergeDragHasFiles(event) {
+    return Array.from(event.dataTransfer?.types || []).includes('Files');
+}
+
+function getMergeDroppedPdfFiles(event) {
+    return Array.from(event.dataTransfer?.files || []).filter(file => {
+        const name = file.name || '';
+        return file.type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+    });
+}
+
+function setMergeDropActive(active) {
+    document.querySelector('#uploadSection .upload-box')?.classList.toggle('pdf-drop-active', active);
+    document.querySelectorAll('#pageGrid .add-page-item').forEach(item => {
+        item.classList.toggle('pdf-drop-active', active);
+    });
+}
+
+function shouldProcessPdfDrop(files) {
+    const signature = Array.from(files || [])
+        .map(file => `${file.name}:${file.size}:${file.lastModified}`)
+        .join('|');
+    const now = Date.now();
+    const last = window._pdfManagerLastFileDrop || {};
+    if (signature && last.signature === signature && now - last.time < 1500) {
+        return false;
+    }
+    window._pdfManagerLastFileDrop = { signature, time: now };
+    return true;
+}
+
+function handleMergeDroppedFiles(files) {
+    if (!files.length) {
+        showNotification('Please drop PDF files only.', 'warning');
+        return;
+    }
+    if (!shouldProcessPdfDrop(files)) return;
+    window._mergeInsertMode = false;
+    handleMergeFileSelect({ target: { files, value: '' } });
+}
+
+function installMergePdfDropSupport() {
+    if (window._mergePdfDropInstalled) return;
+    window._mergePdfDropInstalled = true;
+    let dragDepth = 0;
+
+    const isMergeDropActive = () => window.activeTool === 'merge';
+    const handleDragEnter = event => {
+        if (!isMergeDropActive() || !mergeDragHasFiles(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth++;
+        setMergeDropActive(true);
+    };
+    const handleDragOver = event => {
+        if (!isMergeDropActive() || !mergeDragHasFiles(event)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        event.dataTransfer.dropEffect = 'copy';
+        setMergeDropActive(true);
+    };
+    const handleDragLeave = event => {
+        if (!isMergeDropActive() || !mergeDragHasFiles(event)) return;
+        event.stopPropagation();
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) setMergeDropActive(false);
+    };
+    const handleDrop = event => {
+        if (event._pdfManagerFileDropHandled || !isMergeDropActive() || !mergeDragHasFiles(event)) return;
+        event._pdfManagerFileDropHandled = true;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth = 0;
+        setMergeDropActive(false);
+        handleMergeDroppedFiles(getMergeDroppedPdfFiles(event));
+    };
+
+    ['uploadSection', 'pageContainer', 'pageGrid'].forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('dragenter', handleDragEnter);
+        el.addEventListener('dragover', handleDragOver);
+        el.addEventListener('dragleave', handleDragLeave);
+        el.addEventListener('drop', handleDrop);
+    });
+}
+
+function installMergeGridReorderSupport() {
+    const pageGrid = document.getElementById('pageGrid');
+    if (!pageGrid || pageGrid.dataset.mergeGridReorderInstalled === '1') return;
+    pageGrid.dataset.mergeGridReorderInstalled = '1';
+    pageGrid.addEventListener('dragover', event => window.handleMergeGridDragOver?.(event));
+    pageGrid.addEventListener('drop', event => window.handleMergeGridDrop?.(event));
+}
+
 // Data-only reset — clears merge state without touching the UI.
 // Called by index_enhanced.php when switching AWAY from merge mode.
 window.clearMergeState = function() {
@@ -41,6 +152,8 @@ window.clearMergeState = function() {
 
 // ─── Init / Reset ─────────────────────────────────────────────────────────────
 window.initMerge = function() {
+    installMergePdfDropSupport();
+    installMergeGridReorderSupport();
     isMergeMode = true;
     const splitControls = document.getElementById('splitControls');
     const mergeControls = document.getElementById('mergeControls');
@@ -66,6 +179,14 @@ function resetMergeState() {
     if (pageContainer) { pageContainer.classList.remove('active'); pageContainer.style.display = 'none'; }
     if (pageGrid) pageGrid.innerHTML = '';
     if (uploadSection) uploadSection.classList.remove('hidden');
+
+    const prefixToggle = document.getElementById('mergeNamePrefixToggle');
+    const prefixInput = document.getElementById('mergeNamePrefixInput');
+    if (prefixToggle) prefixToggle.checked = false;
+    if (prefixInput) {
+        prefixInput.value = '';
+        prefixInput.disabled = true;
+    }
 
     updateMergeFileList();
     updateMergeButton();
@@ -522,7 +643,7 @@ async function insertMergeBlankPage(insertAfterPos) {
         if (!window.PDFLib) {
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
+                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || 'PDF-file-manager-new'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
                 s.onload = resolve; s.onerror = () => reject(new Error('Failed to load pdf-lib'));
                 document.head.appendChild(s);
             });
@@ -776,6 +897,82 @@ function _getMergeDropSide(event, element) {
     return 'center';
 }
 
+function _getMergeGridGapDropTarget(event) {
+    const pageWrappers = _getMergePageWrappers();
+    if (!pageWrappers.length) return null;
+
+    const rows = [];
+    pageWrappers.forEach((wrapper, index) => {
+        const rect = wrapper.getBoundingClientRect();
+        let row = rows.find(r => Math.abs(r.top - rect.top) < 12);
+        if (!row) {
+            row = { top: rect.top, bottom: rect.bottom, items: [] };
+            rows.push(row);
+        }
+        row.top = Math.min(row.top, rect.top);
+        row.bottom = Math.max(row.bottom, rect.bottom);
+        row.items.push({ index, rect });
+    });
+
+    const row = rows.find(r => event.clientY >= r.top - 16 && event.clientY <= r.bottom + 16);
+    if (!row) return null;
+
+    row.items.sort((a, b) => a.rect.left - b.rect.left);
+    const first = row.items[0];
+    const last = row.items[row.items.length - 1];
+
+    if (event.clientX < first.rect.left) return { wrapperIndex: first.index, side: 'left' };
+    if (event.clientX > last.rect.right) return { wrapperIndex: last.index, side: 'right' };
+    return null;
+}
+
+function _showMergeDropTarget(wrapperIndex, side) {
+    const pageWrappers = _getMergePageWrappers();
+    const wrapper = pageWrappers[wrapperIndex];
+    if (!wrapper) return;
+
+    if (_mergeDropTarget &&
+        _mergeDropTarget.wrapperIndex === wrapperIndex &&
+        _mergeDropTarget.side === side) return;
+
+    _clearMergeDropIndicators();
+    _mergeDropTarget = { wrapperIndex, side };
+
+    if (side === 'center') {
+        wrapper.classList.add('drop-swap');
+    } else if (side === 'left') {
+        wrapper.classList.add('drop-insert-before');
+        wrapper.classList.add('push-right');
+    } else {
+        wrapper.classList.add('drop-insert-after');
+        const next = pageWrappers[wrapperIndex + 1];
+        if (next && !next.querySelector('.dragging')) next.classList.add('push-right');
+    }
+}
+
+function _performMergePageDrop(wrapperIndex, side) {
+    if (!mergeDraggedPageData) return;
+
+    const pageWrappers = _getMergePageWrappers();
+    const fromWrapper = mergeDraggedPageData.element.closest('.page-item-wrapper');
+    if (!fromWrapper) return;
+
+    const fromPos = pageWrappers.indexOf(fromWrapper);
+    const targetPos = wrapperIndex;
+    if (fromPos === -1 || targetPos === -1) return;
+
+    if (side === 'center') {
+        if (fromPos !== targetPos) swapMergePagesByPos(fromPos, targetPos, pageWrappers);
+        return;
+    }
+
+    let insertPos = targetPos;
+    if (side === 'right') insertPos += 1;
+    if (fromPos !== insertPos && fromPos !== insertPos - 1) {
+        insertMergePageByPos(fromPos, insertPos, pageWrappers);
+    }
+}
+
 window.handleMergePageDragStart = function(event, globalIndex) {
     mergeDraggedPageData = { globalIndex, element: event.currentTarget };
     event.currentTarget.classList.add('dragging');
@@ -799,31 +996,7 @@ window.handleMergePageDragOver = function(event) {
     const wrapperIndex = pageWrappers.indexOf(wrapper);
     if (wrapperIndex === -1) return;
 
-    // Skip re-render if nothing changed
-    if (_mergeDropTarget &&
-        _mergeDropTarget.wrapperIndex === wrapperIndex &&
-        _mergeDropTarget.side === side) return;
-
-    _clearMergeDropIndicators();
-    _mergeDropTarget = { wrapperIndex, side };
-
-    if (side === 'center') {
-        wrapper.classList.add('drop-swap');
-    } else if (side === 'left') {
-        wrapper.classList.add('drop-insert-before');
-        // Animate the card itself (and the one before it) to show space opening
-        wrapper.classList.add('push-right');
-        const prev = pageWrappers[wrapperIndex - 1];
-        if (prev && !prev.querySelector('.dragging')) {
-            // no extra push on previous needed; the gap indicator is enough
-        }
-    } else { // right
-        wrapper.classList.add('drop-insert-after');
-        const next = pageWrappers[wrapperIndex + 1];
-        if (next && !next.querySelector('.dragging')) {
-            next.classList.add('push-right');
-        }
-    }
+    _showMergeDropTarget(wrapperIndex, side);
 };
 
 window.handleMergePageDrop = function(event, _unused) {
@@ -831,32 +1004,43 @@ window.handleMergePageDrop = function(event, _unused) {
     event.stopPropagation();
 
     const target = event.currentTarget;
-    const side   = _getMergeDropSide(event, target);
-    _clearMergeDropIndicators();
-
+    const side = _getMergeDropSide(event, target);
     if (!mergeDraggedPageData) return;
 
-    // Always derive positions from the live DOM — never use stale indices
-    const pageWrappers  = _getMergePageWrappers();
-    const fromWrapper   = mergeDraggedPageData.element.closest('.page-item-wrapper');
+    const pageWrappers = _getMergePageWrappers();
     const targetWrapper = target.closest('.page-item-wrapper');
-    if (!fromWrapper || !targetWrapper) return;
+    if (!targetWrapper) return;
 
-    const fromPos   = pageWrappers.indexOf(fromWrapper);
     const targetPos = pageWrappers.indexOf(targetWrapper);
-    if (fromPos === -1 || targetPos === -1) return;
+    _clearMergeDropIndicators();
+    if (targetPos === -1) return;
 
-    if (side === 'center') {
-        // SWAP: exchange the two wrappers
-        if (fromPos !== targetPos) swapMergePagesByPos(fromPos, targetPos, pageWrappers);
-    } else {
-        // INSERT: remove from source, splice into target position
-        let insertPos = targetPos;
-        if (side === 'right') insertPos += 1;
-        if (fromPos !== insertPos && fromPos !== insertPos - 1) {
-            insertMergePageByPos(fromPos, insertPos, pageWrappers);
-        }
-    }
+_performMergePageDrop(targetPos, side);
+};
+window.handleMergeGridDragOver = function(event) {
+    if (!mergeDraggedPageData || mergeDragHasFiles(event)) return;
+    if (event.target.closest('.page-item:not(.add-page-item)')) return;
+
+    const target = _getMergeGridGapDropTarget(event);
+    if (!target) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    _showMergeDropTarget(target.wrapperIndex, target.side);
+};
+
+window.handleMergeGridDrop = function(event) {
+    if (!mergeDraggedPageData || mergeDragHasFiles(event)) return;
+    if (event.target.closest('.page-item:not(.add-page-item)')) return;
+
+    const target = _mergeDropTarget || _getMergeGridGapDropTarget(event);
+    if (!target) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    _clearMergeDropIndicators();
+    _performMergePageDrop(target.wrapperIndex, target.side);
 };
 
 window.handleMergePageDragEnd = function(event) {
@@ -1151,6 +1335,21 @@ window.removeMergeFile = function(index, event) {
 
 window.addMoreMergeFiles = function() { document.getElementById('fileInput').click(); };
 
+window.toggleMergeNamePrefixInput = function(checked) {
+    const input = document.getElementById('mergeNamePrefixInput');
+    if (!input) return;
+    input.disabled = !checked;
+    if (checked) input.focus();
+};
+
+function getMergeOutputFilename() {
+    const baseName = mergeFiles[0]?.fileName?.replace(/\.pdf$/i, '') || 'merged';
+    const prefixEnabled = document.getElementById('mergeNamePrefixToggle')?.checked === true;
+    const rawPrefix = prefixEnabled ? (document.getElementById('mergeNamePrefixInput')?.value || '') : '';
+    const prefix = rawPrefix.trim().replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, '_');
+    return prefix ? `${prefix}_${baseName}.pdf` : `${baseName}_merged.pdf`;
+}
+
 window.clearAllMergeFiles = function() {
     if (!mergeFiles.length) return;
     showConfirm('Clear All Files', 'Remove all files from the merge list?', () => {
@@ -1162,13 +1361,14 @@ window.clearAllMergeFiles = function() {
 window.executeMerge = async function() {
     if (mergeFiles.length < 2) { showNotification('Please add at least 2 PDF files to merge.', 'warning'); return; }
 
+    setMergeActionLoading(true);
     showProgress('Merging PDFs...', 'Building output…');
     try {
         if (!window.PDFLib) {
             updateProgress(5, 'Loading pdf-lib…');
             await new Promise((resolve, reject) => {
                 const s = document.createElement('script');
-                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || '.'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
+                s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || 'PDF-file-manager-new'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
                 s.onload = resolve;
                 s.onerror = () => reject(new Error('Failed to load pdf-lib'));
                 document.head.appendChild(s);
@@ -1217,8 +1417,7 @@ window.executeMerge = async function() {
         await new Promise(r => setTimeout(r, 300));
         hideProgress();
 
-        const baseName = mergeFiles[0]?.fileName?.replace(/\.pdf$/i, '') || 'merged';
-        downloadFile(btoa(binary), `${baseName}_merged.pdf`);
+        downloadFile(btoa(binary), getMergeOutputFilename());
         showNotification(`Successfully merged ${allPageItems.length} pages into 1 PDF!`, 'success');
         showToast('Successfully merged (' + allPageItems.length + ') pages into 1 PDF!', 'success');
     } catch (err) {
@@ -1226,6 +1425,8 @@ window.executeMerge = async function() {
         showNotification('Merge failed: ' + err.message, 'error');
         showToast('Merge failed.', 'error');
         console.error(err);
+    } finally {
+        setMergeActionLoading(false);
     }
 };
 
@@ -1271,3 +1472,5 @@ window.mergeDeletePreviewPage = function() {
     document.getElementById('previewModal').classList.remove('active');
     deleteMergePage(idx);
 };
+
+
