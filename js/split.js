@@ -197,7 +197,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || 'PDF-file
         }
         
         // LIMIT 2: Maximum file size (50MB per file)
-        if (file.size > 50 * 1024 * 1024) {
+        if (file.size > 100 * 1024 * 1024) {
             showNotification(`File "${file.name}" is too large. Maximum 50MB per file.`, 'error');
             event.target.value = '';
             return;
@@ -256,6 +256,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `${window.PDF_MANAGER_BASE || 'PDF-file
             document.getElementById('uploadSection').classList.add('hidden');
             document.getElementById('pageContainer').classList.add('active');
             document.getElementById('splitControls').classList.add('show');
+            resetSplitGridLayout();
             
             await appendNewFiles(files.length);
             updateFileList();
@@ -326,6 +327,12 @@ function handleSplitDroppedFiles(files) {
     }
     if (!shouldProcessPdfDrop(files)) return;
     handleFileSelect({ target: { files, value: '' } });
+}
+
+function resetSplitGridLayout() {
+    const pageGrid = document.getElementById('pageGrid');
+    if (!pageGrid) return;
+    pageGrid.style.cssText = '';
 }
 
 function installSplitPdfDropSupport() {
@@ -622,6 +629,7 @@ function removeFile(index) {
 // NEW: Rebuild page grid with correct numbering
 async function rebuildPageGrid() {
     const pageGrid = document.getElementById('pageGrid');
+    resetSplitGridLayout();
     pageGrid.innerHTML = '';
     splitPoints.clear();
     
@@ -685,6 +693,7 @@ async function rebuildPageGrid() {
 // NEW FUNCTION: Rebuild entire page grid with correct numbering
 async function rebuildPageGrid() {
     const pageGrid = document.getElementById('pageGrid');
+    resetSplitGridLayout();
     pageGrid.innerHTML = '';
     
     // Clear split points
@@ -1235,6 +1244,14 @@ function createSkeletonItem(pageIndex, totalPages) {
         let currentPreviewPage  = null;
         let currentPreviewDoc   = null;
 
+        function getSplitPreviewFitScale(pageWidth, pageHeight) {
+            const wrapper = document.getElementById('previewCanvasWrapper');
+            const rect = wrapper?.getBoundingClientRect();
+            const availableWidth = Math.max(240, (rect?.width || window.innerWidth * 0.92) - 28);
+            const availableHeight = Math.max(240, (rect?.height || window.innerHeight * 0.82) - 28);
+            return Math.max(0.3, Math.min(5, Math.min(availableWidth / pageWidth, availableHeight / pageHeight) * 0.98));
+        }
+
         async function openSplitPreview(globalIndex) {
             const info = getPageInfoFromDOM(globalIndex);
             if (!info) return;
@@ -1244,16 +1261,15 @@ function createSkeletonItem(pageIndex, totalPages) {
             currentPreviewPage = info.pageNum;
 
             const modal = document.getElementById('previewModal');
+            modal?.classList.add('active');
+            await new Promise(resolve => requestAnimationFrame(resolve));
 
             // Fit scale to screen
             const pg = await currentPreviewDoc.getPage(currentPreviewPage);
-            const modalW = window.innerWidth  * 0.8;
-            const modalH = window.innerHeight * 0.7;
             const vp = pg.getViewport({ scale: 1 });
-            currentPreviewScale = Math.min(modalW / vp.width, modalH / vp.height) * 0.9;
+            currentPreviewScale = getSplitPreviewFitScale(vp.width, vp.height);
 
             await renderSplitPreview();
-            modal.classList.add('active');
         }
 
         // Keep backward compat for anything still calling showPreview
@@ -1324,10 +1340,8 @@ function createSkeletonItem(pageIndex, totalPages) {
 
             // Re-fit scale for potentially different page size
             const pg = await currentPreviewDoc.getPage(currentPreviewPage);
-            const modalW = window.innerWidth  * 0.8;
-            const modalH = window.innerHeight * 0.7;
             const vp = pg.getViewport({ scale: 1 });
-            currentPreviewScale = Math.min(modalW / vp.width, modalH / vp.height) * 0.9;
+            currentPreviewScale = getSplitPreviewFitScale(vp.width, vp.height);
 
             await renderSplitPreview();
         }
@@ -1882,7 +1896,7 @@ window.initSplit = function() {
 
     if (uploadSection) uploadSection.classList.remove('hidden');
     if (pageContainer) { pageContainer.classList.remove('active'); pageContainer.style.display = ''; }
-    if (pageGrid) pageGrid.innerHTML = '';
+    if (pageGrid) { pageGrid.innerHTML = ''; resetSplitGridLayout(); }
     if (splitControls) splitControls.classList.remove('show');  // hide until file uploaded
     if (mergeControls) mergeControls.classList.remove('active');
     if (splitBtn) splitBtn.disabled = true;

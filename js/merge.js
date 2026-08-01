@@ -9,6 +9,7 @@ let mergeDraggedPageData = null;
 let mergeRenderedPages = new Map();
 let currentMergeFileIndex = 0;
 let mergePageOrder = [];
+let mergeFolderSources = [];
 
 // Per-page rotation: pageKey -> degrees
 let mergePageRotations = new Map();
@@ -25,8 +26,24 @@ const mergeFileColors = [
     'var(--file-color-4)', 'var(--file-color-5)', 'var(--file-color-6)',
     'var(--file-color-7)', 'var(--file-color-8)'
 ];
+const MERGE_THUMBNAIL_SCALE = 0.42;
+const MERGE_THUMBNAIL_CONCURRENCY = 3;
 
 Object.defineProperty(window, 'hasMergeFiles', { get: () => mergeFiles.length > 0 });
+
+function resetMergeGridLayout() {
+    const pageGrid = document.getElementById('pageGrid');
+    if (!pageGrid) return;
+    pageGrid.style.cssText = '';
+}
+
+function getMergePreviewFitScale(pageWidth, pageHeight) {
+    const wrapper = document.getElementById('previewCanvasWrapper');
+    const rect = wrapper?.getBoundingClientRect();
+    const availableWidth = Math.max(240, (rect?.width || window.innerWidth * 0.92) - 28);
+    const availableHeight = Math.max(240, (rect?.height || window.innerHeight * 0.82) - 28);
+    return Math.max(0.3, Math.min(5, Math.min(availableWidth / pageWidth, availableHeight / pageHeight) * 0.98));
+}
 
 function setMergeActionLoading(isLoading) {
     const btn = document.getElementById('mergeBtn');
@@ -42,6 +59,31 @@ function setMergeActionLoading(isLoading) {
         delete btn.dataset.originalHtml;
         updateMergeButton();
     }
+}
+
+function setMergeFolderActionLoading(isLoading) {
+    const btn = document.getElementById('mergeFolderExecuteBtn');
+    if (!btn) return;
+    if (isLoading) {
+        if (!btn.dataset.originalHtml) btn.dataset.originalHtml = btn.innerHTML;
+        btn.classList.add('is-processing');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="btn-spinner"></span>Merging folders...';
+    } else {
+        btn.classList.remove('is-processing');
+        btn.innerHTML = btn.dataset.originalHtml || btn.innerHTML;
+        delete btn.dataset.originalHtml;
+        btn.disabled = mergeFolderSources.length < 2;
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function mergeDragHasFiles(event) {
@@ -177,7 +219,7 @@ function resetMergeState() {
     const pageGrid = document.getElementById('pageGrid');
 
     if (pageContainer) { pageContainer.classList.remove('active'); pageContainer.style.display = 'none'; }
-    if (pageGrid) pageGrid.innerHTML = '';
+    if (pageGrid) { pageGrid.innerHTML = ''; resetMergeGridLayout(); }
     if (uploadSection) uploadSection.classList.remove('hidden');
 
     const prefixToggle = document.getElementById('mergeNamePrefixToggle');
@@ -272,10 +314,7 @@ async function handleMergeFileSelect(event) {
                 }
             }
 
-            // Phase 2: render each page sequentially into its skeleton
-            for (const d of skeletonQueue) {
-                await loadMergePageSequentially(d.wrapper, d.skeleton, d.pdfDoc, d.pageNum, d.fileIndex, 0, d.pageKey);
-            }
+            await renderMergePageSkeletonBatch(skeletonQueue);
 
             renumberMergePageItems();
             rebuildMergePageOrder();
@@ -386,12 +425,23 @@ async function appendNewMergeFiles(fileCount) {
     addWrapper.appendChild(createAddMergeFileButton());
     pageGrid.appendChild(addWrapper);
 
-    for (const d of skeletonData) {
-        await loadMergePageSequentially(d.wrapper, d.skeleton, d.pdfDoc, d.pageNum, d.fileIndex, d.globalPageIndex, d.pageKey);
-    }
+    await renderMergePageSkeletonBatch(skeletonData);
 
     refreshMergeAddBetweenButtons();
     updateMergeButton();
+}
+
+async function renderMergePageSkeletonBatch(skeletonData) {
+    let nextIndex = 0;
+    const workerCount = Math.min(MERGE_THUMBNAIL_CONCURRENCY, skeletonData.length);
+    const workers = Array.from({ length: workerCount }, async () => {
+        while (nextIndex < skeletonData.length) {
+            const item = skeletonData[nextIndex++];
+            await loadMergePageSequentially(item.wrapper, item.skeleton, item.pdfDoc, item.pageNum, item.fileIndex, item.globalPageIndex, item.pageKey);
+            if (nextIndex % 12 === 0) await new Promise(resolve => setTimeout(resolve, 0));
+        }
+    });
+    await Promise.all(workers);
 }
 
 async function loadMergePageSequentially(wrapper, skeleton, pdfDoc, pageNum, fileIndex, globalPageIndex, pageKey) {
@@ -412,7 +462,6 @@ async function loadMergePageSequentially(wrapper, skeleton, pdfDoc, pageNum, fil
         if (progressBar) progressBar.style.width = '100%';
         if (percentEl) percentEl.textContent = '100%';
         if (labelEl) labelEl.textContent = 'Complete!';
-        await new Promise(r => setTimeout(r, 150));
         wrapper.replaceChild(pageItem, skeleton);
     } catch (err) {
         console.error('Error loading merge page:', err);
@@ -473,7 +522,7 @@ async function createMergePageItem(pdfDoc, pageNum, fileIndex, globalPageIndex, 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const rotation = mergePageRotations.get(pageKey) || 0;
-    const viewport = page.getViewport({ scale: 0.5, rotation });
+    const viewport = page.getViewport({ scale: MERGE_THUMBNAIL_SCALE, rotation });
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     await page.render({ canvasContext: ctx, viewport }).promise;
@@ -611,10 +660,17 @@ function createMergeAddBetweenButton(afterWrapperIndex) {
         });
     });
 
-    // Close tooltip on outside click
-    document.addEventListener('click', () => { tooltip.style.display = 'none'; }, { capture: false });
+    installMergeAddTooltipCloser();
 
     return btn;
+}
+
+function installMergeAddTooltipCloser() {
+    if (window._mergeAddTooltipCloserInstalled) return;
+    window._mergeAddTooltipCloserInstalled = true;
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.merge-add-tooltip').forEach(t => { t.style.display = 'none'; });
+    }, { capture: false });
 }
 
 // Attach a between-button to a wrapper (called after each real page wrapper is built)
@@ -740,7 +796,7 @@ async function rotateMergePageItem(div, pdfDoc, pageNum, pageKey, delta) {
         const page    = await pdfDoc.getPage(pageNum);
         const canvas  = div.querySelector('canvas');
         if (!canvas) return;
-        const viewport = page.getViewport({ scale: 0.5, rotation: newRot });
+        const viewport = page.getViewport({ scale: MERGE_THUMBNAIL_SCALE, rotation: newRot });
         canvas.width  = viewport.width;
         canvas.height = viewport.height;
         const ctx = canvas.getContext('2d');
@@ -768,12 +824,27 @@ async function duplicateMergePage(globalIndex) {
     if (!fileData) return;
 
     mergeDupCounter++;
-    const dupKey = `${sourceKey}-dup${mergeDupCounter}`;
+    currentMergeFileIndex++;
+    const duplicateFileIndex = currentMergeFileIndex;
+    const duplicateFile = {
+        document: fileData.document,
+        arrayBuffer: fileData.arrayBuffer,
+        fileIndex: duplicateFileIndex,
+        fileName: `${fileData.fileName.replace(/\.pdf$/i, '')} - duplicate page ${pageNum}.pdf`,
+        fileSize: fileData.fileSize,
+        numPages: 1,
+        isDuplicate: true,
+        sourceFileIndex: fileIndex,
+        sourcePageNum: pageNum
+    };
+    mergeFiles.push(duplicateFile);
+
+    const dupKey = `${duplicateFileIndex}-${pageNum}-dup${mergeDupCounter}`;
     const sourceRot = mergePageRotations.get(sourceKey) || 0;
     if (sourceRot) mergePageRotations.set(dupKey, sourceRot);
 
     const sourceIndex = allWrappers.indexOf(sourceWrapper);
-    const newItem = await createMergePageItem(fileData.document, pageNum, fileIndex, globalIndex, dupKey);
+    const newItem = await createMergePageItem(fileData.document, pageNum, duplicateFileIndex, globalIndex, dupKey);
 
     newItem.title = 'Duplicate page';
     const badge = document.createElement('div');
@@ -793,6 +864,8 @@ async function duplicateMergePage(globalIndex) {
     renumberMergePageItems();
     rebuildMergePageOrder();
     refreshMergeAddBetweenButtons();
+    updateMergeFileList();
+    updateMergeButton();
     showNotification('Page duplicated', 'success');
     showToast('Page duplicated!', 'info');
 }
@@ -844,6 +917,7 @@ function renumberMergePageItems() {
         if (numEl) numEl.textContent = n + 1;
         n++;
     });
+    updateMergeButton();
 }
 
 function rebuildMergePageOrder() {
@@ -1125,19 +1199,30 @@ window.handleMergeFileDragLeave = function(event) {
 // ─── Rebuild full grid ────────────────────────────────────────────────────────
 async function rebuildMergePageGrid() {
     const pageGrid = document.getElementById('pageGrid');
+    resetMergeGridLayout();
     pageGrid.innerHTML = '';
     mergePageOrder = [];
-    mergeFiles.forEach((f, i) => { f.fileIndex = i + 1; });
 
     let globalPageIndex = 0;
     for (const fileData of mergeFiles) {
         const { document: pdfDoc, fileIndex } = fileData;
-        for (let i = 1; i <= pdfDoc.numPages; i++) {
+        const pagesToRender = fileData.isDuplicate
+            ? [fileData.sourcePageNum || 1]
+            : Array.from({ length: pdfDoc.numPages }, (_, index) => index + 1);
+        for (const i of pagesToRender) {
             const pageWrapper = document.createElement('div');
             pageWrapper.className = 'page-item-wrapper';
-            const pageKey = `${fileIndex}-${i}`;
+            const pageKey = fileData.isDuplicate ? `${fileIndex}-${i}-dup` : `${fileIndex}-${i}`;
             mergePageOrder.push({ fileIndex, pageNum: i, globalIndex: globalPageIndex, pageKey });
-            pageWrapper.appendChild(await createMergePageItem(pdfDoc, i, fileIndex, globalPageIndex, pageKey));
+            const pageItem = await createMergePageItem(pdfDoc, i, fileIndex, globalPageIndex, pageKey);
+            if (fileData.isDuplicate) {
+                const badge = document.createElement('div');
+                badge.style.cssText = 'position:absolute;top:4px;right:4px;background:rgba(138,43,226,0.85);color:#fff;font-size:9px;font-weight:700;padding:2px 5px;border-radius:4px;z-index:4;pointer-events:none;';
+                badge.textContent = 'DUP';
+                pageItem.style.position = 'relative';
+                pageItem.appendChild(badge);
+            }
+            pageWrapper.appendChild(pageItem);
             pageGrid.appendChild(pageWrapper);
             globalPageIndex++;
         }
@@ -1195,15 +1280,18 @@ function updateMergeButton() {
     const mergeTotalPages = document.getElementById('mergeTotalPages');
     if (!mergeBtn) return;
 
-    const total = mergeFiles.reduce((s, f) => s + f.numPages, 0);
-    if (mergeCountBtn)   mergeCountBtn.textContent  = mergeFiles.length;
-    if (mergeFilesText)  mergeFilesText.textContent  = `files (${total} pages)`;
-    if (mergeTotalPages) mergeTotalPages.textContent = `Total: ${total} pages from ${mergeFiles.length} files`;
-    mergeBtn.disabled = mergeFiles.length < 2;
+    const livePageItems = Array.from(document.querySelectorAll('#pageGrid .page-item:not(.add-page-item)'));
+    const livePages = livePageItems.length || mergeFiles.reduce((s, f) => s + f.numPages, 0);
+    const liveFileIndexes = new Set(livePageItems.map(item => parseInt(item.dataset.fileIndex)).filter(Number.isFinite));
+    const liveFiles = liveFileIndexes.size || mergeFiles.length;
+    if (mergeCountBtn)   mergeCountBtn.textContent  = liveFiles;
+    if (mergeFilesText)  mergeFilesText.textContent  = `files (${livePages} pages)`;
+    if (mergeTotalPages) mergeTotalPages.textContent = `Total: ${livePages} pages from ${liveFiles} files`;
+    mergeBtn.disabled = liveFiles < 2 || livePages < 1;
     mergeBtn.onclick = executeMerge;
 }
 
-function getMergeTotalPages() { return mergeFiles.reduce((s, f) => s + f.numPages, 0); }
+function getMergeTotalPages() { return getMergeDOMTotalPages() || mergeFiles.reduce((s, f) => s + f.numPages, 0); }
 function getMergeDOMTotalPages() { return document.querySelectorAll('#pageGrid .page-item:not(.add-page-item)').length; }
 
 // ─── Preview ───────────────────────────────────────────────────────────────────
@@ -1235,12 +1323,13 @@ async function openMergePreviewByIndex(globalIndex) {
     mergePreviewGlobalIndex = globalIndex;
 
     const modal = document.getElementById('previewModal');
+    modal?.classList.add('active');
+    await new Promise(resolve => requestAnimationFrame(resolve));
     const pg = await info.fileData.document.getPage(info.pageNum);
     const vp = pg.getViewport({ scale: 1 });
-    currentMergePreviewScale = Math.min(window.innerWidth * 0.8 / vp.width, window.innerHeight * 0.7 / vp.height) * 0.9;
+    currentMergePreviewScale = getMergePreviewFitScale(vp.width, vp.height);
 
     await renderMergePreview();
-    modal.classList.add('active');
 }
 
 async function renderMergePreview() {
@@ -1358,8 +1447,647 @@ window.clearAllMergeFiles = function() {
 };
 
 // ─── Execute Merge (client-side via pdf-lib) ───────────────────────────────────
+function ensureMergeFolderInput() {
+    let input = document.getElementById('mergeFolderInput');
+    if (input) return input;
+    input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'mergeFolderInput';
+    input.accept = '.pdf,application/pdf';
+    input.multiple = true;
+    input.webkitdirectory = true;
+    input.directory = true;
+    input.setAttribute('webkitdirectory', '');
+    input.setAttribute('directory', '');
+    input.setAttribute('multiple', '');
+    input.className = 'file-input';
+    input.style.display = 'none';
+    input.addEventListener('change', handleMergeFolderUpload);
+    document.body.appendChild(input);
+    return input;
+}
+
+function getMergeFolderModal() {
+    let modal = document.getElementById('mergeFolderModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mergeFolderModal';
+    modal.className = 'merge-folder-modal';
+    modal.innerHTML = `
+        <div class="merge-folder-dialog">
+            <div class="merge-folder-header">
+                <div>
+                    <h3><i class="fa fa-folder-open"></i> Merge by Folders</h3>
+                    <p>Add folders in the exact order you want their matching PDFs merged.</p>
+                </div>
+                <button type="button" class="merge-folder-close" onclick="closeMergeFolderMode()" title="Close"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="merge-folder-body">
+                <div id="mergeFolderDropZone" class="merge-folder-drop-zone">
+                    <div class="merge-folder-drop-icon"><i class="fa fa-cloud-upload"></i></div>
+                    <strong>Drop main folders here</strong>
+                    <span>Each dropped main folder becomes Folder 1, Folder 2, and so on. Course subfolders stay nested under that folder.</span>
+                </div>
+                <div class="merge-folder-actions">
+                    <button type="button" class="btn btn-secondary" onclick="chooseMergeFolder()"><i class="fa fa-folder-open"></i> Browse Folder</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearMergeFolders()"><i class="fa fa-trash-o"></i> Clear</button>
+                </div>
+                <div class="merge-folder-help">
+                    Matching uses the course and student name in the PDF filename. Suffixes like <code>_Annex-B</code>, <code>_Annex-D</code>, and <code>_Annex-F</code> are ignored. Browser folder browsing may show Chrome's security prompt; drag-and-drop uses this app modal flow.
+                </div>
+                <div id="mergeFolderList" class="merge-folder-list"></div>
+                <div id="mergeFolderSummary" class="merge-folder-summary"></div>
+            </div>
+            <div class="merge-folder-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMergeFolderMode()">Cancel</button>
+                <button type="button" class="btn btn-primary" id="mergeFolderExecuteBtn" onclick="reviewMergeFolderMode()" disabled>
+                    <i class="fa fa-compress"></i> Merge Matching PDFs
+                </button>
+            </div>
+        </div>`;
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeMergeFolderMode();
+    });
+    document.body.appendChild(modal);
+    installMergeFolderDropZone(modal);
+    return modal;
+}
+
+function getMergeFolderName(file) {
+    const rel = getMergeFileRelativePath(file);
+    const parts = rel.split(/[\\/]+/).filter(Boolean);
+    return parts.length > 1 ? parts[0] : 'Selected folder';
+}
+
+function getMergeFileRelativePath(file) {
+    return file.webkitRelativePath || file.relativePath || file._mergeRelativePath || file.name || '';
+}
+
+function getMergeRelativeParts(file) {
+    const rel = getMergeFileRelativePath(file);
+    return rel.split(/[\\/]+/).filter(Boolean);
+}
+
+function inferMergeFolderSourceDepth(files) {
+    const partsList = files.map(getMergeRelativeParts).filter(parts => parts.length > 2);
+    if (!partsList.length) return 0;
+    const topFolders = new Set(partsList.map(parts => parts[0]));
+    const secondFolders = new Set(partsList.map(parts => parts[1]).filter(Boolean));
+    return topFolders.size === 1 && secondFolders.size > 1 ? 1 : 0;
+}
+
+function getMergeFolderKey(folderName) {
+    return (folderName || 'Selected folder').trim().toLowerCase();
+}
+
+function getMergeEntrySubfolder(parts, sourceDepth) {
+    if (parts.length <= sourceDepth + 2) return '';
+    return parts.slice(sourceDepth + 1, -1).join('/');
+}
+
+function normalizeMergeSubfolder(subfolder) {
+    return (subfolder || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+}
+
+function setMergeDroppedFilePath(file, relativePath) {
+    try {
+        Object.defineProperty(file, '_mergeRelativePath', {
+            value: relativePath,
+            configurable: true
+        });
+    } catch (err) {
+        file._mergeRelativePath = relativePath;
+    }
+    return file;
+}
+
+function getMergeBaseName(fileName) {
+    let key = (fileName || '').replace(/\.pdf$/i, '').trim();
+    key = key.replace(/_(annex[-\s]?[a-z]|curriculum|stamped|merged)$/i, '');
+    key = key.replace(/\s*-\s*(annex[-\s]?[a-z]|curriculum|stamped|merged)$/i, '');
+    key = key.replace(/\s+/g, ' ').trim();
+    return key;
+}
+
+function getMergeGroupKey(fileName) {
+    return getMergeBaseName(fileName).toLowerCase();
+}
+
+function getSafeMergeFolderFilename(baseName, usedNames, folderPath = '') {
+    const clean = (baseName || 'merged')
+        .replace(/\.pdf$/i, '')
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .replace(/^[-_.]+|[-_.]+$/g, '') || 'merged';
+    let name = `${clean}.pdf`;
+    let i = 2;
+    const makeKey = value => `${folderPath || ''}/${value}`.toLowerCase();
+    while (usedNames.has(makeKey(name))) {
+        name = `${clean} (${i}).pdf`;
+        i++;
+    }
+    usedNames.add(makeKey(name));
+    return name;
+}
+
+function buildMergeFolderGroups() {
+    const groups = new Map();
+    mergeFolderSources.forEach((source, sourceIndex) => {
+        source.files.forEach(entry => {
+            const key = `${entry.subfolder.toLowerCase()}::${getMergeGroupKey(entry.originalName)}`;
+            if (!key) return;
+            if (!groups.has(key)) {
+                groups.set(key, {
+                    key,
+                    displayName: getMergeBaseName(entry.originalName),
+                    subfolder: entry.subfolder,
+                    sources: new Map()
+                });
+            }
+            const group = groups.get(key);
+            if (!group.sources.has(sourceIndex)) group.sources.set(sourceIndex, entry);
+        });
+    });
+    return Array.from(groups.values())
+        .sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+function analyzeMergeFolderGroups() {
+    const groups = buildMergeFolderGroups();
+    const completeGroups = groups.filter(group => group.sources.size === mergeFolderSources.length);
+    const skippedGroups = groups.filter(group => group.sources.size !== mergeFolderSources.length);
+    const skippedFiles = [];
+
+    skippedGroups.forEach(group => {
+        const present = [];
+        const missing = [];
+        mergeFolderSources.forEach((source, index) => {
+            if (group.sources.has(index)) present.push(source.name);
+            else missing.push(source.name);
+        });
+        group.sources.forEach((entry, sourceIndex) => {
+            skippedFiles.push({
+                folder: mergeFolderSources[sourceIndex]?.name || `Folder ${sourceIndex + 1}`,
+                subfolder: group.subfolder,
+                filename: entry.originalName,
+                outputName: getMergeBaseName(entry.originalName),
+                missing
+            });
+        });
+        group.presentFolders = present;
+        group.missingFolders = missing;
+    });
+
+    return { groups, completeGroups, skippedGroups, skippedFiles };
+}
+
+function getMergeSourceSubfolderRows(source) {
+    const counts = new Map();
+    source.files.forEach(entry => {
+        const label = entry.subfolder || '(root)';
+        counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([name, count]) => ({ name, count }));
+}
+
+function renderMergeFolderList() {
+    const list = document.getElementById('mergeFolderList');
+    const summary = document.getElementById('mergeFolderSummary');
+    const btn = document.getElementById('mergeFolderExecuteBtn');
+    if (!list || !summary) return;
+
+    if (!mergeFolderSources.length) {
+        list.innerHTML = `
+            <div class="merge-folder-empty">
+                <i class="fa fa-folder-o"></i>
+                <span>No folders added yet</span>
+            </div>`;
+        summary.textContent = 'Add at least 2 folders to merge matching filenames.';
+    } else {
+        list.innerHTML = mergeFolderSources.map((source, index) => `
+            <div class="merge-folder-row" draggable="true" data-folder-index="${index}">
+                <div class="merge-folder-order" title="Drag to reorder"><i class="fa fa-bars"></i><span>${index + 1}</span></div>
+                <div class="merge-folder-details">
+                    <strong>${escapeHtml(source.name)}</strong>
+                    <span>${source.files.length} PDF${source.files.length === 1 ? '' : 's'} from ${getMergeSourceSubfolderRows(source).length} subfolder${getMergeSourceSubfolderRows(source).length === 1 ? '' : 's'}</span>
+                    <div class="merge-folder-subfolders">
+                        ${getMergeSourceSubfolderRows(source).slice(0, 8).map(row => `
+                            <div class="merge-folder-subfolder">
+                                <i class="fa fa-folder-o"></i>
+                                <span>${escapeHtml(row.name)}</span>
+                                <small>${row.count}</small>
+                            </div>`).join('')}
+                        ${getMergeSourceSubfolderRows(source).length > 8 ? `<div class="merge-folder-subfolder-more">+ ${getMergeSourceSubfolderRows(source).length - 8} more subfolders</div>` : ''}
+                    </div>
+                </div>
+                <button type="button" class="merge-folder-remove" onclick="removeMergeFolderSource(${index})" title="Remove folder">
+                    <i class="fa fa-trash-o"></i>
+                </button>
+            </div>`).join('');
+        installMergeFolderRowDrag(list);
+        const analysis = analyzeMergeFolderGroups();
+        const skippedText = analysis.skippedFiles.length ? ` ${analysis.skippedFiles.length} unmatched PDF${analysis.skippedFiles.length === 1 ? '' : 's'} will be skipped unless matching files are added.` : '';
+        summary.textContent = `${analysis.completeGroups.length} complete matching group${analysis.completeGroups.length === 1 ? '' : 's'} found across ${mergeFolderSources.length} folders.${skippedText}`;
+    }
+    if (btn) btn.disabled = mergeFolderSources.length < 2;
+}
+
+function installMergeFolderRowDrag(list) {
+    let dragIndex = null;
+    list.querySelectorAll('.merge-folder-row').forEach(row => {
+        row.addEventListener('dragstart', event => {
+            dragIndex = Number(row.dataset.folderIndex);
+            row.classList.add('is-dragging');
+            if (event.dataTransfer) {
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/plain', String(dragIndex));
+            }
+        });
+        row.addEventListener('dragover', event => {
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+            row.classList.add('is-drop-target');
+        });
+        row.addEventListener('dragleave', () => {
+            row.classList.remove('is-drop-target');
+        });
+        row.addEventListener('drop', event => {
+            event.preventDefault();
+            row.classList.remove('is-drop-target');
+            const targetIndex = Number(row.dataset.folderIndex);
+            const fromIndex = Number.isInteger(dragIndex) ? dragIndex : Number(event.dataTransfer?.getData('text/plain'));
+            if (!Number.isInteger(fromIndex) || fromIndex === targetIndex) return;
+            const [moved] = mergeFolderSources.splice(fromIndex, 1);
+            mergeFolderSources.splice(targetIndex, 0, moved);
+            renderMergeFolderList();
+        });
+        row.addEventListener('dragend', () => {
+            dragIndex = null;
+            list.querySelectorAll('.merge-folder-row').forEach(item => item.classList.remove('is-dragging', 'is-drop-target'));
+        });
+    });
+}
+
+window.openMergeFolderMode = function() {
+    getMergeFolderModal().classList.add('active');
+    ensureMergeFolderInput();
+    renderMergeFolderList();
+};
+
+window.closeMergeFolderMode = function() {
+    document.getElementById('mergeFolderModal')?.classList.remove('active');
+};
+
+window.chooseMergeFolder = function() {
+    const input = ensureMergeFolderInput();
+    input.value = '';
+    input.click();
+};
+
+window.clearMergeFolders = function() {
+    if (!mergeFolderSources.length) return;
+    showConfirm('Clear Folders', 'Remove all selected merge folders?', () => {
+        mergeFolderSources = [];
+        renderMergeFolderList();
+        showToast('Merge folders cleared.', 'info');
+    });
+};
+
+window.removeMergeFolderSource = function(index) {
+    mergeFolderSources.splice(index, 1);
+    renderMergeFolderList();
+};
+
+function installMergeFolderDropZone(modal) {
+    const dropZone = modal.querySelector('#mergeFolderDropZone');
+    if (!dropZone || dropZone.dataset.installed === '1') return;
+    dropZone.dataset.installed = '1';
+
+    const setActive = active => dropZone.classList.toggle('is-dragging', active);
+
+    ['dragenter', 'dragover'].forEach(type => {
+        dropZone.addEventListener(type, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            setActive(true);
+            if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+        });
+    });
+
+    ['dragleave', 'dragend'].forEach(type => {
+        dropZone.addEventListener(type, event => {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!dropZone.contains(event.relatedTarget)) setActive(false);
+        });
+    });
+
+    dropZone.addEventListener('drop', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        setActive(false);
+        showProcessing('Reading dropped folders...');
+        try {
+            const files = await getMergeDroppedFolderFiles(event);
+            hideProcessing();
+            addMergeFolderFiles(files);
+        } catch (err) {
+            hideProcessing();
+            showNotification('Could not read dropped folder: ' + err.message, 'error');
+        }
+    });
+}
+
+async function getMergeDroppedFolderFiles(event) {
+    const items = Array.from(event.dataTransfer?.items || []);
+    const entries = items
+        .map(item => typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null)
+        .filter(Boolean);
+
+    if (entries.length) {
+        const nested = await Promise.all(entries.map(entry => readMergeFileEntry(entry, '')));
+        return nested.flat().filter(Boolean);
+    }
+
+    return Array.from(event.dataTransfer?.files || []).filter(Boolean);
+}
+
+function readMergeDirectoryEntries(reader) {
+    return new Promise((resolve, reject) => {
+        const entries = [];
+        const readBatch = () => {
+            reader.readEntries(batch => {
+                if (!batch.length) {
+                    resolve(entries);
+                    return;
+                }
+                entries.push(...batch);
+                readBatch();
+            }, reject);
+        };
+        readBatch();
+    });
+}
+
+async function readMergeFileEntry(entry, parentPath) {
+    const currentPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+    if (entry.isFile) {
+        return new Promise((resolve, reject) => {
+            entry.file(file => {
+                resolve(setMergeDroppedFilePath(file, currentPath));
+            }, reject);
+        });
+    }
+    if (entry.isDirectory) {
+        const children = await readMergeDirectoryEntries(entry.createReader());
+        const nested = await Promise.all(children.map(child => readMergeFileEntry(child, currentPath)));
+        return nested.flat();
+    }
+    return [];
+}
+
+function handleMergeFolderUpload(event) {
+    const input = event.target;
+    const files = Array.from(input.files || []).filter(file => {
+        const name = file.name || '';
+        return file.type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+    });
+    if (!files.length) {
+        showNotification('The selected folder has no PDF files.', 'warning');
+        input.value = '';
+        return;
+    }
+
+    addMergeFolderFiles(files);
+    input.value = '';
+}
+
+function addMergeFolderFiles(files) {
+    const pdfFiles = Array.from(files || []).filter(file => {
+        const name = file.name || '';
+        return file.type === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+    });
+    if (!pdfFiles.length) {
+        showNotification('The selected folder has no PDF files.', 'warning');
+        return;
+    }
+
+    const sourceDepth = 0;
+    const folders = new Map();
+    pdfFiles.forEach(file => {
+        const parts = getMergeRelativeParts(file);
+        const folderName = parts[sourceDepth] || getMergeFolderName(file);
+        const key = getMergeFolderKey(folderName);
+        if (!folders.has(key)) {
+            folders.set(key, { key, name: folderName, files: [] });
+        }
+        folders.get(key).files.push({
+            file,
+            originalName: file.name,
+            subfolder: normalizeMergeSubfolder(getMergeEntrySubfolder(parts, sourceDepth))
+        });
+    });
+
+    let added = 0;
+    let skipped = 0;
+    folders.forEach(folder => {
+        if (mergeFolderSources.some(source => source.key === folder.key)) {
+            skipped += 1;
+            return;
+        }
+        mergeFolderSources.push(folder);
+        added += 1;
+    });
+
+    renderMergeFolderList();
+    if (added) {
+        showToast(`Added ${added} folder${added === 1 ? '' : 's'}${skipped ? ` (${skipped} duplicate skipped)` : ''}.`, 'success');
+    } else {
+        showNotification('The selected folder is already added.', 'warning');
+    }
+}
+
+async function ensurePdfLibForMergeFolders() {
+    if (window.PDFLib) return window.PDFLib;
+    await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = window.PDF_LIB_SRC || `${window.PDF_MANAGER_BASE || 'PDF-file-manager-new'}/ScriptsJS/1.17.1-pdf-lib.min.js`;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('Failed to load pdf-lib'));
+        document.head.appendChild(s);
+    });
+    return window.PDFLib;
+}
+
+function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function getMergeFolderConfirmModal() {
+    let modal = document.getElementById('mergeFolderConfirmModal');
+    if (modal) return modal;
+    modal = document.createElement('div');
+    modal.id = 'mergeFolderConfirmModal';
+    modal.className = 'merge-folder-modal merge-folder-confirm-modal';
+    modal.innerHTML = `
+        <div class="merge-folder-dialog merge-folder-confirm-dialog">
+            <div class="merge-folder-header">
+                <div>
+                    <h3><i class="fa fa-check-circle"></i> Confirm Bulk Merge</h3>
+                    <p>Review the folder order and output structure before generating the ZIP.</p>
+                </div>
+                <button type="button" class="merge-folder-close" onclick="closeMergeFolderConfirm()" title="Close"><i class="fa fa-times"></i></button>
+            </div>
+            <div class="merge-folder-body">
+                <div id="mergeFolderConfirmSummary" class="merge-folder-confirm-summary"></div>
+                <div id="mergeFolderConfirmList" class="merge-folder-confirm-list"></div>
+            </div>
+            <div class="merge-folder-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeMergeFolderConfirm()">Back</button>
+                <button type="button" class="btn btn-primary" onclick="executeMergeFolderMode(true)">
+                    <i class="fa fa-compress"></i> Confirm and Merge
+                </button>
+            </div>
+        </div>`;
+    modal.addEventListener('click', event => {
+        if (event.target === modal) closeMergeFolderConfirm();
+    });
+    document.body.appendChild(modal);
+    return modal;
+}
+
+window.closeMergeFolderConfirm = function() {
+    document.getElementById('mergeFolderConfirmModal')?.classList.remove('active');
+};
+
+window.reviewMergeFolderMode = function() {
+    if (mergeFolderSources.length < 2) {
+        showNotification('Add at least 2 folders first.', 'warning');
+        return;
+    }
+    const groups = buildMergeFolderGroups();
+    const analysis = analyzeMergeFolderGroups();
+    if (!analysis.completeGroups.length) {
+        showNotification('No matching PDF filenames were found across the selected folders.', 'warning');
+        return;
+    }
+
+    const modal = getMergeFolderConfirmModal();
+    const summary = modal.querySelector('#mergeFolderConfirmSummary');
+    const list = modal.querySelector('#mergeFolderConfirmList');
+    const folderOrder = mergeFolderSources.map((source, index) => `${index + 1}. ${source.name}`).join(' -> ');
+    summary.innerHTML = `
+        <div><strong>${analysis.completeGroups.length}</strong> merged PDF${analysis.completeGroups.length === 1 ? '' : 's'} will be created.</div>
+        <div><strong>Folder order:</strong> ${escapeHtml(folderOrder)}</div>
+        <div><strong>ZIP structure:</strong> subfolders are preserved when present.</div>
+        ${analysis.skippedFiles.length ? `<div class="merge-folder-warning"><i class="fa fa-warning"></i> ${analysis.skippedFiles.length} PDF${analysis.skippedFiles.length === 1 ? '' : 's'} do not have a match in every folder and will be skipped if you continue.</div>` : ''}`;
+    const mergedRows = analysis.completeGroups.slice(0, 80).map(group => {
+        const filename = getSafeMergeFolderFilename(group.displayName, new Set());
+        const path = group.subfolder ? `${group.subfolder}/${filename}` : filename;
+        return `
+            <div class="merge-folder-confirm-row">
+                <i class="fa fa-file-pdf-o"></i>
+                <span>${escapeHtml(path)}</span>
+                <small>${group.sources.size} source PDFs</small>
+            </div>`;
+    }).join('') + (analysis.completeGroups.length > 80 ? `<div class="merge-folder-confirm-more">+ ${analysis.completeGroups.length - 80} more outputs</div>` : '');
+    const skippedRows = analysis.skippedFiles.length ? `
+        <div class="merge-folder-skipped-title">Skipped PDFs</div>
+        ${analysis.skippedFiles.slice(0, 120).map(item => `
+            <div class="merge-folder-confirm-row merge-folder-skipped-row">
+                <i class="fa fa-exclamation-triangle"></i>
+                <span>${escapeHtml(`${item.folder}/${item.subfolder ? item.subfolder + '/' : ''}${item.filename}`)}</span>
+                <small>Missing: ${escapeHtml(item.missing.join(', '))}</small>
+            </div>`).join('')}
+        ${analysis.skippedFiles.length > 120 ? `<div class="merge-folder-confirm-more">+ ${analysis.skippedFiles.length - 120} more skipped PDFs</div>` : ''}` : '';
+    list.innerHTML = mergedRows + skippedRows;
+    modal.classList.add('active');
+};
+
+window.executeMergeFolderMode = async function(confirmed = false) {
+    if (!confirmed) {
+        reviewMergeFolderMode();
+        return;
+    }
+    if (mergeFolderSources.length < 2) {
+        showNotification('Add at least 2 folders first.', 'warning');
+        return;
+    }
+    const analysis = analyzeMergeFolderGroups();
+    const groups = analysis.completeGroups;
+    if (!groups.length) {
+        showNotification('No matching PDF filenames were found across the selected folders.', 'warning');
+        return;
+    }
+
+    setMergeFolderActionLoading(true);
+    closeMergeFolderConfirm();
+    showProgress('Merging folder PDFs...', 'Preparing matching groups...');
+    try {
+        const { PDFDocument } = await ensurePdfLibForMergeFolders();
+        const outputs = [];
+        const usedNames = new Set();
+
+        for (let i = 0; i < groups.length; i++) {
+            const group = groups[i];
+            updateProgress(Math.round(5 + (80 * i / groups.length)), `Merging ${group.displayName}...`);
+            const outDoc = await PDFDocument.create();
+
+            for (let sourceIndex = 0; sourceIndex < mergeFolderSources.length; sourceIndex++) {
+                const entry = group.sources.get(sourceIndex);
+                if (!entry) continue;
+                const srcDoc = await PDFDocument.load(await entry.file.arrayBuffer());
+                const pages = await outDoc.copyPages(srcDoc, srcDoc.getPageIndices());
+                pages.forEach(page => outDoc.addPage(page));
+            }
+
+            const bytes = await outDoc.save();
+            const filename = getSafeMergeFolderFilename(group.displayName, usedNames, group.subfolder);
+            outputs.push({
+                filename,
+                zipPath: group.subfolder ? `${group.subfolder}/${filename}` : filename,
+                bytes
+            });
+        }
+
+        updateProgress(90, outputs.length > 1 ? 'Creating ZIP...' : 'Preparing download...');
+        if (outputs.length === 1) {
+            downloadBlob(new Blob([outputs[0].bytes], { type: 'application/pdf' }), outputs[0].filename);
+        } else {
+            if (typeof JSZip === 'undefined') throw new Error('JSZip is not available.');
+            const zip = new JSZip();
+            outputs.forEach(output => zip.file(output.zipPath || output.filename, output.bytes));
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            downloadBlob(zipBlob, 'folder_merged_pdfs.zip');
+        }
+
+        updateProgress(100, 'Done');
+        await new Promise(r => setTimeout(r, 250));
+        hideProgress();
+        showNotification(`Created ${outputs.length} merged PDF${outputs.length === 1 ? '' : 's'} from folders.`, 'success');
+        showToast(`Folder merge complete: ${outputs.length} output${outputs.length === 1 ? '' : 's'}.`, 'success');
+    } catch (err) {
+        hideProgress();
+        showNotification('Folder merge failed: ' + err.message, 'error');
+        showToast('Folder merge failed.', 'error');
+        console.error(err);
+    } finally {
+        setMergeFolderActionLoading(false);
+    }
+};
 window.executeMerge = async function() {
-    if (mergeFiles.length < 2) { showNotification('Please add at least 2 PDF files to merge.', 'warning'); return; }
+    const livePageItemsForMerge = Array.from(document.querySelectorAll('#pageGrid .page-item:not(.add-page-item)'));
+    const liveFileIndexesForMerge = new Set(livePageItemsForMerge.map(item => parseInt(item.dataset.fileIndex)).filter(Number.isFinite));
+    if (liveFileIndexesForMerge.size < 2) { showNotification('Please add at least 2 PDF sources to merge.', 'warning'); return; }
 
     setMergeActionLoading(true);
     showProgress('Merging PDFs...', 'Building output…');

@@ -21,7 +21,7 @@
     <script src="./ScriptsJS/3.10.1-jszip.min.js"></script>
     <script src="./ScriptsJS/3.11.174-pdf.min.js"></script>
 
-    <link rel="stylesheet" href="./CSS/index.css?v=20260604-27">
+    <link rel="stylesheet" href="./CSS/index.css?v=20260717-05">
 
     <style>
         /* ── Page Loader ─────────────────────────────────────────── */
@@ -533,6 +533,10 @@
                     <input type="text" id="mergeNamePrefixInput" class="merge-name-prefix-input" placeholder="e.g. CFC" disabled>
                 </div>
                 <div class="split-actions">
+                    <button class="btn btn-secondary" onclick="openMergeFolderMode()">
+                        <span><i class="fa fa-folder-open"></i></span>
+                        <span>Folder Merge</span>
+                    </button>
                     <button class="btn btn-secondary" onclick="addMoreMergeFiles()">
                         <span><i class="fa fa-plus"></i></span>
                         <span>Add Files</span>
@@ -708,6 +712,23 @@
 
                 <!-- Delete -->
                 <button class="preview-nav-btn danger" onclick="deletePreviewPage()" title="Delete Page"><i class="fa fa-trash-o"></i></button>
+
+                <div class="preview-shortcut-help" onclick="event.stopPropagation()">
+                    <button class="preview-shortcut-btn" type="button" onclick="togglePreviewShortcutHelp(event)" title="Preview shortcuts">
+                        <i class="fa fa-exclamation-circle"></i>
+                    </button>
+                    <div class="preview-shortcut-popover" id="previewShortcutPopover">
+                        <div class="shortcut-title">Preview Shortcuts</div>
+                        <div class="shortcut-row"><kbd>Arrow Up</kbd><span>Zoom in</span></div>
+                        <div class="shortcut-row"><kbd>Arrow Down</kbd><span>Zoom out</span></div>
+                        <div class="shortcut-row"><kbd>Arrow Right</kbd><span>Next page</span></div>
+                        <div class="shortcut-row"><kbd>Arrow Left</kbd><span>Previous page</span></div>
+                        <div class="shortcut-row"><kbd>F</kbd><span>Fit to screen</span></div>
+                        <div class="shortcut-row"><kbd>'</kbd><span>Rotate right</span></div>
+                        <div class="shortcut-row"><kbd>;</kbd><span>Rotate left</span></div>
+                        <div class="shortcut-row"><kbd>Shift</kbd><kbd>D</kbd><span>Delete page</span></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -764,12 +785,12 @@
     <script>
         window.PDF_MANAGER_BASE = '.';
     </script>
-    <script src="./js/common.js?v=20260604-27"></script>
-    <script src="./js/split.js?v=20260604-27"></script>
-    <script src="./js/merge.js?v=20260604-27"></script>
-    <script src="./js/stamp.js?v=20260604-27"></script>
-    <script src="./js/delete.js?v=20260604-27"></script>
-    <script src="./js/compress.js?v=20260604-27"></script>
+    <script src="./js/common.js?v=20260717-02"></script>
+    <script src="./js/split.js?v=20260717-04"></script>
+    <script src="./js/merge.js?v=20260717-04"></script>
+    <script src="./js/stamp.js?v=20260708-06"></script>
+    <script src="./js/delete.js?v=20260717-04"></script>
+    <script src="./js/compress.js?v=20260708-06"></script>
     <!-- Tool switching -->
     <script>
         let activeTool = 'split';
@@ -969,7 +990,7 @@
                     if (deleteControls) deleteControls.classList.remove('active');
                     if (compressControls) compressControls.classList.remove('active');
                     if (pageContainer) pageContainer.classList.remove('active');
-                    if (pageGrid) pageGrid.innerHTML = '';
+                    if (pageGrid) { pageGrid.innerHTML = ''; pageGrid.style.cssText = ''; }
                     if (uploadSection) uploadSection.classList.remove('hidden');
                     if (uploadSection) uploadSection.style.display = '';
 
@@ -1201,7 +1222,7 @@
                         pageContainer.classList.remove('active');
                         pageContainer.style.display = '';
                     }
-                    if (pageGrid) pageGrid.innerHTML = '';
+                    if (pageGrid) { pageGrid.innerHTML = ''; pageGrid.style.cssText = ''; }
                     if (leftPanel) leftPanel.style.display = '';
                     if (mobileToggle) mobileToggle.style.display = '';
 

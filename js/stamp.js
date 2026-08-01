@@ -56,6 +56,12 @@
         schoolName:   'CRONASIA FOUNDATION COLLEGE, INC.',
         schoolAbbrev: 'CFC',
         showDate:     true,
+        signatureEnabled: false,
+        signatureSrc:     '',
+        signatureColor:   '#111111',
+        signatureScale:   1.0,
+        signatureOffsetX: 0,
+        signatureOffsetY: 28,
         color:        '#1a2a6c',
         opacity:      1.0,
         scale:        0.4,
@@ -96,7 +102,7 @@
     let stampOnlyMode = false;   // true when "Print Stamp Only" checkbox is checked
     let bwMode        = false;   // true when "Grayscale page" is checked
     let grayscaleOutputMode = 'normal';
-    let stampOutputRenderProfile = 'fast';
+    let stampOutputRenderProfile = 'high';
     let stampOnlyLastSize = 'A4'; // remembers last paper size used this session
 
     // ─── Presets ──────────────────────────────────────────────────────────────
@@ -122,6 +128,19 @@
             "'": '&#39;'
         }[ch]));
     }
+
+    const DEFAULT_SEAL_SIGNATURE_SRC = `${typeof PDF_MANAGER_BASE !== 'undefined' ? PDF_MANAGER_BASE : (window.PDF_MANAGER_BASE || 'PDF-file-manager-new')}/assets/default-e-signature.png`;
+
+    const sealSignatureImageCache = new Map();
+    const SEAL_SIGNATURE_COLORS = [
+        { label: 'Black', value: '#111111' },
+        { label: 'Seal Blue', value: '#1a2a6c' },
+        { label: 'Deep Blue', value: '#0f3f8c' },
+        { label: 'Red', value: '#b91c1c' },
+        { label: 'Green', value: '#166534' },
+        { label: 'Purple', value: '#5b21b6' },
+        { label: 'Gray', value: '#374151' }
+    ];
 
     function deepClone(value) {
         return JSON.parse(JSON.stringify(value));
@@ -151,6 +170,7 @@
     const LS_KEY_SEAL   = 'sealSettings_v1';
     const LS_KEY_RECV   = 'recvSettings_v1';
     const LS_KEY_META   = 'stampMetaSettings_v1';
+    const LS_KEY_SEAL_SIGNATURE_DEFAULTED = 'sealSignatureDefaultUnchecked_v1';
     const PAPER_SIZE_KEYS = [
         'A4', 'Photo4x6', 'Photo5x7', 'A6', 'A5', 'B5', 'B6',
         'Photo3_5x5', 'Photo5x8', 'Photo8x10', 'Wide16x9',
@@ -187,7 +207,13 @@
             const metaRaw = localStorage.getItem(LS_KEY_META);
             if (s)  stampSettings = Object.assign(stampSettings, JSON.parse(s));
             if (f)  fmtSettings   = Object.assign(fmtSettings,   JSON.parse(f));
-            if (e)  sealSettings  = Object.assign(sealSettings,  JSON.parse(e));
+            if (e) {
+                sealSettings = Object.assign(sealSettings, JSON.parse(e));
+                if (!localStorage.getItem(LS_KEY_SEAL_SIGNATURE_DEFAULTED)) {
+                    sealSettings.signatureEnabled = false;
+                    localStorage.setItem(LS_KEY_SEAL_SIGNATURE_DEFAULTED, '1');
+                }
+            }
             if (rv) recvSettings  = Object.assign(recvSettings,  JSON.parse(rv));
             if (m)  stampMode     = m;
             if (metaRaw) {
@@ -213,6 +239,7 @@
         localStorage.removeItem(LS_KEY_RECV);
         localStorage.removeItem(LS_KEY_MODE);
         localStorage.removeItem(LS_KEY_META);
+        localStorage.removeItem(LS_KEY_SEAL_SIGNATURE_DEFAULTED);
     };
 
     // ─── Init ─────────────────────────────────────────────────────────────────
@@ -235,7 +262,7 @@
         activeStampDocIndex = -1;
         bwMode = false;
         grayscaleOutputMode = 'normal';
-        stampOutputRenderProfile = 'fast';
+        stampOutputRenderProfile = 'high';
         window.stampHasPdf = false;
 
         // Start with hardcoded defaults ...
@@ -264,6 +291,12 @@
             schoolName:   'CRONASIA FOUNDATION COLLEGE, INC.',
             schoolAbbrev: 'CFC',
             showDate:     true,
+            signatureEnabled: false,
+            signatureSrc:     '',
+            signatureColor:   '#111111',
+            signatureScale:   1.0,
+            signatureOffsetX: 0,
+            signatureOffsetY: 28,
             color:        '#1a2a6c',
             opacity:      1.0,
             scale:        0.4,
@@ -604,6 +637,51 @@
                 <div class="stamp-section-title"><i class="fa fa-calendar"></i> Show Date</div>
                 <div class="stamp-row" style="gap:14px;flex-wrap:wrap">
                   <label class="stamp-check"><input type="checkbox" id="sealShowDate" ${sealSettings.showDate ? 'checked' : ''} onchange="onSealSettingChange(); showToast(this.checked ? 'Date shown' : 'Date hidden')"> Show current date above DATE line</label>
+                </div>
+              </div>
+
+              <div class="stamp-section">
+              <br>
+                <div class="stamp-section-title"><i class="fa fa-pencil"></i> E-Signature</div>
+                <label class="stamp-check">
+                  <input type="checkbox" id="sealSignatureEnabled" ${sealSettings.signatureEnabled ? 'checked' : ''} onchange="onSealSignatureToggle(this.checked)">
+                  Include e-signature
+                </label>
+                <div id="sealSignatureControls" style="display:${sealSettings.signatureEnabled ? 'block' : 'none'};margin-top:8px">
+                  <div class="stamp-row">
+                    <label class="stamp-label">Image</label>
+                    <button type="button" class="stamp-btn" onclick="document.getElementById('sealSignatureUpload')?.click()" style="flex:1">
+                      <i class="fa fa-upload"></i> Upload e-signature
+                    </button>
+                    <button type="button" class="stamp-btn" onclick="resetSealSignatureImage()" title="Use default e-signature">
+                      <i class="fa fa-refresh"></i>
+                    </button>
+                    <input id="sealSignatureUpload" type="file" accept="image/png,.png" onchange="uploadSealSignatureImage(this)" style="display:none">
+                  </div>
+                  <div class="stamp-row">
+                    <label class="stamp-label">Color</label>
+                    <select class="stamp-input" id="sealSignatureColor" onchange="onSealSignatureTransformChange()" style="flex:1">
+                      ${SEAL_SIGNATURE_COLORS.map(c => `<option value="${c.value}" ${(sealSettings.signatureColor || '#111111') === c.value ? 'selected' : ''}>${c.label}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="stamp-row">
+                    <label class="stamp-label">Size</label>
+                    <input type="range" id="sealSignatureScale" min="30" max="220" step="5"
+                           value="${Math.round((sealSettings.signatureScale || 1) * 100)}" oninput="onSealSignatureTransformChange()" style="flex:1">
+                    <span id="sealSignatureScaleVal" style="width:36px;text-align:right">${Math.round((sealSettings.signatureScale || 1) * 100)}%</span>
+                  </div>
+                  <div class="stamp-row">
+                    <label class="stamp-label">Horizontal</label>
+                    <input type="range" id="sealSignatureOffsetX" min="-80" max="80" step="1"
+                           value="${sealSettings.signatureOffsetX ?? 0}" oninput="onSealSignatureTransformChange()" style="flex:1">
+                    <span id="sealSignatureOffsetXVal" style="width:42px;text-align:right">${sealSettings.signatureOffsetX ?? 0}</span>
+                  </div>
+                  <div class="stamp-row">
+                    <label class="stamp-label">Vertical</label>
+                    <input type="range" id="sealSignatureOffsetY" min="-80" max="80" step="1"
+                           value="${sealSettings.signatureOffsetY ?? 28}" oninput="onSealSignatureTransformChange()" style="flex:1">
+                    <span id="sealSignatureOffsetYVal" style="width:42px;text-align:right">${sealSettings.signatureOffsetY ?? 28}</span>
+                  </div>
                 </div>
               </div>
 
@@ -2172,8 +2250,8 @@
     }
 
     function getStampOutputRenderSettings() {
-        if (stampOutputRenderProfile === 'high') return { scale: 2.0, jpegQuality: 0.92 };
-        if (stampOutputRenderProfile === 'balanced') return { scale: 1.5, jpegQuality: 0.88 };
+        if (stampOutputRenderProfile === 'high') return { scale: 3.0, jpegQuality: 0.98 };
+        if (stampOutputRenderProfile === 'balanced') return { scale: 2.0, jpegQuality: 0.94 };
         return { scale: 1.15, jpegQuality: 0.82 };
     }
 
@@ -2251,6 +2329,12 @@
                 schoolName:   g('sealSchoolName')?.value    ?? sealSettings.schoolName,
                 schoolAbbrev: g('sealSchoolAbbrev')?.value  ?? sealSettings.schoolAbbrev,
                 showDate:     g('sealShowDate')?.checked    ?? sealSettings.showDate,
+                signatureEnabled: g('sealSignatureEnabled')?.checked ?? sealSettings.signatureEnabled,
+                signatureSrc:     sealSettings.signatureSrc,
+                signatureColor:   g('sealSignatureColor')?.value ?? sealSettings.signatureColor,
+                signatureScale:   (parseInt(g('sealSignatureScale')?.value) || Math.round((sealSettings.signatureScale || 1) * 100)) / 100,
+                signatureOffsetX: parseInt(g('sealSignatureOffsetX')?.value) || 0,
+                signatureOffsetY: parseInt(g('sealSignatureOffsetY')?.value) || 0,
                 color:        g('sealColor')?.value         ?? sealSettings.color,
                 opacity:      parseFloat(g('sealOpacity')?.value)   || sealSettings.opacity,
                 scale:        parseFloat(g('sealScale')?.value)     || sealSettings.scale,
@@ -2342,6 +2426,15 @@
             if (g('sealScale'))    { g('sealScale').value       = s.scale       ?? sealSettings.scale;
                                      const sn = g('sealScaleNum');
                                      if (sn) sn.value = Math.round((s.scale ?? sealSettings.scale) * 100); }
+            if (g('sealSignatureEnabled')) g('sealSignatureEnabled').checked = !!(s.signatureEnabled ?? sealSettings.signatureEnabled);
+            if (g('sealSignatureControls')) g('sealSignatureControls').style.display = (s.signatureEnabled ?? sealSettings.signatureEnabled) ? 'block' : 'none';
+            if (g('sealSignatureColor')) g('sealSignatureColor').value = s.signatureColor ?? sealSettings.signatureColor ?? '#111111';
+            if (g('sealSignatureScale')) { g('sealSignatureScale').value = Math.round((s.signatureScale ?? sealSettings.signatureScale ?? 1) * 100);
+                                           const sv = g('sealSignatureScaleVal'); if (sv) sv.textContent = g('sealSignatureScale').value + '%'; }
+            if (g('sealSignatureOffsetX')) { g('sealSignatureOffsetX').value = s.signatureOffsetX ?? sealSettings.signatureOffsetX ?? 0;
+                                             const xv = g('sealSignatureOffsetXVal'); if (xv) xv.textContent = g('sealSignatureOffsetX').value; }
+            if (g('sealSignatureOffsetY')) { g('sealSignatureOffsetY').value = s.signatureOffsetY ?? sealSettings.signatureOffsetY ?? 28;
+                                             const yv = g('sealSignatureOffsetYVal'); if (yv) yv.textContent = g('sealSignatureOffsetY').value; }
             if (g('sealPosX'))     { g('sealPosX').value        = s.positionX   ?? sealSettings.positionX;
                                      const xv = g('sealPosXVal'); if (xv) xv.textContent = (s.positionX ?? sealSettings.positionX) + '%'; }
             if (g('sealPosY'))     { g('sealPosY').value        = s.positionY   ?? sealSettings.positionY;
@@ -2922,7 +3015,7 @@
     }
 
     function getStampedPdfModalPreviewPages(modal) {
-        const total = stampTotalPages || 1;
+        const total = modal?._totalPages || stampTotalPages || 1;
         const range = getStampedPdfModalPageRange(modal);
         let pages = range ? parsePageRange(range, total) : Array.from({ length: total }, (_, i) => i + 1);
         const subset = modal.querySelector('#stampedPrintSubset')?.value;
@@ -2957,11 +3050,31 @@
         modal._previewTimer = setTimeout(() => renderStampedPdfModalPreview(modal), 80);
     }
 
+    function updateStampedPdfModalTotalUi(modal) {
+        const total = modal?._totalPages || stampTotalPages || 1;
+        const current = Math.min(Math.max(1, stampPreviewPage || 1), total);
+        const pagesInput = modal?.querySelector('#stampedPrintPages');
+        const totalLabel = modal?.querySelector('#stampedPrintTotalPagesLabel');
+        const currentLabel = modal?.querySelector('#stampedPrintCurrentPageLabel');
+        if (pagesInput) {
+            const nextDefaultRange = `1-${total}`;
+            const previousDefaultRange = pagesInput.dataset.defaultRange || nextDefaultRange;
+            pagesInput.max = String(total);
+            if (!pagesInput.value || pagesInput.value === previousDefaultRange) {
+                pagesInput.value = nextDefaultRange;
+            }
+            pagesInput.dataset.defaultRange = nextDefaultRange;
+        }
+        if (totalLabel) totalLabel.textContent = `/ ${total}`;
+        if (currentLabel) currentLabel.textContent = `Current page (${current} / ${total})`;
+    }
+
     async function getStampedPdfModalDoc(modal) {
         if (modal._previewDoc) return modal._previewDoc;
         const job = modal._printJob;
         const bytes = job?.bytes || Uint8Array.from(atob(job.b64), c => c.charCodeAt(0));
         modal._previewDoc = await pdfjsLib.getDocument({ data: bytes.slice ? bytes.slice() : bytes }).promise;
+        modal._totalPages = modal._previewDoc.numPages || modal._totalPages || stampTotalPages || 1;
         return modal._previewDoc;
     }
 
@@ -2981,7 +3094,7 @@
         const pdfDoc = await getStampedPdfModalDoc(modal);
         const pages = getStampedPdfModalPreviewPages(modal);
         const { paperW, paperH } = getStampedPdfModalPaper(modal);
-        const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit';
+        const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'noscale';
         const zoom = Math.max(10, Math.min(400, parseInt(modal.querySelector('#stampedPrintZoom')?.value, 10) || 100));
         const shouldGrayscale = modal.querySelector('#stampedPrintGrayscale')?.checked === true;
         const renderScale = pages.length > 150 ? 1.05 : (pages.length > 60 ? 1.25 : 1.75);
@@ -3037,8 +3150,12 @@
         const prevBtn = modal.querySelector('#stampedPrintPreviewPrev');
         const nextBtn = modal.querySelector('#stampedPrintPreviewNext');
         if (!stage) return;
+        const renderToken = (modal._previewRenderToken || 0) + 1;
+        modal._previewRenderToken = renderToken;
 
         updateStampedPdfModalChoiceStyles(modal);
+        const pdfDoc = await getStampedPdfModalDoc(modal);
+        updateStampedPdfModalTotalUi(modal);
         const pages = getStampedPdfModalPreviewPages(modal);
         modal._previewPages = pages;
         modal._previewIndex = Math.min(Math.max(0, modal._previewIndex || 0), pages.length - 1);
@@ -3054,15 +3171,15 @@
             </div>`;
 
         try {
-            const pdfDoc = await getStampedPdfModalDoc(modal);
             const page = await pdfDoc.getPage(pageNum);
+            if (modal._previewRenderToken !== renderToken) return;
             const source = page.getViewport({ scale: 1 });
             const { paperW, paperH } = getStampedPdfModalPaper(modal);
 
             const rect = stage.getBoundingClientRect();
             const displayScale = Math.min((rect.width - 52) / paperW, (rect.height - 82) / paperH, 1.08);
             const safeDisplayScale = Math.max(0.25, displayScale);
-            const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit';
+            const scaleMode = modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'noscale';
             const zoom = Math.max(10, Math.min(400, parseInt(modal.querySelector('#stampedPrintZoom')?.value, 10) || 100));
             let pagePointScale = Math.min((paperW * 0.96) / source.width, (paperH * 0.96) / source.height);
             if (scaleMode === 'noscale') pagePointScale = 1;
@@ -3078,6 +3195,7 @@
             canvas.style.filter = modal.querySelector('#stampedPrintGrayscale')?.checked ? 'grayscale(1) contrast(1.08)' : 'none';
             canvas.style.boxShadow = '0 1px 2px rgba(0,0,0,.22)';
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderViewport }).promise;
+            if (modal._previewRenderToken !== renderToken) return;
 
             const sheet = document.createElement('div');
             sheet.style.cssText = `width:${paperW * safeDisplayScale}px;height:${paperH * safeDisplayScale}px;background:#fff;box-shadow:0 10px 28px rgba(0,0,0,.42);display:flex;align-items:center;justify-content:center;overflow:hidden;`;
@@ -3330,7 +3448,8 @@
         const modal = document.createElement('div');
         modal.id = 'stampedPdfPrintModal';
         modal._printJob = printJob;
-        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px;';
+        modal._totalPages = printJob?.totalPages || stampTotalPages || 1;
+        modal.style.cssText = 'position:fixed;inset:0;z-index:10000;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:20px 72px;';
         modal.innerHTML = `
             <style>
                 #stampedPdfPrintModal button { cursor:pointer; transition:filter .12s ease, background-color .12s ease, border-color .12s ease; }
@@ -3344,12 +3463,12 @@
                 #stampedPdfPrintModal .print-choice { white-space:nowrap; }
                 @keyframes stampPrintSpin { to { transform:rotate(360deg); } }
             </style>
-            <div style="width:min(1140px,calc(100vw - 28px));height:min(760px,calc(100vh - 28px));background:#202124;color:#f5f5f5;border:1px solid #3a3a3a;border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:grid;grid-template-rows:34px 1fr;">
-                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid #343434;">
+            <div style="width:min(1140px,calc(100vw - 144px));height:min(760px,calc(100vh - 28px));max-width:1140px;background:#202124;color:#f5f5f5;border:1px solid #3a3a3a;border-radius:8px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:grid;grid-template-rows:34px 1fr;overflow:hidden;">
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:0 8px 0 12px;border-bottom:1px solid #343434;min-width:0;">
                     <strong><i class="fa fa-print"></i> Print Stamped PDF</strong>
-                    <button type="button" onclick="closeStampedPdfPrintModal()" style="background:transparent;border:0;color:#fff;font-size:22px;line-height:1;cursor:pointer;">&times;</button>
+                    <button type="button" onclick="closeStampedPdfPrintModal()" aria-label="Close" title="Close" style="width:28px;height:28px;display:inline-flex;align-items:center;justify-content:center;background:#2b2b2b;border:1px solid #444;border-radius:4px;color:#fff;font-size:18px;line-height:1;cursor:pointer;">&times;</button>
                 </div>
-                <div style="display:grid;grid-template-columns:440px minmax(0,1fr);min-height:0;">
+                <div style="display:grid;grid-template-columns:minmax(360px,420px) minmax(420px,1fr);min-width:0;min-height:0;">
                     <div style="padding:20px;border-right:1px solid #343434;overflow-y:auto;overflow-x:hidden;">
                         <div style="display:grid;grid-template-columns:82px minmax(0,1fr) 110px;gap:8px;align-items:center;margin-bottom:10px;">
                             <label>Printer</label>
@@ -3368,11 +3487,11 @@
                             <div>Range</div>
                             <div style="display:grid;gap:8px;">
                                 <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="all" checked> All pages</label>
-                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="current"> Current page (${current} / ${total})</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="current"> <span id="stampedPrintCurrentPageLabel">Current page (${current} / ${total})</span></label>
                                 <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintRange" value="selected"> Selected pages</label>
                                 <div style="display:flex;align-items:center;gap:8px;">
                                     <input id="stampedPrintPages" type="text" value="1-${total}" disabled style="flex:1;height:28px;background:#2b2b2b;color:#fff;border:1px solid #444;border-radius:3px;padding:0 8px;">
-                                    <span>/ ${total}</span>
+                                    <span id="stampedPrintTotalPagesLabel">/ ${total}</span>
                                 </div>
                                 <small style="color:#bbb;">e.g. 1,8,9-12</small>
                                 <select id="stampedPrintSubset" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">
@@ -3398,8 +3517,8 @@
                         <div style="display:grid;grid-template-columns:82px minmax(0,1fr);gap:8px;">
                             <div>Page Sizing</div>
                             <div style="display:grid;gap:8px;">
-                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="fit" checked> Fit Page</label>
-                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="noscale"> Actual Size</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="fit"> Fit Page</label>
+                                <label class="print-choice" data-print-choice style="border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="noscale" checked> Actual Size</label>
                                 <label class="print-choice" data-print-choice style="display:flex;align-items:center;gap:8px;border:1px solid transparent;border-radius:4px;padding:3px 6px;"><input type="radio" name="stampedPrintScale" value="shrink"> Zoom <input id="stampedPrintZoom" type="number" min="10" max="400" value="100" style="width:64px;height:26px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;" disabled> %</label>
                             </div>
                         </div>
@@ -3409,13 +3528,14 @@
                         <div id="stampedPrintPreviewStage" style="display:flex;align-items:center;justify-content:center;overflow:hidden;padding:18px;background:#747e8c;">
                             <div style="color:#d9dde5;">Rendering preview...</div>
                         </div>
-                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:10px 14px;background:#202124;border-top:1px solid #343434;">
+                        <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;padding:8px 12px;background:#202124;border-top:1px solid #343434;min-width:0;">
                             <button type="button" id="stampedPrintPreviewPrev" class="print-soft-button" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-chevron-left"></i></button>
                             <span id="stampedPrintPreviewCount" style="min-width:74px;height:30px;display:inline-flex;align-items:center;justify-content:center;background:#2b2b2b;border-radius:4px;font-weight:700;">1/1</span>
                             <button type="button" id="stampedPrintPreviewNext" class="print-soft-button" style="width:32px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;margin-right:auto;"><i class="fa fa-chevron-right"></i></button>
                             <button type="button" class="print-soft-button" onclick="closeStampedPdfPrintModal()" style="min-width:90px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Cancel</button>
                             <button type="button" onclick="printStampedPdfClassic()" style="min-width:110px;height:32px;background:transparent;color:#ff6f61;border:0;">Classic Mode</button>
                             <button type="button" class="print-soft-button" onclick="openStampedPdfBatchPrint()" style="min-width:92px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Batch Print</button>
+                            <button type="button" id="stampedPrintSaveBtn" class="print-soft-button" onclick="saveStampedPdfModalAsPdf()" style="min-width:112px;height:32px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;"><i class="fa fa-download"></i> Save as PDF</button>
                             <button type="button" id="stampedPrintSubmitBtn" class="print-danger-button" onclick="executeStampedPdfModalPrint()" style="min-width:90px;height:32px;background:#ef5350;color:#fff;border:0;border-radius:3px;"><i class="fa fa-print"></i> Print</button>
                         </div>
                     </div>
@@ -3495,6 +3615,15 @@
 
     function setStampedPrintButtonLoading(modal, loading, label = 'Printing...') {
         const button = modal?.querySelector('#stampedPrintSubmitBtn');
+        setStampedModalButtonLoading(button, loading, label, '<i class="fa fa-print"></i> Print');
+    }
+
+    function setStampedSaveButtonLoading(modal, loading, label = 'Saving...') {
+        const button = modal?.querySelector('#stampedPrintSaveBtn');
+        setStampedModalButtonLoading(button, loading, label, '<i class="fa fa-download"></i> Save as PDF');
+    }
+
+    function setStampedModalButtonLoading(button, loading, label, defaultHtml) {
         if (!button) return;
         if (loading) {
             if (!button.dataset.originalHtml) button.dataset.originalHtml = button.innerHTML;
@@ -3502,7 +3631,7 @@
             button.innerHTML = `<i class="fa fa-spinner fa-spin"></i> ${label}`;
         } else {
             button.disabled = false;
-            button.innerHTML = button.dataset.originalHtml || '<i class="fa fa-print"></i> Print';
+            button.innerHTML = button.dataset.originalHtml || defaultHtml;
             delete button.dataset.originalHtml;
         }
     }
@@ -3513,7 +3642,7 @@
         const options = {
             printer: modal.querySelector('#stampedPrintPrinter')?.value || undefined,
             copies: Math.max(1, Math.min(99, parseInt(modal.querySelector('#stampedPrintCopies')?.value, 10) || 1)),
-            scale: includePages ? (modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'fit') : 'fit'
+            scale: includePages ? (modal.querySelector('input[name="stampedPrintScale"]:checked')?.value || 'noscale') : 'noscale'
         };
         options.paperSize = getPrintHelperPaperSize(paperKey);
         if (includeOrientation) options.orientation = modal.querySelector('input[name="stampedPrintOrientation"]:checked')?.value || 'portrait';
@@ -3585,6 +3714,16 @@
             canvas.style.background = '#fff';
             canvas.style.boxShadow = '0 10px 28px rgba(0,0,0,.42)';
             await page.render({ canvasContext: canvas.getContext('2d'), viewport: renderViewport }).promise;
+            if (!file.stampedCurrent) {
+                drawStampOverlayForState(
+                    canvas.getContext('2d'),
+                    canvas.width,
+                    canvas.height,
+                    batchModal._stampMode || stampMode,
+                    batchModal._stampState || cloneStampState(),
+                    new Date()
+                );
+            }
             stage.innerHTML = '';
             stage.appendChild(canvas);
         } catch (error) {
@@ -3620,6 +3759,10 @@
         batchModal.id = 'stampedPdfBatchModal';
         batchModal._batchIndex = 0;
         batchModal._batchPage = 1;
+        batchModal._stampMode = stampMode;
+        batchModal._stampState = cloneStampState();
+        batchModal._paperSize = stampPdfPaperSize;
+        batchModal._bwMode = bwMode;
         batchModal._batchFiles = [{
             name: `${typeof getStampedFilename === 'function' ? getStampedFilename() : 'Stamped PDF'}`,
             pages: stampTotalPages || 1,
@@ -3652,7 +3795,7 @@
                         <button type="button" id="stampedBatchPrefs" onclick="openSystemPrintPreferences()" style="height:28px;background:#2b2b2b;color:#fff;border:1px solid #555;border-radius:3px;">Preference...</button>
                     </div>
                     <div id="stampedBatchPrefsStatus" style="min-height:16px;margin:-4px 0 10px 88px;color:#aeb4bd;font-size:12px;"></div>
-                    <p style="color:#bbb;line-height:1.5;margin:0 0 14px;">Batch Print uses the printer, paper, orientation, copies, grayscale, duplex, and sizing settings from the main print window. Added PDFs print as full documents.</p>
+                    <p style="color:#bbb;line-height:1.5;margin:0 0 14px;">Batch Print uses the printer, paper, orientation, copies, grayscale, duplex, sizing, and current stamp settings from the main print window. Added PDFs are stamped before printing.</p>
                     <hr style="border:0;border-top:1px solid #333;margin:0 0 14px;">
                     <div style="color:#ddd;">Files in queue: <strong id="stampedBatchCount">1</strong></div>
                 </div>
@@ -3703,12 +3846,7 @@
                 updateProgress((i / Math.max(1, files.length)) * 90, `Preparing ${file.name}`);
                 const b64 = file.stampedCurrent
                     ? file.b64
-                    : await buildStampedPDFForDocument(
-                        file.pdfDoc,
-                        file.pages,
-                        Array.from({ length: file.pages }, (_, pageIndex) => pageIndex + 1),
-                        false
-                    );
+                    : await buildStampedBatchPdf(file, batchModal);
                 await printPdfWithLocalHelper(b64, getStampedPdfModalPrintOptions(printModal, file.stampedCurrent === true));
             }
             updateProgress(100, 'Batch print sent');
@@ -3720,6 +3858,58 @@
             showNotification(getPrintHelperErrorMessage(error), 'warning');
         } finally {
             hideProgress();
+        }
+    };
+
+    async function buildStampedBatchPdf(file, batchModal) {
+        const previousMode = stampMode;
+        const previousState = cloneStampState();
+        const previousPaperSize = stampPdfPaperSize;
+        const previousBwMode = bwMode;
+        try {
+            stampMode = batchModal._stampMode || stampMode;
+            applyStampState(batchModal._stampState || previousState);
+            stampPdfPaperSize = batchModal._paperSize || stampPdfPaperSize;
+            bwMode = !!batchModal._bwMode;
+            return await buildStampedPDFForDocument(
+                file.pdfDoc,
+                file.pages,
+                Array.from({ length: file.pages }, (_, pageIndex) => pageIndex + 1),
+                false
+            );
+        } finally {
+            stampMode = previousMode;
+            applyStampState(previousState);
+            stampPdfPaperSize = previousPaperSize;
+            bwMode = previousBwMode;
+        }
+    }
+
+    window.saveStampedPdfModalAsPdf = async function () {
+        const modal = document.getElementById('stampedPdfPrintModal');
+        const job = modal?._printJob;
+        if (!modal || !job) return;
+
+        try {
+            setStampedSaveButtonLoading(modal, true, 'Preparing...');
+            showProgress('Preparing PDF...', 'Applying selected print settings');
+            const pdfB64 = await buildStampedPdfModalPrintPdf(modal);
+            updateProgress(96, 'Saving PDF...');
+            const baseName = (typeof getStampedFilename === 'function' ? getStampedFilename() : 'stamped.pdf')
+                .replace(/\.pdf$/i, '');
+            const rangeMode = modal.querySelector('input[name="stampedPrintRange"]:checked')?.value || 'all';
+            const suffix = rangeMode === 'current'
+                ? `_page-${stampPreviewPage}`
+                : (rangeMode === 'selected' ? '_selected-pages' : '_print-ready');
+            downloadFile(pdfB64, `${baseName}${suffix}.pdf`);
+            updateProgress(100, 'PDF saved');
+            showNotification('Saved filtered stamped PDF.', 'success');
+        } catch (error) {
+            console.warn('Save as PDF failed.', error);
+            showNotification(error.message || 'Could not save the filtered stamped PDF.', 'error');
+        } finally {
+            hideProgress();
+            setStampedSaveButtonLoading(modal, false);
         }
     };
 
@@ -3854,6 +4044,25 @@
             drawSimpleStamp(ctx, w, h, s2);
         }
     }
+
+    function drawStampOverlayForState(ctx, w, h, mode, state, dateObj) {
+        const snapshot = state || cloneStampState();
+        if (mode === 'formatted') {
+            drawFormattedStamp(ctx, w, h, snapshot.fmtSettings || fmtSettings, dateObj);
+        } else if (mode === 'seal') {
+            drawCircularSeal(ctx, w, h, snapshot.sealSettings || sealSettings, dateObj);
+        } else if (mode === 'received') {
+            drawReceivedStamp(ctx, w, h, snapshot.recvSettings || recvSettings, dateObj);
+        } else {
+            const base = snapshot.stampSettings || stampSettings;
+            const ratio = w / 595;
+            drawSimpleStamp(ctx, w, h, Object.assign({}, base, {
+                fontSize: base.fontSize * ratio,
+                borderWidth: base.borderWidth * ratio
+            }));
+        }
+    }
+
     function setupOverlayDrag() {
         const canvas = document.getElementById('stampOverlayCanvas');
         if (!canvas) return;
@@ -4104,6 +4313,11 @@
         sealSettings.schoolName   =  g('sealSchoolName')?.value   || '';
         sealSettings.schoolAbbrev =  g('sealSchoolAbbrev')?.value || '';
         sealSettings.showDate     =  g('sealShowDate')?.checked   ?? true;
+        sealSettings.signatureEnabled = g('sealSignatureEnabled')?.checked ?? sealSettings.signatureEnabled;
+        sealSettings.signatureColor   = g('sealSignatureColor')?.value || sealSettings.signatureColor || '#111111';
+        sealSettings.signatureScale   = (parseInt(g('sealSignatureScale')?.value) || Math.round((sealSettings.signatureScale || 1) * 100)) / 100;
+        sealSettings.signatureOffsetX = parseInt(g('sealSignatureOffsetX')?.value) || 0;
+        sealSettings.signatureOffsetY = parseInt(g('sealSignatureOffsetY')?.value) || 0;
         sealSettings.color        =  g('sealColor')?.value        || '#1a2a6c';
         sealSettings.opacity      =  parseFloat(g('sealOpacity')?.value) || 1.0;
         sealSettings.scale        =  parseFloat(g('sealScale')?.value)   || 1.0;
@@ -4295,6 +4509,88 @@
         return !!document.getElementById('pageOverrideChk')?.checked;
     }
 
+    function getSealSignatureSrc(s) {
+        return s?.signatureSrc || DEFAULT_SEAL_SIGNATURE_SRC;
+    }
+
+    function getSealSignatureImage(src) {
+        const imageSrc = src || DEFAULT_SEAL_SIGNATURE_SRC;
+        const cached = sealSignatureImageCache.get(imageSrc);
+        if (cached) return cached;
+        const img = new Image();
+        img.onload = function () {
+            scheduleStampOverlayRedraw();
+            const stampOnlyCanvas = document.getElementById('stampOnlyCanvas');
+            if (stampOnlyCanvas) renderStampOnlyPreview();
+        };
+        img.onerror = function () {
+            sealSignatureImageCache.delete(imageSrc);
+        };
+        img.src = imageSrc;
+        sealSignatureImageCache.set(imageSrc, img);
+        return img;
+    }
+
+    window.onSealSignatureToggle = function (checked) {
+        const box = document.getElementById('sealSignatureControls');
+        if (box) box.style.display = checked ? 'block' : 'none';
+        if (!sealSettings.signatureSrc) sealSettings.signatureSrc = '';
+        if (!isOnCustomPage()) sealSettings.signatureEnabled = checked;
+        refreshOverlay();
+        showToast(checked ? 'E-signature included' : 'E-signature hidden');
+    };
+
+    window.onSealSignatureTransformChange = function () {
+        const color = document.getElementById('sealSignatureColor')?.value || '#111111';
+        const scale = parseInt(document.getElementById('sealSignatureScale')?.value) || 100;
+        const x = parseInt(document.getElementById('sealSignatureOffsetX')?.value) || 0;
+        const y = parseInt(document.getElementById('sealSignatureOffsetY')?.value) || 0;
+        const sv = document.getElementById('sealSignatureScaleVal');
+        const xv = document.getElementById('sealSignatureOffsetXVal');
+        const yv = document.getElementById('sealSignatureOffsetYVal');
+        if (sv) sv.textContent = scale + '%';
+        if (xv) xv.textContent = x;
+        if (yv) yv.textContent = y;
+        if (!isOnCustomPage()) {
+            sealSettings.signatureColor = color;
+            sealSettings.signatureScale = scale / 100;
+            sealSettings.signatureOffsetX = x;
+            sealSettings.signatureOffsetY = y;
+        }
+        refreshOverlay();
+    };
+
+    window.uploadSealSignatureImage = function (input) {
+        const file = input?.files?.[0];
+        if (!file) return;
+        const isPng = file.type === 'image/png' || /\.png$/i.test(file.name || '');
+        if (!isPng) {
+            showNotification('Please upload a PNG file for the e-signature.', 'warning');
+            input.value = '';
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function () {
+            sealSettings.signatureSrc = String(reader.result || '');
+            sealSignatureImageCache.delete(sealSettings.signatureSrc);
+            const chk = document.getElementById('sealSignatureEnabled');
+            if (chk) chk.checked = true;
+            window.onSealSignatureToggle(true);
+            showToast('E-signature uploaded');
+        };
+        reader.onerror = function () {
+            showNotification('Could not read the e-signature image.', 'error');
+        };
+        reader.readAsDataURL(file);
+        input.value = '';
+    };
+
+    window.resetSealSignatureImage = function () {
+        sealSettings.signatureSrc = '';
+        refreshOverlay();
+        showToast('Default e-signature restored');
+    };
+
     window.onSealSettingChange = function () {
         const op = document.getElementById('sealOpacity'), opV = document.getElementById('sealOpacityVal');
         if (op && opV) opV.textContent = Math.round(op.value * 100) + '%';
@@ -4433,11 +4729,40 @@
         // ↓ To change font size of "NAME OF SCHOOL", adjust lblFontSz multiplier above
         ctx.font = `bold ${lblFontSz}px Arial`;
         ctx.fillText('NAME OF SCHOOL', cx, line2Y + lblFontSz * 0.9);
+        drawSealSignature(ctx, s, cx, cy, r, line2Y);
 
         // ── Drag dot ──────────────────────────────────────────────────────────
         ctx.restore();
         ctx.save(); ctx.globalAlpha = 0.2; ctx.fillStyle = clr;
         ctx.beginPath(); ctx.arc(cx, cy, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+    }
+
+    function drawSealSignature(ctx, s, cx, cy, r, line2Y) {
+        if (!s.signatureEnabled) return;
+        const img = getSealSignatureImage(getSealSignatureSrc(s));
+        if (!img.complete || !img.naturalWidth || !img.naturalHeight) return;
+
+        const scale = Number.isFinite(s.signatureScale) ? s.signatureScale : 1;
+        const offsetX = Number.isFinite(s.signatureOffsetX) ? s.signatureOffsetX : 0;
+        const offsetY = Number.isFinite(s.signatureOffsetY) ? s.signatureOffsetY : 28;
+        const boxW = r * 1.05 * scale;
+        const boxH = boxW * (img.naturalHeight / img.naturalWidth);
+        const x = cx + (offsetX / 100) * r - boxW / 2;
+        const y = line2Y + r * 0.10 + (offsetY / 100) * r - boxH / 2;
+        const tint = s.signatureColor || '#111111';
+        const buffer = document.createElement('canvas');
+        buffer.width = Math.max(1, Math.ceil(boxW));
+        buffer.height = Math.max(1, Math.ceil(boxH));
+        const bctx = buffer.getContext('2d');
+        bctx.drawImage(img, 0, 0, buffer.width, buffer.height);
+        bctx.globalCompositeOperation = 'source-in';
+        bctx.fillStyle = tint;
+        bctx.fillRect(0, 0, buffer.width, buffer.height);
+
+        ctx.save();
+        ctx.globalAlpha = Math.min(1, Math.max(0.1, s.opacity ?? 1));
+        ctx.drawImage(buffer, x, y, boxW, boxH);
         ctx.restore();
     }
 
@@ -4664,7 +4989,7 @@
             const b64      = await buildStampedPDF(pages);
             const pdfBytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
             const blob     = new Blob([pdfBytes], { type: 'application/pdf' });
-            openStampedPdfPrintModal({ b64, blob, bytes: pdfBytes });
+            openStampedPdfPrintModal({ b64, blob, bytes: pdfBytes, totalPages: stampTotalPages });
 
         } catch (err) {
             showNotification('Error: ' + err.message, 'error'); console.error(err);

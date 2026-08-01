@@ -35,6 +35,20 @@
     };
     window._deleteHasFile = function () { return !!deleteFile; };
 
+    function resetDeleteGridLayout() {
+        const pageGrid = document.getElementById('pageGrid');
+        if (!pageGrid) return;
+        pageGrid.style.cssText = '';
+    }
+
+    function getDeletePreviewFitScale(pageWidth, pageHeight) {
+        const wrapper = document.getElementById('previewCanvasWrapper');
+        const rect = wrapper?.getBoundingClientRect();
+        const availableWidth = Math.max(240, (rect?.width || window.innerWidth * 0.92) - 28);
+        const availableHeight = Math.max(240, (rect?.height || window.innerHeight * 0.82) - 28);
+        return Math.max(0.3, Math.min(5, Math.min(availableWidth / pageWidth, availableHeight / pageHeight) * 0.98));
+    }
+
     // ─── Init ─────────────────────────────────────────────────────────────────
     window.initDelete = function () {
         clearDeleteState();
@@ -48,7 +62,7 @@
         const pageGrid      = document.getElementById('pageGrid');
         if (uploadSection) { uploadSection.classList.remove('hidden'); uploadSection.style.display = ''; }
         if (pageContainer) { pageContainer.classList.remove('active'); pageContainer.style.display = ''; }
-        if (pageGrid)      pageGrid.innerHTML = '';
+        if (pageGrid)      { pageGrid.innerHTML = ''; resetDeleteGridLayout(); }
         // Controls bar
         const splitControls = document.getElementById('splitControls');
         const mergeControls = document.getElementById('mergeControls');
@@ -297,7 +311,7 @@
                 const uploadSection = document.getElementById('uploadSection');
                 const deleteControls = document.getElementById('deleteControls');
                 if (pageContainer) { pageContainer.classList.remove('active'); }
-                if (pageGrid)      pageGrid.innerHTML = '';
+                if (pageGrid)      { pageGrid.innerHTML = ''; resetDeleteGridLayout(); }
                 if (uploadSection) uploadSection.classList.remove('hidden');
                 if (deleteControls) deleteControls.classList.remove('active');
                 updateDeleteFileList();
@@ -310,6 +324,7 @@
     async function _renderDeleteGrid() {
         const pageGrid = document.getElementById('pageGrid');
         if (!pageGrid || !deletePdfDoc) return;
+        resetDeleteGridLayout();
         pageGrid.innerHTML = '';
 
         const totalPages = deletePdfDoc.numPages;
@@ -647,14 +662,13 @@
     async function _openDeletePreview(pageNum) {
         if (!deletePdfDoc) return;
         deletePreviewPage = pageNum;
+        const modal = document.getElementById('previewModal');
+        modal?.classList.add('active');
+        await new Promise(resolve => requestAnimationFrame(resolve));
         const page   = await deletePdfDoc.getPage(pageNum);
         const vp     = page.getViewport({ scale: 1 });
-        deletePreviewScale = Math.min(
-            window.innerWidth * 0.8 / vp.width,
-            window.innerHeight * 0.7 / vp.height
-        ) * 0.9;
+        deletePreviewScale = getDeletePreviewFitScale(vp.width, vp.height);
         await _renderDeletePreview();
-        document.getElementById('previewModal')?.classList.add('active');
     }
 
     async function _renderDeletePreview() {
@@ -1001,8 +1015,11 @@
                 switch (btn.dataset.action) {
                     case 'preview': {
                         // Render a preview in the preview modal
+                        const modal2 = document.getElementById('previewModal');
+                        modal2?.classList.add('active');
+                        await new Promise(resolve => requestAnimationFrame(resolve));
                         const vp0 = (await pdfDoc.getPage(pageNum)).getViewport({ scale: 1 });
-                        const scale = Math.min(window.innerWidth * 0.8 / vp0.width, window.innerHeight * 0.7 / vp0.height) * 0.9;
+                        const scale = getDeletePreviewFitScale(vp0.width, vp0.height);
                         const wrapper2 = document.getElementById('previewCanvasWrapper');
                         if (wrapper2) {
                             wrapper2.innerHTML = '';

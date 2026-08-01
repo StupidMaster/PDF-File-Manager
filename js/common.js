@@ -184,6 +184,30 @@ function downloadFile(base64Content, filename) {
     URL.revokeObjectURL(url);
 }
 
+function isTypingTarget(el) {
+    if (!el) return false;
+    const tag = el.tagName;
+    const type = el.type && el.type.toLowerCase();
+    return el.isContentEditable ||
+           tag === 'TEXTAREA' ||
+           tag === 'SELECT' ||
+           (tag === 'INPUT' && type !== 'checkbox' && type !== 'radio' && type !== 'button' && type !== 'submit');
+}
+
+window.togglePreviewShortcutHelp = function(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    const help = document.querySelector('.preview-shortcut-help');
+    if (help) help.classList.toggle('show');
+};
+
+document.addEventListener('click', function(event) {
+    const help = document.querySelector('.preview-shortcut-help');
+    if (help && !help.contains(event.target)) help.classList.remove('show');
+});
+
 // Close modals with Escape key / confirm with Space
 document.addEventListener('keydown', function(e) {
 
@@ -191,6 +215,49 @@ document.addEventListener('keydown', function(e) {
     const notificationModal = document.getElementById('notificationModal');
     const confirmOpen       = confirmModal      && confirmModal.classList.contains('show');
     const notifOpen         = notificationModal && notificationModal.classList.contains('show');
+
+    const previewModal = document.getElementById('previewModal');
+    const previewOpen = previewModal && previewModal.classList.contains('active');
+    if (previewOpen && !confirmOpen && !notifOpen && !isTypingTarget(document.activeElement) && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        let handled = true;
+        switch (e.key) {
+            case 'ArrowUp':
+                if (typeof window.zoomPreview === 'function') window.zoomPreview(0.25);
+                break;
+            case 'ArrowDown':
+                if (typeof window.zoomPreview === 'function') window.zoomPreview(-0.25);
+                break;
+            case 'ArrowRight':
+                if (typeof window.navigatePreview === 'function') window.navigatePreview(1);
+                break;
+            case 'ArrowLeft':
+                if (typeof window.navigatePreview === 'function') window.navigatePreview(-1);
+                break;
+            case 'f':
+            case 'F':
+                if (!e.shiftKey && typeof window.fitPreview === 'function') window.fitPreview();
+                else handled = false;
+                break;
+            case "'":
+                if (typeof window.rotatePreview === 'function') window.rotatePreview(90);
+                break;
+            case ';':
+                if (typeof window.rotatePreview === 'function') window.rotatePreview(-90);
+                break;
+            case 'D':
+                if (e.shiftKey && typeof window.deletePreviewPage === 'function') window.deletePreviewPage();
+                else handled = false;
+                break;
+            default:
+                handled = false;
+        }
+
+        if (handled) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+    }
 
     // ── Escape = Cancel / Close ───────────────────────────────────────────────
     if (e.key === 'Escape') {
@@ -372,6 +439,87 @@ if (e.ctrlKey && e.shiftKey && e.key.toUpperCase() === 'M') {
 }
 
 });
+
+// Shared PDF drag/drop upload for modes that use the main file input.
+(function installMainPdfDropSupport() {
+    if (window._mainPdfDropSupportInstalled) return;
+    window._mainPdfDropSupportInstalled = true;
+
+    let dragDepth = 0;
+    const supportedTools = new Set(['split', 'delete', 'compress']);
+
+    function isSupportedDropTool() {
+        return supportedTools.has(window.activeTool || 'split');
+    }
+
+    function dragHasFiles(event) {
+        return Array.from(event.dataTransfer?.types || []).includes('Files');
+    }
+
+    function getDroppedPdfs(event) {
+        return Array.from(event.dataTransfer?.files || []).filter(file => {
+            const name = (file.name || '').toLowerCase();
+            return file.type === 'application/pdf' || name.endsWith('.pdf');
+        });
+    }
+
+    function setMainDropActive(active) {
+        document.querySelector('#uploadSection .upload-box')?.classList.toggle('pdf-drop-active', active);
+        document.querySelectorAll('#pageGrid .add-page-item').forEach(item => {
+            item.classList.toggle('pdf-drop-active', active);
+        });
+    }
+
+    function shouldProcessDrop(files) {
+        const signature = Array.from(files || [])
+            .map(file => `${file.name}:${file.size}:${file.lastModified}`)
+            .join('|');
+        const now = Date.now();
+        const last = window._mainPdfLastDrop || {};
+        if (signature && last.signature === signature && now - last.time < 1500) return false;
+        window._mainPdfLastDrop = { signature, time: now };
+        return true;
+    }
+
+    document.addEventListener('dragenter', function(event) {
+        if (!isSupportedDropTool() || !dragHasFiles(event)) return;
+        event.preventDefault();
+        dragDepth++;
+        setMainDropActive(true);
+    }, true);
+
+    document.addEventListener('dragover', function(event) {
+        if (!isSupportedDropTool() || !dragHasFiles(event)) return;
+        event.preventDefault();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+        setMainDropActive(true);
+    }, true);
+
+    document.addEventListener('dragleave', function(event) {
+        if (!isSupportedDropTool() || !dragHasFiles(event)) return;
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0 || !event.relatedTarget) setMainDropActive(false);
+    }, true);
+
+    document.addEventListener('drop', function(event) {
+        if (event._pdfManagerFileDropHandled || !isSupportedDropTool() || !dragHasFiles(event)) return;
+        event._pdfManagerFileDropHandled = true;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth = 0;
+        setMainDropActive(false);
+
+        const files = getDroppedPdfs(event);
+        if (!files.length) {
+            showNotification('Please drop PDF files only.', 'warning');
+            return;
+        }
+        if (!shouldProcessDrop(files)) return;
+        if (typeof window.handleFileSelect === 'function') {
+            window.handleFileSelect({ target: { files, value: '' } });
+        }
+    }, true);
+})();
 
 // Close notification when clicking outside
 const notificationModal = document.getElementById('notificationModal');
